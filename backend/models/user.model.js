@@ -11,14 +11,38 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+
+    phone: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
+
+    role: {
+      type: String,
+      enum: ["buyer", "vendor", "rider", "supplier", "admin"],
+      required: true,
+      default: "buyer",
+    },
+
     name: {
       type: String,
       required: true,
     },
+
+    status: {
+      type: String,
+      enum: ["active", "suspended", "pending"],
+      required: true,
+      default: "pending",
+    },
+
     lastLogin: {
       type: Date,
       default: Date.now,
     },
+
     isVerified: {
       type: Boolean,
       default: false,

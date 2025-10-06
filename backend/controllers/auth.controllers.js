@@ -1,5 +1,4 @@
 import bcryptjs from "bcryptjs";
-import crypto from "crypto";
 import dotenv from "dotenv";
 
 import { User } from "../models/user.model.js";
@@ -7,9 +6,9 @@ import { User } from "../models/user.model.js";
 dotenv.config();
 
 export const signup = async (req, res) => {
-  const { email, password, name } = req.body;
+  const { email, password, name, phone, role } = req.body;
   try {
-    if (!email || !password || !name) {
+    if (!email || !password || !name || !phone || !role) {
       throw new Error("All fields are required");
     }
 
@@ -26,6 +25,8 @@ export const signup = async (req, res) => {
     ).toString();
     const user = new User({
       email,
+      phone,
+      role,
       password: hashedPassword,
       name,
       VerificationToken,
@@ -33,10 +34,6 @@ export const signup = async (req, res) => {
     });
 
     await user.save();
-    // jwt
-    generateTokenAndSetCookie(res, user._id);
-
-    sendVerificationEmail(user.email, VerificationToken);
 
     res.status(201).json({
       sucess: true,
