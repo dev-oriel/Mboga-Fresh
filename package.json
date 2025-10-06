@@ -1,0 +1,26 @@
+{
+  "name": "mbogafresh",
+  "version": "1.0.0",
+  "description": "This repository implements a **B2B2C marketplace** that connects **farmers**, **mama mboga vendors**, **riders**, and **urban buyers** using a **platform-controlled escrow mechanism**. The platform’s core promise is **freshness**, **trust**, and **simplicity** for vendors with **low digital literacy**.",
+  "main": "backend/index.js",
+  "scripts": {
+    "dev":"nodemon backend/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "type" : "module",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "crypto": "^1.0.1",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mailtrap": "^4.3.0",
+    "mongoose": "^8.19.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
