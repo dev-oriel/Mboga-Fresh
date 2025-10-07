@@ -1,9 +1,11 @@
 import { Route, Routes } from "react-router-dom";
 
-import VendorSignup from "./pages/VendorSignup.jsx";
-import Home from "./pages/Home.jsx";
+import VendorSignup from "./signup/VendorSignup"
+import RiderSignup from "./signup/RiderSignup"
+import Home from "./pages/Home.jsx"; 
 
 function App() {
+
   return (
     <div>
       <Routes>
@@ -11,7 +13,7 @@ function App() {
         <Route path="/signup/vendor" element={<VendorSignup />} />
       </Routes>
     </div>
-  );
+  )
 }
 
-export default App;
+export default App
