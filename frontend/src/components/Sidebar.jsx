@@ -53,8 +53,8 @@ const Sidebar = ({ categories = [], onCategoryClick }) => {
               className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-400"
             />
             <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-              <span>$0</span>
-              <span>$100+</span>
+              <span>KES 0</span>
+              <span>KES 100+</span>
             </div>
           </div>
 

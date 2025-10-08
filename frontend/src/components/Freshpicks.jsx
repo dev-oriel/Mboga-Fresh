@@ -1,4 +1,5 @@
 import React from "react";
+import { useCart } from "../context/CartContext";
 
 const products = [
   {
@@ -27,7 +28,30 @@ const products = [
   },
 ];
 
+function slugifyName(name = "") {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
 const Freshpicks = () => {
+  const { addItem } = useCart();
+
+  const handleAdd = (product) => {
+    const id = slugifyName(product.name);
+    addItem(
+      {
+        id,
+        title: product.name,
+        price: `${product.price}${product.unit ? product.unit : ""}`,
+        img: product.img,
+        vendor: product.vendor,
+      },
+      1
+    );
+  };
+
   return (
     <section className="py-8 bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -35,46 +59,56 @@ const Freshpicks = () => {
           Today's Fresh Picks
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {products.map((product) => (
-            <div
-              key={product.name}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden group flex flex-col"
-            >
-              <div className="relative">
-                <img
-                  src={product.img}
-                  alt={product.name}
-                  className="w-full h-56 object-cover"
-                />
-                {product.special && (
-                  <div className="absolute top-3 left-3 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                    SPECIAL
+          {products.map((product) => {
+            const id = slugifyName(product.name);
+            return (
+              <div
+                key={id}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden group flex flex-col"
+              >
+                <div className="relative">
+                  <img
+                    src={product.img}
+                    alt={product.name}
+                    className="w-full h-56 object-cover"
+                  />
+                  {product.special && (
+                    <div className="absolute top-3 left-3 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      SPECIAL
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-4 flex-grow flex flex-col">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white flex-grow">
+                    {product.name}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    From {product.vendor}
+                  </p>
+
+                  <div className="flex justify-between items-center mt-4">
+                    <span className="text-xl font-extrabold text-green-600">
+                      {product.price}{" "}
+                      <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                        {product.unit}
+                      </span>
+                    </span>
+
+                    <button
+                      aria-label={`Add ${product.name} to cart`}
+                      onClick={() => handleAdd(product)}
+                      className="bg-green-600/10 text-green-600 p-2 rounded-full hover:bg-green-600 hover:text-white transition-colors"
+                    >
+                      <span className="material-symbols-outlined">
+                        add_shopping_cart
+                      </span>
+                    </button>
                   </div>
-                )}
-              </div>
-              <div className="p-4 flex-grow flex flex-col">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex-grow">
-                  {product.name}
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  From {product.vendor}
-                </p>
-                <div className="flex justify-between items-center mt-4">
-                  <span className="text-xl font-extrabold text-green-600">
-                    {product.price}{" "}
-                    <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
-                      {product.unit}
-                    </span>
-                  </span>
-                  <button className="bg-green-600/20 text-green-600 p-2 rounded-full hover:bg-green-600 hover:text-white transition-colors">
-                    <span className="material-symbols-outlined">
-                      add_shopping_cart
-                    </span>
-                  </button>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

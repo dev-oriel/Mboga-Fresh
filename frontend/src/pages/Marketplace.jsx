@@ -9,9 +9,11 @@ import ProductCard from "../components/ProductCard";
 import SearchInput from "../components/SearchInput";
 import Footer from "../components/FooterSection";
 import { categories, vendors, products } from "../constants";
+import { useCart } from "../context/CartContext";
 
 const Marketplace = () => {
   const navigate = useNavigate();
+  const { addItem } = useCart();
 
   const goToCategory = useCallback(
     (slug) => navigate(`/category/${slug}`),
@@ -34,8 +36,17 @@ const Marketplace = () => {
   };
 
   const handleAddToCart = (product) => {
-    // TODO: wire to CartContext (placeholder action)
-    console.log("Add to cart:", product);
+    // Add product to cart using the cart context
+    addItem(
+      {
+        id: product.id,
+        title: product.title,
+        price: product.price ?? product.priceLabel ?? "",
+        img: product.img,
+        vendor: product.vendor,
+      },
+      1
+    );
   };
 
   return (
