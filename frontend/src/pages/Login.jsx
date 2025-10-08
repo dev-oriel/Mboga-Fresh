@@ -1,6 +1,76 @@
-import React from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    role: 'Buyer'
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Important for cookies
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          role: formData.role.toLowerCase()
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Store user data in localStorage for client-side access
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Navigate based on user role
+        switch (data.user.role) {
+          case 'vendor':
+            navigate(`/vendor/dashboard`);
+            break;
+          case 'buyer':
+            navigate('/marketplace');
+            break;
+          case 'farmer':
+            navigate('/farmer/dashboard');
+            break;
+          case 'rider':
+            navigate('/rider/dashboard');
+            break;
+          default:
+            navigate('/');
+        }
+      } else {
+        setError(data.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('Network error. Please check your connection and try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
     <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100">
       {/* Header */}
@@ -40,18 +110,26 @@ const Login = () => {
             </p>
           </div>
 
-          <form className="mt-8 space-y-6" method="POST">
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+                {error}
+              </div>
+            )}
+            
             <div className="space-y-4 rounded-lg">
               {/* Role Select */}
               <select
                 id="role"
                 name="role"
+                value={formData.role}
+                onChange={handleInputChange}
                 className="block w-full rounded-lg bg-gray-200 dark:bg-gray-700 px-3 py-4 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600 text-base appearance-none"
               >
-                <option>Buyer</option>
-                <option>Vendor</option>
-                <option>Farmer</option>
-                <option>Rider</option>
+                <option value="Buyer">Buyer</option>
+                <option value="Vendor">Vendor</option>
+                <option value="Farmer">Farmer</option>
+                <option value="Rider">Rider</option>
               </select>
 
               {/* Email */}
@@ -61,6 +139,8 @@ const Login = () => {
                 type="email"
                 autoComplete="email"
                 placeholder="Email address"
+                value={formData.email}
+                onChange={handleInputChange}
                 required
                 className="block w-full rounded-lg bg-gray-200 dark:bg-gray-700 px-3 py-4 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600 text-base"
               />
@@ -72,6 +152,8 @@ const Login = () => {
                 type="password"
                 autoComplete="current-password"
                 placeholder="Password"
+                value={formData.password}
+                onChange={handleInputChange}
                 required
                 className="block w-full rounded-lg bg-gray-200 dark:bg-gray-700 px-3 py-4 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-600 text-base"
               />
@@ -93,9 +175,20 @@ const Login = () => {
             <div>
               <button
                 type="submit"
-                className="group relative flex w-full justify-center rounded-lg bg-green-600 py-3 px-4 text-base font-bold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2"
+                disabled={isLoading}
+                className="group relative flex w-full justify-center rounded-lg bg-green-600 py-3 px-4 text-base font-bold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                Log in
+                {isLoading ? (
+                  <div className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Logging in...
+                  </div>
+                ) : (
+                  'Log in'
+                )}
               </button>
             </div>
 
