@@ -1,6 +1,13 @@
+// frontend/src/components/Hero.jsx
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 const Hero = () => {
+  const navigate = useNavigate();
+
+  const goMarketplace = () => navigate("/marketplace");
+  const goVendorsNearMe = () => navigate("/marketplace?vendorsNearMe=1"); // tweak later to a real vendor page/filter
+
   return (
     <div className="relative h-[65vh] min-h-[500px] w-full">
       {/* Background image */}
@@ -29,12 +36,20 @@ const Hero = () => {
             {/* Buttons */}
             <div className="mt-6 flex flex-col sm:flex-row gap-4">
               {/* Primary button - Fresh green */}
-              <button className="flex min-w-[180px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-14 px-8 bg-[#28A745] text-white text-lg font-bold shadow-2xl transition-transform hover:scale-105 hover:bg-[#1e7e34]">
+              <button
+                onClick={goMarketplace}
+                className="flex min-w-[180px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-14 px-8 bg-emerald-600 text-white text-lg font-bold shadow-2xl transition-transform hover:scale-105 hover:bg-emerald-700"
+                aria-label="Explore Marketplace"
+              >
                 Explore Marketplace
               </button>
 
-              {/* Secondary button - Light green/neutral */}
-              <button className="flex min-w-[180px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-14 px-8 bg-[#DFF5E1] text-[#2D2D2D] text-lg font-bold shadow-2xl transition-transform hover:scale-105 hover:bg-[#bde6c1]">
+              {/* Secondary button - View vendors near me */}
+              <button
+                onClick={goVendorsNearMe}
+                className="flex min-w-[180px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-14 px-8 bg-emerald-100 text-emerald-900 text-lg font-bold shadow-2xl transition-transform hover:scale-105 hover:bg-emerald-200"
+                aria-label="View Vendors Near Me"
+              >
                 View Vendors Near Me
               </button>
             </div>
