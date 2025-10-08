@@ -6,6 +6,7 @@ import FarmerSignUp from "./signup/Farmersignup";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
 import ProductPage from "./pages/ProductPage.jsx";
+import Marketplace from "./pages/Marketplace.jsx";
 
 function App() {
   return (
@@ -16,7 +17,7 @@ function App() {
         <Route path="/signup/rider" element={<RiderSignup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/productpage" element={<ProductPage />} />
-        
+        <Route path="/marketplace" element={<Marketplace />} />
       </Routes>
     </div>
   );
