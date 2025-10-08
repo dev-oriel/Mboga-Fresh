@@ -84,9 +84,7 @@ const CategoryPage = () => {
 
             {filtered.length === 0 && (
               <div className="mt-8 text-sm text-gray-500 dark:text-gray-400">
-                We couldn't find products for this category. Consider adding a
-                `category` field to your products in{" "}
-                <code>constants/index.js</code> or check other categories.
+                We couldn't find products for this category.
               </div>
             )}
           </section>
