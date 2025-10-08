@@ -6,6 +6,7 @@ import CategoryCard from "../components/CategoryCard";
 import VendorCard from "../components/VendorCard";
 import ProductCard from "../components/ProductCard";
 import SearchInput from "../components/SearchInput";
+import Footer from "../components/FooterSection.jsx";
 
 const categories = [
   {
@@ -123,6 +124,7 @@ const Marketplace = () => {
           </section>
         </div>
       </main>
+      <Footer className="border-t-2 border-gray-500" />
     </div>
   );
 };

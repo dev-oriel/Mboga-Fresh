@@ -7,6 +7,8 @@ import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
 import ProductPage from "./pages/ProductPage.jsx";
 import Marketplace from "./pages/Marketplace.jsx";
+import Orders from "./pages/Orders.jsx";
+import Help from "./pages/Help.jsx";
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/productpage" element={<ProductPage />} />
         <Route path="/marketplace" element={<Marketplace />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/help" element={<Help />} />
       </Routes>
     </div>
   );
