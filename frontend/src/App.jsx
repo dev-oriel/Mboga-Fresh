@@ -22,6 +22,9 @@ import BuyerProfile from "./pages/BuyerProfile.jsx";
 
 import VendorDashboard from "./vendor/vendordashboard.jsx";
 import RiderDashboard from "./rider/RiderDashboard.jsx";
+import RiderDeliveryQueue from "./rider/RiderDeliveryQueue.jsx";
+
+
 
 function App() {
   return (
@@ -48,6 +51,7 @@ function App() {
 
           <Route path="/vendordashboard" element={<VendorDashboard />} />
           <Route path="/riderdashboard" element={<RiderDashboard />} />
+          <Route path="/riderdeliveryqueue" element={<RiderDeliveryQueue />} />  
         </Routes>
       </div>
     </CartProvider>
