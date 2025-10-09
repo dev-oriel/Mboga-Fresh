@@ -1,5 +1,10 @@
+<<<<<<< Updated upstream
 
 import { Route, Routes } from "react-router-dom";
+=======
+import React from "react";
+import { Route, Routes, Navigate } from "react-router-dom";
+>>>>>>> Stashed changes
 import { CartProvider } from "./context/CartContext";
 
 import VendorSignup from "./signup/VendorSignup";
@@ -28,7 +33,11 @@ import VendorProducts from "./vendor/vendor_products.jsx";
 
 // Rider related imports
 import RiderDashboard from "./rider/RiderDashboard.jsx";
+<<<<<<< Updated upstream
 import RiderDeliveryDetail from "./rider/RiderDeliveryDetail.jsx";
+=======
+import RiderEarningsAndHistory from "./rider/RiderEarningsAndHistory";
+>>>>>>> Stashed changes
 
 function App() {
   return (
@@ -62,8 +71,14 @@ function App() {
 
           {/*Rider routes */}
           <Route path="/riderdashboard" element={<RiderDashboard />} />
+<<<<<<< Updated upstream
           <Route path="/rider/delivery/:orderId" element={<RiderDeliveryDetail />} />
           <Route path="/RiderDeliveryDetail" element={<RiderDeliveryDetail />} />
+=======
+          {/* support both lowercase and the capitalized URL the browser may have used */}
+          <Route path="/RiderEarningsAndHistory" element={<Navigate to="/riderearnings" replace />} />
+          <Route path="/riderearnings" element={<RiderEarningsAndHistory />} />
+>>>>>>> Stashed changes
         </Routes>
       </div>
     </CartProvider>
@@ -71,4 +86,8 @@ function App() {
 }
 
 export default App;
+<<<<<<< Updated upstream
 
+=======
+ 
+>>>>>>> Stashed changes
