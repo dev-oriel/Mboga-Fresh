@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 const vendors = [
   {
@@ -21,39 +22,54 @@ const vendors = [
   },
 ];
 
+function slugify(str = "") {
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
 const VendorsSection = () => {
+  const navigate = useNavigate();
+
   return (
-    <section className="py-20 bg-[#f9f9f4]">
+    <section className="py-20 bg-gray-50 dark:bg-gray-800">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <h2 className="text-4xl font-extrabold mb-12 text-gray-800 dark:text-white text-center">
           Featured Vendors
         </h2>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
-          {vendors.map((vendor) => (
-            <div
-              key={vendor.name}
-              className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow transform hover:-translate-y-1 hover:scale-105"
-            >
-              <img
-                src={vendor.img}
-                alt={vendor.name}
-                className="w-full h-56 object-cover transition-transform duration-500 hover:scale-110"
-              />
-              <div className="p-6 flex flex-col justify-between h-40">
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
-                    {vendor.name}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {vendor.location}
+          {vendors.map((vendor) => {
+            const id = slugify(vendor.name);
+            return (
+              <button
+                type="button"
+                key={vendor.name}
+                onClick={() => navigate(`/vendor/${id}`)}
+                className="text-left bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow transform hover:-translate-y-1 hover:scale-105 focus:outline-none"
+              >
+                <img
+                  src={vendor.img}
+                  alt={vendor.name}
+                  className="w-full h-56 object-cover transition-transform duration-500 hover:scale-110"
+                />
+                <div className="p-6 flex flex-col justify-between h-40">
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+                      {vendor.name}
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-300">
+                      {vendor.location}
+                    </p>
+                  </div>
+                  <p className="mt-4 text-emerald-600 font-semibold">
+                    {vendor.rating}
                   </p>
                 </div>
-                <p className="mt-4 text-[#28A745] font-semibold">
-                  {vendor.rating}
-                </p>
-              </div>
-            </div>
-          ))}
+              </button>
+            );
+          })}
         </div>
       </div>
     </section>
