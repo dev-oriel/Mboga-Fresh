@@ -5,6 +5,8 @@ import { CartProvider } from "./context/CartContext";
 import VendorSignup from "./signup/VendorSignup";
 import RiderSignup from "./signup/RiderSignup";
 import FarmerSignUp from "./signup/Farmersignup";
+import BuyerSignup from "./signup/BuyerSignup";
+
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
 import Marketplace from "./pages/Marketplace.jsx";
