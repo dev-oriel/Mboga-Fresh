@@ -1,6 +1,6 @@
 import React from "react";
 // Combining imports from both branches
-import { Route, Routes, Navigate } from "react-router-dom"; 
+import { Route, Routes } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 
 import VendorSignup from "./signup/VendorSignup";
@@ -30,8 +30,8 @@ import VendorProducts from "./vendor/vendor_products.jsx";
 // Rider related imports
 import RiderDashboard from "./rider/RiderDashboard.jsx";
 // Keeping both Rider components
-import RiderDeliveryDetail from "./rider/RiderDeliveryDetail.jsx"; 
-import RiderEarningsAndHistory from "./rider/RiderEarningsAndHistory"; 
+import RiderDeliveryDetail from "./rider/RiderDeliveryDetail.jsx";
+import RiderEarningsAndHistory from "./rider/RiderEarningsAndHistory";
 
 function App() {
   return (
@@ -56,7 +56,6 @@ function App() {
           <Route path="/category/:id" element={<CategoryPage />} />
           <Route path="/vendor/:id" element={<VendorPage />} />
           <Route path="/vendorprofile" element={<Vendorprofile />} />
-          
 
           {/*Vendor routes */}
           <Route path="/vendordashboard" element={<VendorDashboard />} />
@@ -66,10 +65,15 @@ function App() {
           {/*Rider routes - Keeping all routes from both branches */}
           <Route path="/riderdashboard" element={<RiderDashboard />} />
           {/* Routes for RiderDeliveryDetail */}
-          <Route path="/rider/delivery/:orderId" element={<RiderDeliveryDetail />} />
-          <Route path="/RiderDeliveryDetail" element={<RiderDeliveryDetail />} />
+          <Route
+            path="/rider/delivery/:orderId"
+            element={<RiderDeliveryDetail />}
+          />
+          <Route
+            path="/RiderDeliveryDetail"
+            element={<RiderDeliveryDetail />}
+          />
           {/* Routes for RiderEarningsAndHistory */}
-          <Route path="/RiderEarningsAndHistory" element={<Navigate to="/riderearnings" replace />} />
           <Route path="/riderearnings" element={<RiderEarningsAndHistory />} />
         </Routes>
       </div>
