@@ -1,5 +1,3 @@
-import React from "react";
-import Header from "../components/Header";
 import StatsCard from "../components/riderComponents/StatsCard";
 import RecentDeliveriesTable from "../components/riderComponents/RecentDeliveriesTable";
 import RiderHeader from "../components/riderComponents/RiderHeader";
@@ -10,7 +8,7 @@ const RiderDashboard = () => {
   // NOTE: data is currently static. Replace with props or fetch from an API later.
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100">
-      <Header userAvatarUrl="https://via.placeholder.com/200" />
+      <RiderHeader userAvatarUrl="https://via.placeholder.com/200" />
 
       <main className="flex-1 px-4 sm:px-6 lg:px-8 xl:px-20 2xl:px-40 py-8">
         <div className="mx-auto max-w-7xl flex-col gap-8">
