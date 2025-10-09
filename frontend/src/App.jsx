@@ -27,6 +27,7 @@ import VendorProducts from "./vendor/vendor_products.jsx";
 
 // Rider related imports
 import RiderDashboard from "./rider/RiderDashboard.jsx";
+import RiderDeliveryDetail from "./rider/RiderDeliveryDetail.jsx";
 
 function App() {
   return (
@@ -58,6 +59,8 @@ function App() {
 
           {/*Rider routes */}
           <Route path="/riderdashboard" element={<RiderDashboard />} />
+          <Route path="/rider/delivery/:orderId" element={<RiderDeliveryDetail />} />
+          <Route path="/RiderDeliveryDetail" element={<RiderDeliveryDetail />} />
         </Routes>
       </div>
     </CartProvider>
