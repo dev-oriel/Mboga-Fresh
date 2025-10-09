@@ -18,6 +18,7 @@ import Checkout from "./pages/Checkout";
 import OrderPlaced from "./pages/OrderPlaced";
 import CategoryPage from "./pages/CategoryPage";
 import VendorPage from "./pages/VendorPage";
+import BuyerProfile from "./pages/BuyerProfile.jsx";
 
 function App() {
   return (
@@ -51,6 +52,7 @@ function App() {
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/cart" element={<ShoppingCart />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/profile" element={<BuyerProfile />} />
           <Route path="/order-placed" element={<OrderPlaced />} />
           <Route path="/category/:id" element={<CategoryPage />} />
           <Route path="/vendor/:id" element={<VendorPage />} />

@@ -1,34 +1,23 @@
-// frontend/src/components/Header.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import CartPreview from "./CartPreview";
 
-/**
- * Header component
- * Props:
- *  - avatarUrl (string) optional
- */
 const Header = ({ avatarUrl } = {}) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
 
-  // get cart from context (hooks MUST be inside component)
-  const { count, items } = useCart();
+  // cart context (may be present in your app)
+  const { count, items } = useCart?.() ?? { count: 0, items: [] };
 
-  // cart preview open state (used to auto-open briefly on add)
   const [cartOpen, setCartOpen] = useState(false);
-
-  // track previous count to detect increases
   const prevCountRef = useRef(count);
 
-  // auto-open cart preview when item(s) added
   useEffect(() => {
     const prev = prevCountRef.current;
     if (count > prev) {
       setCartOpen(true);
-      // auto-close after 4s
       const t = setTimeout(() => setCartOpen(false), 4000);
       return () => clearTimeout(t);
     }
@@ -43,7 +32,7 @@ const Header = ({ avatarUrl } = {}) => {
   ];
 
   const handleSubmitSearch = (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
     const trimmed = (query || "").trim();
     navigate(
       `/marketplace${trimmed ? `?query=${encodeURIComponent(trimmed)}` : ""}`
@@ -55,7 +44,6 @@ const Header = ({ avatarUrl } = {}) => {
       <header className="sticky top-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg shadow-md">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-24 items-center justify-between">
-            {/* Left: Logo + desktop nav */}
             <div className="flex items-center gap-6">
               <button
                 onClick={() => navigate("/")}
@@ -79,7 +67,6 @@ const Header = ({ avatarUrl } = {}) => {
                 </span>
               </button>
 
-              {/* Desktop nav */}
               <nav
                 className="hidden lg:flex items-center gap-8"
                 aria-label="Main navigation"
@@ -103,9 +90,7 @@ const Header = ({ avatarUrl } = {}) => {
               </nav>
             </div>
 
-            {/* Right: search, cart, avatar, mobile menu */}
             <div className="flex items-center gap-4">
-              {/* Search */}
               <form
                 onSubmit={handleSubmitSearch}
                 className="relative hidden md:block"
@@ -136,7 +121,6 @@ const Header = ({ avatarUrl } = {}) => {
                 />
               </form>
 
-              {/* Cart: NAVIGATE to full cart page when clicked */}
               <button
                 onClick={() => navigate("/cart")}
                 className="relative p-1 rounded-md"
@@ -165,9 +149,9 @@ const Header = ({ avatarUrl } = {}) => {
                 )}
               </button>
 
-              {/* Avatar */}
+              {/* Avatar always goes to /profile */}
               <button
-                onClick={() => navigate("/login")}
+                onClick={() => navigate("/profile")}
                 className="hidden lg:block group"
                 aria-label="Open profile"
                 title="Profile"
@@ -183,7 +167,6 @@ const Header = ({ avatarUrl } = {}) => {
                 />
               </button>
 
-              {/* Mobile menu toggle */}
               <button
                 onClick={() => setMobileOpen((s) => !s)}
                 className="lg:hidden text-gray-600 dark:text-gray-300 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -197,7 +180,6 @@ const Header = ({ avatarUrl } = {}) => {
           </div>
         </div>
 
-        {/* Mobile menu (collapsible) */}
         <div
           id="mobile-menu"
           className={`lg:hidden border-t border-gray-100 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 transition-[max-height] overflow-hidden ${
@@ -224,7 +206,6 @@ const Header = ({ avatarUrl } = {}) => {
                 </NavLink>
               ))}
 
-              {/* small search for mobile */}
               <form
                 onSubmit={handleSubmitSearch}
                 className="mt-2"
@@ -254,11 +235,9 @@ const Header = ({ avatarUrl } = {}) => {
         </div>
       </header>
 
-      {/* CartPreview: auto-open on add; close via onClose */}
       {cartOpen && <CartPreview onClose={() => setCartOpen(false)} />}
 
-      {/* small sticky minimized preview when cart exists and closed (optional) */}
-      {!cartOpen && items.length > 0 && (
+      {!cartOpen && items?.length > 0 && (
         <button
           onClick={() => setCartOpen(true)}
           className="fixed right-3 bottom-24 z-40 rounded-full bg-emerald-600 text-white p-3 shadow-lg"
