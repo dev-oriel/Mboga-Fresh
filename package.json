@@ -17,6 +17,7 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.545.0",
     "mailtrap": "^4.3.0",
     "mongoose": "^8.19.0",
     "react-router-dom": "^7.9.3"

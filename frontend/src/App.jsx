@@ -19,8 +19,13 @@ import OrderPlaced from "./pages/OrderPlaced";
 import CategoryPage from "./pages/CategoryPage";
 import VendorPage from "./pages/VendorPage";
 import BuyerProfile from "./pages/BuyerProfile.jsx";
-
+// Buyer related imports
+// Vendor related imports
 import VendorDashboard from "./vendor/vendordashboard.jsx";
+import OrderManagement from "./vendor/order_management.jsx";
+import VendorProducts from "./vendor/vendor_products.jsx";
+
+// Rider related imports
 import RiderDashboard from "./rider/RiderDashboard.jsx";
 
 function App() {
@@ -46,7 +51,12 @@ function App() {
           <Route path="/category/:id" element={<CategoryPage />} />
           <Route path="/vendor/:id" element={<VendorPage />} />
 
+          {/*Vendor routes */}
           <Route path="/vendordashboard" element={<VendorDashboard />} />
+          <Route path="/ordermanagement" element={<OrderManagement />} />
+          <Route path="/vendorproducts" element={<VendorProducts />} />
+
+          {/*Rider routes */}
           <Route path="/riderdashboard" element={<RiderDashboard />} />
         </Routes>
       </div>
