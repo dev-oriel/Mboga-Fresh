@@ -2,87 +2,86 @@
 import React from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Header from "./Header";
-import { products, vendors } from "../constants"; // <-- central constants
-
-const RECOMMENDATIONS = [
-  {
-    id: "c1",
-    title: "Carrots",
-    price: "Ksh 120/kg",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBXCZvWtdsQmpyBWpEI5RZpad-a9VQX1MRY7Mv7-n2AoaJ2A3-2PlLT2d4kssEFw9LylQL26qM7BKnE3ugQh_XCJqgI6S69DOrkECVbb4jU0qk49AsI8pyEwMfnmw5TcrE1fD4eufVbWLBoXutUKcrmG2WdSlDlxPWZc8BtSE6myAal7ZCz2LQ4cfrpZLTLZqBPuV75HmniwT_aI5hUP3l3Wga3WqKDCn2tYptSK8Yk2qVWzzBbhkLoOYHcpvc1RSHlLIeihsGevBM",
-  },
-  {
-    id: "c2",
-    title: "Spinach",
-    price: "Ksh 80/bunch",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBQIR22AE8QJNGrRu1z6UliX3LFrzXCKkTvrLesBFFvmMPXStRx2C-_xKm9w9oJqr6ccZqT3FHFvo6CnDJHXWsPzqaSWWhBkpiWIa_JgLnXgm2nMWoKLG0FEK-nO_SOjaSEwNqUUGKvqstHcsU0fZCdzkWeLBzJ8qbfZnkOuuXEmZqjDc-GC0eYl-qruFvh0dv4yOy7eQYxlexNDSjRhQpcPaTZ8up3ZANm2cItVmz6L2ZiXx0D3xVVYyIf7xGNFF_VNJjhI-epYk8",
-  },
-  {
-    id: "c3",
-    title: "Potatoes",
-    price: "Ksh 60/kg",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDO73HmGSXSPK6p8MeYqLkUHDQPgRTFDMSKQMYfcpSvgRv0ooEDqt5XgQSvFq5JPIO_PSV1svPidfymRRvCk42AXIUkOP-4r3o5SELv_zgtXZdbuou2d92tKEYvFSQ3WDrUGsUGBalqw-0_zy35Z-Suf0CMhxxFukdTZHwSb0QQSEh3z3tCKumL-8BZX6vOykH79l-JwStb6g-NNJ4M89bZ1bymRP1bGO4qzYf551SkOoLMlyBoO1plFFZ7g0WgoCXrzvXeEm9V47o",
-  },
-  {
-    id: "c4",
-    title: "Onions",
-    price: "Ksh 50/kg",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBZ7kQ1HaJ5z5Ak9PjndRarFocnJ6gARZAwK7eUQyD4NALZwWw2Nc6ac5WYcWjB_cs2oQy4jrmgqOR_wh72Khlz0nivy759bvcO4SX1Azy94XVCeO_XdnhCxkmnsudjXah8tVgVrrwS-TImhcjNY9JB7D7pJMY-NdvwJZ3GptMl4yRKyONeJYZnbl8wz-LzDKMm43BO7PxxxEWNKelrlTvvJA_Y1LSgo8Q2tgFNj8fKFjkKrwsArmrDwEoBVfszml2hV5ccX1cGeq8",
-  },
-  {
-    id: "c5",
-    title: "Tomatoes",
-    price: "Ksh 100/kg",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBxzUH_puxqM6Rcs-h__RfZBty4j3HgBY1QCxGSrT4USlVH9XGLef_KWMZt-qGEDka5ds2A-IMvy3E4TFD8Xzht7ugDskLCtpgd0Butkf_kZD0PgIPBTK_cL1956P7M8HXTeUePcpHgmpPW2lU59lnQpxMGQfe4iQVMF8nMrluulUDWbsOvIhO0V4eydFyl6YvIZcm--tpzOB3z5EBz0rHH100HBnJhruUDO-PseGd_hImHdXgSObjPpYo4j0VNvihHZZxltT1-1II",
-  },
-];
+import { products, vendors, RECOMMENDATIONS } from "../constants";
+import { useCart } from "../context/CartContext";
 
 const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { addItem } = useCart();
 
-  // example product (keeps your original example intact)
-  const exampleProduct = {
-    id: "prod-001",
-    category: "Fresh Produce",
-    title: "Fresh Tomatoes",
-    description:
-      "Juicy, ripe tomatoes, perfect for salads, cooking, and snacking. Sourced directly from local farmers, ensuring freshness and quality.",
-    price: "Ksh 100/kg",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBxzUH_puxqM6Rcs-h__RfZBty4j3HgBY1QCxGSrT4USlVH9XGLef_KWMZt-qGEDka5ds2A-IMvy3E4TFD8Xzht7ugDskLCtpgd0Butkf_kZD0PgIPBTK_cL1956P7M8HXTeUePcpHgmpPW2lU59lnQpxMGQfe4iQVMF8nMrluulUDWbsOvIhO0V4eydFyl6YvIZcm--tpzOB3z5EBz0rHH100HBnJhruUDO-PseGd_hImHdXgSObjPpYo4j0VNvihHZZxltT1-1II",
-    vendor: {
-      name: "Mama Rose",
-      location: "Nairobi, Kenya",
-      avatar:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuArzvQ9NBC50by7OFXNaZRHgiDCz1XdeITatVThYGF2jVw4-HFFV79sp2z6JmjapVN_VV_bDyXguMYkEWwEZobbQuQ2RH5W6LXvawSnkO4wj6eiVSPoY_2RjnhqahT5caY7-4mAmPoa5miBvvrec_ilCuHCY1-jTTwesyj63u3puEsPJW6YbbVnNGtG9lkwCkN9CZtnoFDU455tRhgtunI2Im49UoMXasnYLYFk5kADBJV0Xhs91pVkIk8gWHVFX4l7oMISLxEp7ns",
-      rating: 4.8,
-      reviews: 125,
-    },
-    deliveryEstimate: "1-2 hours",
-  };
+  // Try to find product from constants; fall back to undefined
+  const product = products.find((p) => p.id === id);
 
-  // Try to find product from constants; fall back to exampleProduct
-  const product = products.find((p) => p.id === id) || exampleProduct;
-
-  const handleAddToCart = () => {
-    // wire this to your cart context / redux later
-    navigate("/cart");
-  };
-
-  const handleChatVendor = () => {
-    // Open chat or vendor page
-    navigate(
-      `/vendor/${product.vendor.name.replace(/\s+/g, "-").toLowerCase()}`
+  if (!product) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+        <Header />
+        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+          <h2 className="text-2xl font-bold mb-4">Product not found</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            We couldn't find the product you're looking for.
+          </p>
+          <div className="flex justify-center gap-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700"
+            >
+              Go Back
+            </button>
+            <Link
+              to="/marketplace"
+              className="px-4 py-2 rounded bg-emerald-400 text-white"
+            >
+              View Marketplace
+            </Link>
+          </div>
+        </main>
+      </div>
     );
-  };
+  }
 
-  // vendor info (from constants) if available
   const vendorInfo = vendors.find(
     (v) =>
       v.name === product.vendor ||
       v.id === product.vendorId ||
       v.name === (product.vendor && product.vendor.name)
   );
+
+  const vendorName = product.vendor?.name ?? product.vendor ?? "vendor";
+
+  const handleAddToCart = () => {
+    addItem(
+      {
+        id: product.id,
+        title: product.title,
+        price: product.price ?? "",
+        img: product.img,
+        vendor: product.vendor ?? vendorName,
+      },
+      1
+    );
+    // Header opens preview automatically on cart count increase.
+  };
+
+  // Replaced "Chat with Vendor" with simple navigation to vendor page
+  const handleViewVendor = () => {
+    const slug = (vendorName || "").replace(/\s+/g, "-").toLowerCase();
+    navigate(`/vendor/${slug}`);
+  };
+
+  const handleAddRecommendation = (r) => {
+    addItem(
+      {
+        id: r.id,
+        title: r.title,
+        price: r.price ?? "",
+        img: r.img,
+        vendor: r.vendor ?? "Vendor",
+      },
+      1
+    );
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
@@ -166,8 +165,8 @@ const ProductDetails = () => {
               </div>
 
               <div className="mt-4 flex items-center gap-2">
-                {/* Stars (static SVGs same as original) */}
                 <div className="flex items-center">
+                  {/* rating icons (static) */}
                   <svg
                     className="w-5 h-5 text-yellow-500"
                     viewBox="0 0 20 20"
@@ -228,12 +227,13 @@ const ProductDetails = () => {
                 Add to Cart
               </button>
 
+              {/* Replaced chat button with "View Vendor" */}
               <button
-                onClick={handleChatVendor}
+                onClick={handleViewVendor}
                 className="flex-1 py-3 px-6 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-center hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2"
               >
-                <span className="material-symbols-outlined">chat</span>
-                Chat with Vendor
+                <span className="material-symbols-outlined">storefront</span>
+                View Vendor
               </button>
             </div>
           </div>
@@ -264,6 +264,10 @@ const ProductDetails = () => {
                 </Link>
 
                 <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleAddRecommendation(r);
+                  }}
                   aria-label={`Add ${r.title} to cart`}
                   className="absolute top-2 right-2 p-2 rounded-full bg-white/70 dark:bg-gray-800/70 text-gray-800 dark:text-gray-200 hover:bg-emerald-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
                 >
