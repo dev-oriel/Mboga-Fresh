@@ -1,26 +1,61 @@
-import React from "react";
+import React, { useRef, useState } from "react";
 
 const ProfileSidebar = () => {
+  const [profileImage, setProfileImage] = useState(
+    "https://lh3.googleusercontent.com/aida-public/AB6AXuCGsWq5QqWwF5f66c9kSicNkfyDw_dLYwhgqbTufkto3Cv95U7ah6Lpf7dxekVzJy7qtEuTMbSEMtzCsRdn_drhMsyEEFdvv-ktwLdeIdvdhXBKQf_f92jO-owfsZtFSRN1AnfO8VdV-vB-pUk5fJVCTKuLcXTQdcoADz4hP9cno0sovnYaZCswMomwMtLaD0H1t7htob_NXd0ApLJO7HIW7NyuZEkGHFj13FeiqxpfhWJLfwkkDOoJ9NitW6lF8OQQTWL6syZp4ng"
+  );
+  const fileInputRef = useRef(null);
+
+  // Trigger file picker
+  const handleEditClick = () => {
+    fileInputRef.current.click();
+  };
+
+  // Handle selected image
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfileImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-md p-6 sticky top-28">
+      {/* Profile Section */}
       <div className="flex flex-col items-center mb-6">
         <div className="relative mb-4">
+          {/* Profile Image */}
           <div
             className="w-24 h-24 rounded-full bg-cover bg-center border-4 border-emerald-600"
-            style={{
-              backgroundImage:
-                "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCGsWq5QqWwF5f66c9kSicNkfyDw_dLYwhgqbTufkto3Cv95U7ah6Lpf7dxekVzJy7qtEuTMbSEMtzCsRdn_drhMsyEEFdvv-ktwLdeIdvdhXBKQf_f92jO-owfsZtFSRN1AnfO8VdV-vB-pUk5fJVCTKuLcXTQdcoADz4hP9cno0sovnYaZCswMomwMtLaD0H1t7htob_NXd0ApLJO7HIW7NyuZEkGHFj13FeiqxpfhWJLfwkkDOoJ9NitW6lF8OQQTWL6syZp4ng')",
-            }}
+            style={{ backgroundImage: `url(${profileImage})` }}
           />
-          <button className="absolute bottom-0 right-0 bg-emerald-600 text-white rounded-full p-1.5 hover:bg-opacity-90">
+          {/* Edit Button */}
+          <button
+            onClick={handleEditClick}
+            className="absolute bottom-0 right-0 bg-emerald-600 text-white rounded-full p-1.5 hover:bg-opacity-90"
+          >
             <span className="material-symbols-outlined text-sm">edit</span>
           </button>
+
+          {/* Hidden File Input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
         </div>
 
         <h2 className="text-2xl font-bold text-gray-900">John Doe</h2>
         <p className="text-gray-500">john.doe@example.com</p>
       </div>
 
+      {/* Navigation Links */}
       <nav className="space-y-2">
         <a
           className="flex items-center gap-3 px-4 py-3 bg-emerald-50 text-emerald-600 font-semibold rounded-lg"
