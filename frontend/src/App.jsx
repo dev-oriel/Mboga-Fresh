@@ -1,10 +1,12 @@
 import React from "react";
+// Combining imports from both branches
 import { Route, Routes } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 
 import VendorSignup from "./signup/VendorSignup";
 import RiderSignup from "./signup/RiderSignup";
 import FarmerSignUp from "./signup/Farmersignup";
+import Vendorprofile from "./vendor/vendorprofile.jsx";
 import BuyerSignup from "./signup/BuyerSignup";
 
 import Home from "./pages/Home.jsx";
@@ -19,8 +21,13 @@ import OrderPlaced from "./pages/OrderPlaced";
 import CategoryPage from "./pages/CategoryPage";
 import VendorPage from "./pages/VendorPage";
 import BuyerProfile from "./pages/BuyerProfile.jsx";
-
+// Buyer related imports
+// Vendor related imports
 import VendorDashboard from "./vendor/vendordashboard.jsx";
+import OrderManagement from "./vendor/order_management.jsx";
+import VendorProducts from "./vendor/vendor_products.jsx";
+
+// Rider related imports
 import RiderDashboard from "./rider/RiderDashboard.jsx";
 import RiderDeliveryQueue from "./rider/RiderDeliveryQueue.jsx";
 
@@ -48,8 +55,14 @@ function App() {
           <Route path="/order-placed" element={<OrderPlaced />} />
           <Route path="/category/:id" element={<CategoryPage />} />
           <Route path="/vendor/:id" element={<VendorPage />} />
+          <Route path="/vendorprofile" element={<Vendorprofile />} />
 
+          {/*Vendor routes */}
           <Route path="/vendordashboard" element={<VendorDashboard />} />
+          <Route path="/ordermanagement" element={<OrderManagement />} />
+          <Route path="/vendorproducts" element={<VendorProducts />} />
+
+          {/*Rider routes - Keeping all routes from both branches */}
           <Route path="/riderdashboard" element={<RiderDashboard />} />
           <Route path="/riderdeliveryqueue" element={<RiderDeliveryQueue />} />  
         </Routes>
