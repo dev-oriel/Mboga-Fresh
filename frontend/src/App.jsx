@@ -6,14 +6,25 @@ import FarmerSignUp from "./signup/Farmersignup";
 import vendorwalletandpayments from "./vendor/vendorwalletandpayments.jsx";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
+import Marketplace from "./pages/Marketplace.jsx";
+import Orders from "./pages/Orders.jsx";
+import Help from "./pages/Help.jsx";
+import ProductDetails from "./components/ProductDetails.jsx";
+
 function App() {
   return (
     <div>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/signup/vendor" element={<VendorSignup />} />
+        <Route path="/signup/farmer" element={<FarmerSignUp />} />
         <Route path="/signup/rider" element={<RiderSignup />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/marketplace" element={<Marketplace />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/help" element={<Help />} />
+
+        <Route path="/product/:id" element={<ProductDetails />} />
       </Routes>
     </div>
   );
