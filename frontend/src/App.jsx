@@ -22,22 +22,6 @@ import BuyerProfile from "./pages/BuyerProfile.jsx";
 
 function App() {
   return (
-    <div>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/signup/vendor" element={<VendorSignup />} />
-        <Route path="/signup/farmer" element={<FarmerSignUp />} />
-        <Route path="/signup/rider" element={<RiderSignup />} />
-        <Route path="/signup/farmer" element={<FarmerSignUp />} />
-        <Route path="/signup/buyer" element={<BuyerSignup />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/marketplace" element={<Marketplace />} />
-        <Route path="/orders" element={<Orders />} />
-        <Route path="/help" element={<Help />} />
-
-        <Route path="/product/:id" element={<ProductDetails />} />
-      </Routes>
-    </div>
     <CartProvider>
       <div>
         <Routes>
