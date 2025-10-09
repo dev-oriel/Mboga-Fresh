@@ -20,6 +20,9 @@ import CategoryPage from "./pages/CategoryPage";
 import VendorPage from "./pages/VendorPage";
 import BuyerProfile from "./pages/BuyerProfile.jsx";
 
+import VendorDashboard from "./vendor/vendordashboard.jsx";
+import RiderDashboard from "./rider/RiderDashboard.jsx";
+
 function App() {
   return (
     <CartProvider>
@@ -29,6 +32,8 @@ function App() {
           <Route path="/signup/vendor" element={<VendorSignup />} />
           <Route path="/signup/farmer" element={<FarmerSignUp />} />
           <Route path="/signup/rider" element={<RiderSignup />} />
+          <Route path="/signup/buyer" element={<BuyerSignup />} />
+
           <Route path="/login" element={<Login />} />
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/orders" element={<Orders />} />
@@ -40,6 +45,9 @@ function App() {
           <Route path="/order-placed" element={<OrderPlaced />} />
           <Route path="/category/:id" element={<CategoryPage />} />
           <Route path="/vendor/:id" element={<VendorPage />} />
+
+          <Route path="/vendordashboard" element={<VendorDashboard />} />
+          <Route path="/riderdashboard" element={<RiderDashboard />} />
         </Routes>
       </div>
     </CartProvider>

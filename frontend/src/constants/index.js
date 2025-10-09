@@ -304,3 +304,40 @@ export const RECOMMENDATIONS = [
     img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBxzUH_puxqM6Rcs-h__RfZBty4j3HgBY1QCxGSrT4USlVH9XGLef_KWMZt-qGEDka5ds2A-IMvy3E4TFD8Xzht7ugDskLCtpgd0Butkf_kZD0PgIPBTK_cL1956P7M8HXTeUePcpHgmpPW2lU59lnQpxMGQfe4iQVMF8nMrluulUDWbsOvIhO0V4eydFyl6YvIZcm--tpzOB3z5EBz0rHH100HBnJhruUDO-PseGd_hImHdXgSObjPpYo4j0VNvihHZZxltT1-1II",
   },
 ];
+export const sampleDeliveries = [
+  {
+    id: "#12345",
+    customer: "Aisha Hassan",
+    location: "Westlands",
+    status: "Delivered",
+    earnings: "Ksh 300",
+  },
+  {
+    id: "#12346",
+    customer: "David Kamau",
+    location: "Kilimani",
+    status: "Delivered",
+    earnings: "Ksh 250",
+  },
+  {
+    id: "#12347",
+    customer: "Fatima Ali",
+    location: "Karen",
+    status: "Delivered",
+    earnings: "Ksh 350",
+  },
+  {
+    id: "#12348",
+    customer: "Peter Mwangi",
+    location: "Lavington",
+    status: "Delivered",
+    earnings: "Ksh 300",
+  },
+  {
+    id: "#12349",
+    customer: "Grace Wambui",
+    location: "Runda",
+    status: "Delivered",
+    earnings: "Ksh 300",
+  },
+];
