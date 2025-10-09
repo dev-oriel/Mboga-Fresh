@@ -1,10 +1,11 @@
-import React from "react";
+
 import { Route, Routes } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 
 import VendorSignup from "./signup/VendorSignup";
 import RiderSignup from "./signup/RiderSignup";
 import FarmerSignUp from "./signup/Farmersignup";
+import Vendorprofile from "./pages/vendorprofile.jsx";
 import BuyerSignup from "./signup/BuyerSignup";
 
 import Home from "./pages/Home.jsx";
@@ -51,6 +52,8 @@ function App() {
           <Route path="/order-placed" element={<OrderPlaced />} />
           <Route path="/category/:id" element={<CategoryPage />} />
           <Route path="/vendor/:id" element={<VendorPage />} />
+          <Route path="/vendorprofile" element={<Vendorprofile />} />
+         
 
           {/*Vendor routes */}
           <Route path="/vendordashboard" element={<VendorDashboard />} />
@@ -68,3 +71,4 @@ function App() {
 }
 
 export default App;
+
