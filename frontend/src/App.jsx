@@ -29,9 +29,9 @@ import VendorProducts from "./vendor/vendor_products.jsx";
 
 // Rider related imports
 import RiderDashboard from "./rider/RiderDashboard.jsx";
-// Keeping both Rider components
-import RiderDeliveryDetail from "./rider/RiderDeliveryDetail.jsx";
-import RiderEarningsAndHistory from "./rider/RiderEarningsAndHistory";
+import RiderDeliveryQueue from "./rider/RiderDeliveryQueue.jsx";
+
+
 
 function App() {
   return (
@@ -64,17 +64,7 @@ function App() {
 
           {/*Rider routes - Keeping all routes from both branches */}
           <Route path="/riderdashboard" element={<RiderDashboard />} />
-          {/* Routes for RiderDeliveryDetail */}
-          <Route
-            path="/rider/delivery/:orderId"
-            element={<RiderDeliveryDetail />}
-          />
-          <Route
-            path="/RiderDeliveryDetail"
-            element={<RiderDeliveryDetail />}
-          />
-          {/* Routes for RiderEarningsAndHistory */}
-          <Route path="/riderearnings" element={<RiderEarningsAndHistory />} />
+          <Route path="/riderdeliveryqueue" element={<RiderDeliveryQueue />} />  
         </Routes>
       </div>
     </CartProvider>
