@@ -59,7 +59,7 @@ function App() {
           <Route path="/category/:id" element={<CategoryPage />} />
           <Route path="/vendor/:id" element={<VendorPage />} />
           <Route path="/vendorprofile" element={<Vendorprofile />} />
-
+rmil
           {/* Vendor routes */}
           <Route path="/vendordashboard" element={<VendorDashboard />} />
           <Route path="/ordermanagement" element={<OrderManagement />} />
