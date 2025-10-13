@@ -45,7 +45,7 @@ export const vendors = [
     reviews: 98,
     featured: false,
   },
-  {
+  {   
     id: "auntie-agnes",
     name: "Auntie Agnes",
     img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAtJyf3gztKISUGmV_x6gziYHVv6k4TdASiH-lKaMWtUE2yRc0sfoSnZds5_NIz2qWjTgxbzyr7c4Qir3qpU5IXerJbBuPU5YQMChWu-nNc4MBoUek-eoW6eDPmGK9EnZs9ib6yNx5dx_8LDmiaN6pWhwjr6UwdMgDs2xobmu0aB1ZXWrIYa0NiQByTmsnX7XUW01bEEnJastsN6TxQmoGXUwufnGMx8KFyzqsuZRFvtU_H1MUlFT8e0OXxOnkWAts7GJeYLiWSC4o",

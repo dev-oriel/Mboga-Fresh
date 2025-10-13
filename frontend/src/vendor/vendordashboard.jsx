@@ -1,40 +1,66 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/vendorComponents/Header";
 
-const VendorDashboard = () => {
-  // State for dashboard data
-  const [dashboardData, setDashboardData] = useState({
-    ordersReceived: 0,
-    pendingDeliveries: 0,
-    salesInEscrow: 0,
-    earningsReleased: 0,
-  });
+// --- DUMMY DATA FOR DEMONSTRATION ---
+const DUMMY_DASHBOARD_DATA = {
+  ordersReceived: 28,
+  pendingDeliveries: 5,
+  salesInEscrow: 14500, // Ksh
+  earningsReleased: 7200, // Ksh
+};
 
-  const [notifications, setNotifications] = useState([]);
-  const [activeTab, setActiveTab] = useState("Dashboard");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
+const DUMMY_NOTIFICATIONS = [
+  {
+    id: 1,
+    type: "order",
+    title: "New Order Received! 📦",
+    message: "Order #5678 is ready for processing. Check Order Management.",
+    icon: "🛒",
+    isRead: false,
+  },
+  {
+    id: 2,
+    type: "payment",
+    title: "Funds Released ✅",
+    message: "Ksh 3,500 has been released to your available balance.",
+    icon: "💰",
+    isRead: false,
+  },
+  {
+    id: 3,
+    type: "warning",
+    title: "Low Stock Alert",
+    message: "Potatoes are critically low. Update your inventory now.",
+    icon: "⚠️",
+    isRead: true,
+  },
+  {
+    id: 4,
+    type: "order",
+    title: "Order Delivered",
+    message: "Order #5674 was successfully delivered and confirmed by the buyer.",
+    icon: "🚚",
+    isRead: true,
+  },
+];
+// ------------------------------------
+
+const VendorDashboard = () => {
+  // Use DUMMY DATA directly for initial state
+  const [dashboardData, setDashboardData] = useState(DUMMY_DASHBOARD_DATA);
+  const [notifications, setNotifications] = useState(DUMMY_NOTIFICATIONS);
+
+  // States related to fetching are no longer needed, keeping for potential future re-use
+  // const [activeTab, setActiveTab] = useState("Dashboard");
+  // const [loading, setLoading] = useState(false);
+  // const [error, setError] = useState(null);
+  // const [lastUpdated, setLastUpdated] = useState(new Date());
+
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
-  // Get vendor ID from logged-in user or fallback to demo
-  const getVendorId = () => {
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      const user = JSON.parse(userData);
-      return user.id || user._id;
-    }
-    return "vendor_123"; // Fallback for demo
-  };
-
-  const vendorId = getVendorId();
-
-  // API Base URL
-  const API_BASE_URL = "http://localhost:5000/api";
-
-  // Check authentication
+  // Check authentication (This remains the same)
   useEffect(() => {
     const userData = localStorage.getItem("user");
     if (userData) {
@@ -49,88 +75,46 @@ const VendorDashboard = () => {
     }
   }, [navigate]);
 
-  // Logout
-  const handleLogout = async () => {
-    try {
-      await fetch(`${API_BASE_URL}/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
-      localStorage.removeItem("user");
-      navigate("/login");
-    }
+  // Logout (This remains the same, but the fetch call is simulated/simplified)
+  const handleLogout = () => {
+    // Simulate API call success
+    console.log("Simulating logout...");
+    localStorage.removeItem("user");
+    navigate("/login");
   };
 
-  // Fetch dashboard data
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      setError(null);
-      setLoading(true);
-
-      const dashboardResponse = await fetch(
-        `${API_BASE_URL}/vendor/${vendorId}/dashboard`
-      );
-      if (!dashboardResponse.ok)
-        throw new Error(`Dashboard API failed (${dashboardResponse.status})`);
-
-      const dashboardData = await dashboardResponse.json();
-      setDashboardData(dashboardData);
-
-      const notificationsResponse = await fetch(
-        `${API_BASE_URL}/vendor/${vendorId}/notifications`
-      );
-      if (!notificationsResponse.ok)
-        throw new Error(
-          `Notifications API failed (${notificationsResponse.status})`
-        );
-
-      const notificationsData = await notificationsResponse.json();
-      setNotifications(notificationsData);
-
-      setLastUpdated(new Date());
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      setError(`Failed to load dashboard data: ${error.message}`);
-      setDashboardData({
-        ordersReceived: 0,
-        pendingDeliveries: 0,
-        salesInEscrow: 0,
-        earningsReleased: 0,
-      });
-      setNotifications([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [vendorId]);
-
-  useEffect(() => {
-    fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 30000);
-    return () => clearInterval(interval);
-  }, [fetchDashboardData]);
-
-  // Manual refresh
-  const handleRefresh = () => fetchDashboardData();
-
+  // The functions below replace the API-fetching logic:
+  
   // Quick actions
-  const handleAddProduct = () => alert("Add New Product clicked!");
-  const handleViewOrders = () => alert("View Orders clicked!");
+  const handleAddProduct = () => navigate("/vendorproducts"); 
+  const handleViewOrders = () => navigate("/ordermanagement");
 
-  const handleWithdrawFunds = async () => {
+  const handleWithdrawFunds = () => {
     const amount = dashboardData.earningsReleased;
     if (amount <= 0) return alert("No funds available for withdrawal.");
 
     const confirmed = window.confirm(
-      `Withdraw Ksh ${amount.toLocaleString()}?`
+      `Withdraw Ksh ${amount.toLocaleString()}? This is a simulation.`
     );
     if (!confirmed) return;
 
-    alert(`Withdrawal request submitted for Ksh ${amount.toLocaleString()}`);
+    alert(`Simulating withdrawal request for Ksh ${amount.toLocaleString()}`);
+    
+    // Immediately update the UI for a better user experience simulation
     setDashboardData((prev) => ({ ...prev, earningsReleased: 0 }));
-    fetchDashboardData();
+    
+    // Optionally, simulate a new notification after withdrawal
+    setNotifications((prev) => [
+      {
+        id: Date.now(),
+        type: "payment",
+        title: "Withdrawal Requested",
+        message: `Ksh ${amount.toLocaleString()} has been sent for processing.`,
+        icon: "⏳",
+        isRead: false,
+      },
+      ...prev,
+    ]);
   };
 
   const markNotificationAsRead = (id) => {
@@ -152,22 +136,29 @@ const VendorDashboard = () => {
     }
   };
 
+  // Since we are using dummy data, we set loading to false and error to null permanently.
+  const loading = false;
+  const error = null;
+  const lastUpdated = new Date();
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <Header
-        avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDeL7radWSj-FEteEjqLpufXII3-tc_o7GMvLvB07AaD_bYBkfAcIOnNbOXkTdMOHRgJQwLZE-Z_iw72Bd8bpHzfXP_m0pIvteSw7FKZ1qV9GD1KfgyDVG90bCO7OGe6JyYIkm9DBo2ArC60uEqSfDvnnYWeo6IqVEjWxsVX6dUoxjm9ozyVlriiMdVLc_jU9ZxS01QcxNa8hn-ePNbB6IcXSwExf2U61R-epab8nsOkbq95E7z6b-fH4zOt0j2MPt20nrqtPM1NHI"
-        userName="Daniel Mutuku"
+        avatarUrl={user ? user.avatarUrl : "default_avatar.jpg"} // Use actual user data
+        userName={user ? user.name : "Demo Vendor"}
+        onLogout={handleLogout} // Pass the simplified logout handler
       />
 
       {/* Main */}
       <main className="p-6">
+        {/* Error/Loading Banners are now mostly suppressed */}
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
             <span className="text-red-600 mr-2">⚠️</span>
             <span className="text-red-800">{error}</span>
             <button
-              onClick={handleRefresh}
+              onClick={() => console.log("Simulating retry...")}
               className="ml-auto text-red-600 hover:text-red-800 underline"
             >
               Retry
@@ -192,6 +183,13 @@ const VendorDashboard = () => {
             </svg>
             Loading dashboard data...
           </div>
+        )}
+        
+        {/* Last Updated Info */}
+        {!loading && (
+            <div className="text-right text-sm text-gray-500 mb-4">
+                Last UI action: {lastUpdated.toLocaleTimeString()}
+            </div>
         )}
 
         {/* Stats */}
