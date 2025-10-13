@@ -24,7 +24,7 @@ import BuyerProfile from "./pages/BuyerProfile.jsx";
 
 // Vendor pages
 import Vendorprofile from "./vendor/vendorprofile.jsx";
-import VendorDashboard from "./vendor/VendorDashboard.jsx";
+import VendorDashboard from "./vendor/vendordashboard.jsx";
 import OrderManagement from "./vendor/order_management.jsx";
 import VendorProducts from "./vendor/VendorProducts.jsx";
 import Farmily from "./vendor/Farmily.jsx";

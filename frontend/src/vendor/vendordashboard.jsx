@@ -1,40 +1,65 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+// Importing Lucide icons for a cleaner UI
+import { CheckCircle, DollarSign, Package, AlertTriangle, X, Clock, Plus, ClipboardList, Trash2 } from "lucide-react";
 import Header from "../components/vendorComponents/Header";
 
-const VendorDashboard = () => {
-  // State for dashboard data
-  const [dashboardData, setDashboardData] = useState({
-    ordersReceived: 0,
-    pendingDeliveries: 0,
-    salesInEscrow: 0,
-    earningsReleased: 0,
-  });
+// --- DUMMY DATA FOR DEMONSTRATION ---
+const DUMMY_DASHBOARD_DATA = {
+  ordersReceived: 28,
+  pendingDeliveries: 5,
+  salesInEscrow: 14500, // Ksh
+  earningsReleased: 7200, // Ksh
+};
 
-  const [notifications, setNotifications] = useState([]);
-  const [activeTab, setActiveTab] = useState("Dashboard");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
+const DUMMY_NOTIFICATIONS = [
+  {
+    id: 1,
+    type: "order",
+    title: "New Order Received!",
+    message: "Order #5678 is ready for processing. Check Order Management.",
+    icon: <Package className="w-5 h-5" />,
+    isRead: false,
+  },
+  {
+    id: 2,
+    type: "payment",
+    title: "Funds Released",
+    message: "Ksh 3,500 has been released to your available balance.",
+    icon: <DollarSign className="w-5 h-5" />,
+    isRead: false,
+  },
+  {
+    id: 3,
+    type: "warning",
+    title: "Low Stock Alert",
+    message: "Potatoes are critically low. Update your inventory now.",
+    icon: <AlertTriangle className="w-5 h-5" />,
+    isRead: true, // Marked as read for the delete feature test
+  },
+  {
+    id: 4,
+    type: "order",
+    title: "Order Delivered",
+    message: "Order #5674 was successfully delivered and confirmed by the buyer.",
+    icon: <CheckCircle className="w-5 h-5" />,
+    isRead: true, // Marked as read for the delete feature test
+  },
+];
+// ------------------------------------
+
+const VendorDashboard = () => {
+  // Use DUMMY DATA directly for initial state
+  const [dashboardData, setDashboardData] = useState(DUMMY_DASHBOARD_DATA);
+  const [notifications, setNotifications] = useState(DUMMY_NOTIFICATIONS);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
-  // Get vendor ID from logged-in user or fallback to demo
-  const getVendorId = () => {
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      const user = JSON.parse(userData);
-      return user.id || user._id;
-    }
-    return "vendor_123"; // Fallback for demo
-  };
+  // Since we are using dummy data, these are static
+  const loading = false;
+  const error = null;
 
-  const vendorId = getVendorId();
-
-  // API Base URL
-  const API_BASE_URL = "http://localhost:5000/api";
-
-  // Check authentication
+  // Check authentication (Kept for basic routing security simulation)
   useEffect(() => {
     const userData = localStorage.getItem("user");
     if (userData) {
@@ -49,125 +74,89 @@ const VendorDashboard = () => {
     }
   }, [navigate]);
 
-  // Logout
-  const handleLogout = async () => {
-    try {
-      await fetch(`${API_BASE_URL}/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
-      localStorage.removeItem("user");
-      navigate("/login");
-    }
+  // Logout (Simplified)
+  const handleLogout = () => {
+    console.log("Simulating logout...");
+    localStorage.removeItem("user");
+    navigate("/login");
   };
 
-  // Fetch dashboard data
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      setError(null);
-      setLoading(true);
+  // --- QUICK ACTIONS ---
+  const handleAddProduct = () => navigate("/vendorproducts"); 
+  const handleViewOrders = () => navigate("/ordermanagement");
 
-      const dashboardResponse = await fetch(
-        `${API_BASE_URL}/vendor/${vendorId}/dashboard`
-      );
-      if (!dashboardResponse.ok)
-        throw new Error(`Dashboard API failed (${dashboardResponse.status})`);
-
-      const dashboardData = await dashboardResponse.json();
-      setDashboardData(dashboardData);
-
-      const notificationsResponse = await fetch(
-        `${API_BASE_URL}/vendor/${vendorId}/notifications`
-      );
-      if (!notificationsResponse.ok)
-        throw new Error(
-          `Notifications API failed (${notificationsResponse.status})`
-        );
-
-      const notificationsData = await notificationsResponse.json();
-      setNotifications(notificationsData);
-
-      setLastUpdated(new Date());
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      setError(`Failed to load dashboard data: ${error.message}`);
-      setDashboardData({
-        ordersReceived: 0,
-        pendingDeliveries: 0,
-        salesInEscrow: 0,
-        earningsReleased: 0,
-      });
-      setNotifications([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [vendorId]);
-
-  useEffect(() => {
-    fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 30000);
-    return () => clearInterval(interval);
-  }, [fetchDashboardData]);
-
-  // Manual refresh
-  const handleRefresh = () => fetchDashboardData();
-
-  // Quick actions
-  const handleAddProduct = () => alert("Add New Product clicked!");
-  const handleViewOrders = () => alert("View Orders clicked!");
-
-  const handleWithdrawFunds = async () => {
+  // Functional: Handles the simulated withdrawal of funds
+  const handleWithdrawFunds = useCallback(() => {
     const amount = dashboardData.earningsReleased;
-    if (amount <= 0) return alert("No funds available for withdrawal.");
+    if (amount <= 0) return;
 
     const confirmed = window.confirm(
-      `Withdraw Ksh ${amount.toLocaleString()}?`
+      `CONFIRM WITHDRAWAL: Do you want to withdraw Ksh ${amount.toLocaleString()}? This is a simulation.`
     );
     if (!confirmed) return;
 
-    alert(`Withdrawal request submitted for Ksh ${amount.toLocaleString()}`);
-    setDashboardData((prev) => ({ ...prev, earningsReleased: 0 }));
-    fetchDashboardData();
-  };
+    console.log(`Simulating successful withdrawal of Ksh ${amount.toLocaleString()}`);
 
+    // Update the UI: set earnings to 0
+    setDashboardData((prev) => ({ ...prev, earningsReleased: 0 }));
+
+    // Add a success notification to the top of the list
+    setNotifications((prev) => [
+      {
+        id: Date.now(),
+        type: "payment",
+        title: "Withdrawal Initiated",
+        message: `Ksh ${amount.toLocaleString()} is being processed. Funds should reflect in your account within 24 hours.`,
+        icon: <Clock className="w-5 h-5" />,
+        isRead: false,
+      },
+      ...prev,
+    ]);
+  }, [dashboardData.earningsReleased, setDashboardData, setNotifications]);
+
+  // --- NOTIFICATION HANDLERS ---
+  
+  // Functional: Marks a notification as read
   const markNotificationAsRead = (id) => {
     setNotifications(
       notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n))
     );
   };
+  
+  // Functional: Deletes all notifications that have been marked as read
+  const handleDeleteReadNotifications = () => {
+      const readCount = notifications.filter(n => n.isRead).length;
+      if (readCount === 0) return;
 
-  const getNotificationBgColor = (type, isRead) => {
-    if (isRead) return "#f3f4f6";
-    switch (type) {
-      case "order":
-      case "payment":
-        return "#42cf17";
-      case "warning":
-        return "#fbbf24";
-      default:
-        return "#42cf17";
-    }
+      const confirmed = window.confirm(`Are you sure you want to delete ${readCount} read notification(s)?`);
+      
+      if (!confirmed) return;
+      
+      // Filter the current list, keeping only notifications where isRead is false
+      const unreadNotifications = notifications.filter(n => !n.isRead);
+      
+      // Update the state with the filtered list
+      setNotifications(unreadNotifications);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <Header
-        avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDeL7radWSj-FEteEjqLpufXII3-tc_o7GMvLvB07AaD_bYBkfAcIOnNbOXkTdMOHRgJQwLZE-Z_iw72Bd8bpHzfXP_m0pIvteSw7FKZ1qV9GD1KfgyDVG90bCO7OGe6JyYIkm9DBo2ArC60uEqSfDvnnYWeo6IqVEjWxsVX6dUoxjm9ozyVlriiMdVLc_jU9ZxS01QcxNa8hn-ePNbB6IcXSwExf2U61R-epab8nsOkbq95E7z6b-fH4zOt0j2MPt20nrqtPM1NHI"
-        userName="Daniel Mutuku"
+        avatarUrl={user ? user.avatarUrl : "default_avatar.jpg"}
+        userName={user ? user.name : "Demo Vendor"}
+        onLogout={handleLogout}
       />
 
-      {/* Main */}
+      {/* Main Content */}
       <main className="p-6">
+        {/* Error/Loading Banners (kept for future API implementation) */}
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
             <span className="text-red-600 mr-2">⚠️</span>
             <span className="text-red-800">{error}</span>
             <button
-              onClick={handleRefresh}
+              onClick={() => console.log("Simulating retry...")}
               className="ml-auto text-red-600 hover:text-red-800 underline"
             >
               Retry
@@ -193,8 +182,8 @@ const VendorDashboard = () => {
             Loading dashboard data...
           </div>
         )}
-
-        {/* Stats */}
+        
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {[
             {
@@ -242,21 +231,26 @@ const VendorDashboard = () => {
               className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white font-medium shadow-sm hover:opacity-90 transition transform hover:scale-105"
               style={{ backgroundColor: "#42cf17" }}
             >
-              <span className="text-lg">+</span>
+              <Plus className="w-5 h-5" />
               <span>Add New Product</span>
             </button>
             <button
               onClick={handleViewOrders}
               className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition transform hover:scale-105"
             >
-              <span className="text-lg">📋</span>
+              <ClipboardList className="w-5 h-5" />
               <span>View Orders</span>
             </button>
             <button
               onClick={handleWithdrawFunds}
-              className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition transform hover:scale-105"
+              disabled={dashboardData.earningsReleased <= 0}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium shadow-sm transition transform hover:scale-105 ${
+                dashboardData.earningsReleased > 0
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+              }`}
             >
-              <span className="text-lg">💰</span>
+              <DollarSign className="w-5 h-5" />
               <span>Withdraw Funds</span>
             </button>
           </div>
@@ -266,67 +260,83 @@ const VendorDashboard = () => {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-700">
-              Notifications
+              Recent Notifications
             </h2>
-            <span className="text-sm text-gray-500">
-              {notifications.filter((n) => !n.isRead).length} unread
-            </span>
+            <div className="flex items-center space-x-4">
+                {/* Delete All Read Notifications Button */}
+                <button
+                    onClick={handleDeleteReadNotifications}
+                    className="flex items-center space-x-1 text-sm font-medium text-red-500 hover:text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed transition"
+                    disabled={notifications.filter(n => n.isRead).length === 0}
+                    title="Delete all read notifications"
+                >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete Read</span>
+                </button>
+                <span className="text-sm text-gray-500">
+                    {notifications.filter((n) => !n.isRead).length} unread
+                </span>
+            </div>
           </div>
           <div className="space-y-4">
-            {notifications.map((notification) => (
-              <div
-                key={notification.id}
-                onClick={() => markNotificationAsRead(notification.id)}
-                className={`bg-white rounded-lg p-4 shadow-sm border border-gray-200 flex items-start space-x-4 cursor-pointer hover:shadow-md transition ${
-                  notification.isRead ? "opacity-60" : ""
-                }`}
-              >
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
-                  style={{
-                    backgroundColor: getNotificationBgColor(
-                      notification.type,
-                      notification.isRead
-                    ),
-                    opacity: notification.isRead ? 0.5 : 0.2,
-                  }}
-                >
-                  <span
-                    style={{
-                      color: notification.isRead
-                        ? "#6b7280"
-                        : getNotificationBgColor(notification.type, false),
-                    }}
-                  >
-                    {notification.icon}
-                  </span>
+            {notifications.length === 0 ? (
+                <div className="text-gray-500 p-6 bg-white rounded-lg text-center border">
+                    All caught up! No notifications to display.
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h3
-                      className={`font-semibold ${
-                        notification.isRead ? "text-gray-600" : "text-gray-900"
-                      }`}
+            ) : (
+                notifications.map((notification) => (
+                    <div
+                        key={notification.id}
+                        className={`bg-white rounded-lg p-4 shadow-sm border border-gray-200 flex items-start space-x-4 transition ${
+                        notification.isRead 
+                            ? "opacity-70 border-l-4 border-l-gray-300" 
+                            : "border-l-4 border-l-green-600 hover:shadow-lg"
+                        }`}
                     >
-                      {notification.title}
-                    </h3>
-                    {!notification.isRead && (
-                      <div
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: "#42cf17" }}
-                      ></div>
-                    )}
-                  </div>
-                  <p
-                    className={`text-sm ${
-                      notification.isRead ? "text-gray-500" : "text-gray-600"
-                    }`}
-                  >
-                    {notification.message}
-                  </p>
-                </div>
-              </div>
-            ))}
+                        {/* Icon Container */}
+                        <div
+                            className={`w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0 ${
+                                notification.isRead ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-600'
+                            }`}
+                        >
+                            {notification.icon}
+                        </div>
+
+                        <div className="flex-1">
+                        <div className="flex items-start justify-between">
+                            <h3
+                            className={`font-semibold ${
+                                notification.isRead ? "text-gray-600" : "text-gray-900"
+                            }`}
+                            >
+                            {notification.title}
+                            </h3>
+                        </div>
+                        <p
+                            className={`text-sm mt-1 ${
+                            notification.isRead ? "text-gray-500" : "text-gray-600"
+                            }`}
+                        >
+                            {notification.message}
+                        </p>
+                        </div>
+                        
+                        {/* Mark as Read / Read Status */}
+                        {!notification.isRead ? (
+                            <button
+                                onClick={() => markNotificationAsRead(notification.id)}
+                                className="text-xs font-semibold text-green-600 hover:text-green-800 ml-4 flex items-center space-x-1 flex-shrink-0"
+                                title="Mark as Read"
+                            >
+                                <CheckCircle className="w-4 h-4" />
+                                <span>Mark Read</span>
+                            </button>
+                        ) : (
+                            <X className="w-4 h-4 text-gray-400 ml-4 flex-shrink-0" title="Dismissed" />
+                        )}
+                    </div>
+                ))
+            )}
           </div>
         </div>
       </main>
