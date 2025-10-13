@@ -6,7 +6,7 @@ import { CartProvider } from "./context/CartContext";
 import VendorSignup from "./signup/VendorSignup";
 import RiderSignup from "./signup/RiderSignup";
 import FarmerSignUp from "./signup/Farmersignup";
-import Vendorprofile from "./vendor/vendorprofile.jsx";
+import Vendorprofile from "./vendor/VendorProfile.jsx";
 import BuyerSignup from "./signup/BuyerSignup";
 
 import Home from "./pages/Home.jsx";
@@ -23,9 +23,11 @@ import VendorPage from "./pages/VendorPage";
 import BuyerProfile from "./pages/BuyerProfile.jsx";
 // Buyer related imports
 // Vendor related imports
-import VendorDashboard from "./vendor/vendordashboard.jsx";
+import VendorDashboard from "./vendor/VendorDashboard.jsx";
 import OrderManagement from "./vendor/order_management.jsx";
-import VendorProducts from "./vendor/vendor_products.jsx";
+import VendorProducts from "./vendor/VendorProducts.jsx";
+import Farmily from "./vendor/Farmily.jsx";
+import VendorWallet from "./vendor/vendorwalletandpayments.jsx";
 
 // Rider related imports
 import RiderDashboard from "./rider/RiderDashboard.jsx";
@@ -61,10 +63,12 @@ function App() {
           <Route path="/vendordashboard" element={<VendorDashboard />} />
           <Route path="/ordermanagement" element={<OrderManagement />} />
           <Route path="/vendorproducts" element={<VendorProducts />} />
+          <Route path="/farmily" element={<Farmily />} />
+          <Route path="/vendorwallet" element={<VendorWallet />} />
 
           {/*Rider routes - Keeping all routes from both branches */}
           <Route path="/riderdashboard" element={<RiderDashboard />} />
-          {/* Routes for RiderDeliveryDetail */}
+
           <Route
             path="/rider/delivery/:orderId"
             element={<RiderDeliveryDetail />}
@@ -73,7 +77,7 @@ function App() {
             path="/RiderDeliveryDetail"
             element={<RiderDeliveryDetail />}
           />
-          {/* Routes for RiderEarningsAndHistory */}
+
           <Route path="/riderearnings" element={<RiderEarningsAndHistory />} />
         </Routes>
       </div>

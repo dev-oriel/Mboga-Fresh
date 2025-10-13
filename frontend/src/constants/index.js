@@ -34,6 +34,7 @@ export const vendors = [
     location: "Westlands, Nairobi",
     rating: "4.8 (120 reviews)",
     reviews: 120,
+    featured: true,
   },
   {
     id: "farmer-john",
@@ -42,6 +43,7 @@ export const vendors = [
     location: "Kileleshwa Market, Nairobi",
     rating: "4.7 (98 reviews)",
     reviews: 98,
+    featured: false,
   },
   {
     id: "auntie-agnes",
@@ -50,6 +52,7 @@ export const vendors = [
     location: "Kasarani, Nairobi",
     rating: "4.6 (64 reviews)",
     reviews: 64,
+    featured: true,
   },
   {
     id: "uncle-david",
@@ -58,6 +61,31 @@ export const vendors = [
     location: "Kawangware, mombasa",
     rating: "4.5 (48 reviews)",
     reviews: 48,
+    featured: false,
+  },
+  {
+    id: "mama-njeri-greens",
+    name: "Mama Njeri's Greens",
+    location: "Westlands, Nairobi",
+    rating: "4.8 (120+ reviews)",
+    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDueNPuikXZ-v_tKsbjnJ2NYPV4bDprvT6Km8GqY1l0GLhaiKttqoqBaLdzdVf-opzFB6xozG9m8qAQ1CAgRm5_FMBNFa0tDaFg5RyGBDSg8tEkirRlEVFs22whlkHQOoBNaQyWs1RWxsKSdKOkBYKQCQmrcbx91pC3boCuWlERPcufHVeWuFw_V_5qJo-j_4tRwIMxN5VXbH7ABF5txpyDZnLW4tLFm2tEZiSkGzyBDYKXCYGa6aDITIwIjgczVNTjljcP3fb8sco",
+    featured: true,
+  },
+  {
+    id: "kimanis-fresh-produce",
+    name: "Kimani's Fresh Produce",
+    location: "Kileleshwa Market",
+    rating: "4.9 (98 reviews)",
+    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDJ9G4v7aFIzsBkbXJTtM6A8vg4oIJ6EBpep4dW9m-IeWwok01_nVspuhUMqMpe0Jk9y1D1mY3DmKFkgB-r-sVbpX4Nj65gHmwdZlZGsfS-zZLbJfw0Yw8peD2Lmb2I1fGOvuxw7z-DWW5NQa0vBJK3j-Wf7mrFd__dZXRDPRLcmfhEeh6w9gN5DS2EN1C1W1y_Laq8x4VJi4-lEvs1ca8Ruj4LytcIWENONwnsBYMG_nj7H2ggBHk9WsA7t47MjLQoIgCHNutFG28",
+    featured: false,
+  },
+  {
+    id: "fresh-green-hub",
+    name: "Fresh & Green Hub",
+    location: "Karen, Nairobi",
+    rating: "4.7 (75 reviews)",
+    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDyQ-kfMGOz1EmZeChAc6loFUG8JIq6r_9WUe_CRC4US50k7R1zJlddn_nX3BRGGoOrL1GqEoP7dpr-XhQY-iztEnHVZ0UhjhRizz0PmZYcvEHJAN95NKBzUCYqSkgBMlWzssFDrKFKprMvqPFg2sMC7FfCLyduoXGYWApHDziB5LSMWn7FHaxs96XMphuuER0ixn4tFMYlMkoiczu69GcfvXxD6PJ2jvOCXu5WmZi9J-oQWqS74ERfBUhUOdrdRFk0U5TJIHNoFjE",
+    featured: false,
   },
 ];
 
@@ -113,8 +141,8 @@ export const products = [
   {
     id: "p4",
     title: "Cow Milk",
-    vendorId: "uncle-david",
-    vendor: "Uncle David",
+    vendorId: "mama-njeri-greens",
+    vendor: "Mama Njeri",
     category: "Dairy",
     categoryId: "dairy",
     tags: ["milk", "dairy", "fresh"],
@@ -339,5 +367,102 @@ export const sampleDeliveries = [
     location: "Runda",
     status: "Delivered",
     earnings: "Ksh 300",
+  },
+];
+export const sampleProducts = [
+  {
+    id: "kales-sukuma",
+    title: "Kales - Sukuma Wiki",
+    farmer: "Farmer Kamau",
+    price: "KSh 400 per sack",
+    image:
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuCUB54unNuvXwcPHBd4-AX5IqpBWz7pK5PvDd6JCSOIZ9VBsk2uuL80YiNMa63jy7QYJWABHsFK9-J4andr_kWOxXGSABAzhRPZc08ZI4wkKDTE6WO-ksuWYR6LnGvumJhAfYfsncY3Mep2-ZkxsBQH8kXi35KAZPvPvxw4EvY_StLpj8pMMbR0ngOfZ2oWVFZT-nQg5-p56anBLD-7eJKw0DxfUuWb6ZL4A2yB_Xusx_VVms2YAWgEDxeymbDfmzjVYyz6eWFGSp0",
+  },
+  {
+    id: "tomatoes",
+    title: "Tomatoes",
+    farmer: "Farmer Wanjiku",
+    price: "KSh 300 per crate",
+    image:
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuAQZjr4wRojn9tUMcyNwCsPdep4PE1iQ_0AFm5w7e9RIyASOgL69iXfZFF43s6NIT-NNlYUJWOpXTxU7o0-Prqe7ezBF7kNioy_TOY3RZNCuL59Ke2G-e_aV0vt6qCJPrnt3gamr6C5IOMg8UBbqhXVsBrTNMz70UL8r2qMbhqSI0sNLhh9yPiQl_i_rRUHVofwFuiajGj68ihTGUU_UkEObOsNO3-N5TucqWNK82imPvSELg5OEZF2jzWtuyOE05NsZW0P4LLpMEw",
+  },
+  {
+    id: "onions",
+    title: "Onions",
+    farmer: "Farmer Otieno",
+    price: "KSh 250 per bag",
+    image:
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuB8exSDYGnRzaFWRcUWkU0eK9ibLqjwMat7Jvy8OE8XYHM9kwn0fbxKLGL404GpUJessTHKU9I75bk9Ju7cVtqqut1OECMWrBpPiRIZ1jm6-BtXfcw9pKS245VZK6Dl5MgiSu9A3giifO302gL5avUqg60z4Zh1PdTN2qBKUdltCJ4BEfaUIyiyhsydgJ4ZfMy9n0QRrEFnBE_k4VMlpnTRkq7snusubVM00b26osV0uXjgtrMYFRaGz4o4cJkCvIztXJrF2MggJus",
+  },
+  {
+    id: "potatoes",
+    title: "Potatoes",
+    farmer: "Farmer Kiptoo",
+    price: "KSh 350 per sack",
+    image:
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuB0V6NltLNSDtwIt3T876Patd1it8y8pnZyb6A6kQ5h7md4Rh6oci3ccJwNVLDhURZG-WAXLs5XOltbwWX8C53i4BaUDBVTRhtNjxnmIEtgvW6sZZEr5HR_ClhKFepPxgesHGNMqbh9PeyWcU8koJPn_iHLn2r23mNx5d41w_ZSongfzdiebO7p0HFTEPGZCAlqY-JAaVRlQxnER8J3q4XBjkeNnrWt_KiotYZUy1BHBzlBKHy-oHOO1VIYDEBWyuzw-zyoNbq0GK4",
+  },
+  {
+    id: "bananas",
+    title: "Bananas",
+    farmer: "Farmer Mwangi",
+    price: "KSh 200 per bunch",
+    image:
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuDBHJsLYWe1QkPdFPIqg3PQSDZ1Yc_Fl8Ys5WRIngBhLtqw47UXuh5Mlpq-gs16qwlLoTxUnSiRGuU6zIXE5XuQNEQzrYuhcLlwNtMVEe0qvF3Oc2SuoCfWMPQV7L5SRAsp9bLSUZAlYJ852krlXqxVxBi8LuWGwfw9Id73uE6JsDbUkX6hWmYn6h1I0B2blzbRExSGawgutQsQnl8Coa1tgofRrUtsIsPDMdOybLHijY9ruwDA1KxKDIAgx2ftR1x06VDyl2wUiOs",
+  },
+  {
+    id: "mangoes",
+    title: "Mangoes",
+    farmer: "Farmer Chebet",
+    price: "KSh 150 per basket",
+    image:
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuBZXMZhxIVDwrzKiGhL2xs8GCDNEM_6CMnrp_EOtb0qQIUmmHA8U6hc9T56qLk59pnHGLQd_TDhmjHUP5ufcgIs-PiaJjxmTqMY6DV6ZwYiV_qyQAXJNkFUk7RVXGkZ2K5OjUzUSONBijiC2NCLES-uD9TN3CuPn2NAqy4oKr92PaEVqOiW2Q4HhKu8JcXincO8kusoiAjD-cSTFpwClnVMchW4dNUiBCuClQIpZljD_hiTOeed2jcr5OzXRS0hi-QnFQz2DPbbhz4",
+  },
+];
+export const orders = [
+  {
+    id: "#12345",
+    buyer: "Aisha Hassan",
+    items: "Tomatoes, Onions",
+    amount: "KES 1,500",
+    status: "Pending",
+    payment: "Unpaid",
+    action: "Accept Order",
+  },
+  {
+    id: "#12346",
+    buyer: "Fatima Ali",
+    items: "Potatoes, Carrots",
+    amount: "KES 2,200",
+    status: "Pending",
+    payment: "Paid",
+    action: "Accept Order",
+  },
+  {
+    id: "#12347",
+    buyer: "Grace Mwangi",
+    items: "Mangoes, Bananas",
+    amount: "KES 1,800",
+    status: "Confirmed",
+    payment: "Unpaid",
+    action: "Mark as Delivered",
+  },
+  {
+    id: "#12348",
+    buyer: "Sarah Kamau",
+    items: "Avocados, Spinach",
+    amount: "KES 1,200",
+    status: "Delivered",
+    payment: "Paid",
+    action: "View Details",
+  },
+  {
+    id: "#12349",
+    buyer: "Esther Njoroge",
+    items: "Cabbages, Peppers",
+    amount: "KES 2,000",
+    status: "Pending",
+    payment: "Unpaid",
+    action: "Accept Order",
   },
 ];
