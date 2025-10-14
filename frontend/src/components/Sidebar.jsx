@@ -1,4 +1,4 @@
-// src/components/Sidebar.jsx
+// frontend/src/components/Sidebar.jsx
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -9,10 +9,6 @@ import { Link } from "react-router-dom";
  *  - selectedCategory, selectedVendor, locationFilter, maxPrice, minRating, availability
  *  - onCategoryClick(categoryId)
  *  - onFiltersChange(filters) // receives partial filters object
- *
- * Important: this component only emits changes via onFiltersChange and
- * calls onCategoryClick when a category is selected. It does not perform
- * navigation itself (the Link still navigates).
  */
 const Sidebar = ({
   categories = [],
@@ -22,39 +18,33 @@ const Sidebar = ({
   locationFilter = "All Locations",
   maxPrice = 0,
   minRating = 0,
-  availability = "in",
+  availability = "any",
   onCategoryClick,
   onFiltersChange,
 }) => {
-  // local controlled state so UI remains responsive
   const [localMaxPrice, setLocalMaxPrice] = useState(maxPrice || 0);
   const [localLocation, setLocalLocation] = useState(
     locationFilter || "All Locations"
   );
   const [localMinRating, setLocalMinRating] = useState(minRating || 0);
   const [localAvailability, setLocalAvailability] = useState(
-    availability || "in"
+    availability || "any"
   );
   const [localVendor, setLocalVendor] = useState(selectedVendor || "");
 
-  // sync incoming prop changes (parent-driven) into local state
   useEffect(() => setLocalMaxPrice(maxPrice || 0), [maxPrice]);
   useEffect(
     () => setLocalLocation(locationFilter || "All Locations"),
     [locationFilter]
   );
   useEffect(() => setLocalMinRating(minRating || 0), [minRating]);
-  useEffect(() => setLocalAvailability(availability || "in"), [availability]);
+  useEffect(() => setLocalAvailability(availability || "any"), [availability]);
   useEffect(() => setLocalVendor(selectedVendor || ""), [selectedVendor]);
 
-  // helper to emit a patch
   const emit = (patch) => {
     if (onFiltersChange) onFiltersChange(patch);
   };
 
-  // When user moves the range, update local and emit numeric KES maxPrice.
-  // Range maps directly to KES value (0..1000). This keeps the UI simple
-  // and interoperable with Marketplace's numeric maxPrice.
   const onRangeChange = (e) => {
     const val = Number(e.target.value || 0);
     setLocalMaxPrice(val);
@@ -69,7 +59,6 @@ const Sidebar = ({
 
   const onVendorRatingChange = (e) => {
     const v = e.target.value;
-    // map readable options to numeric rating
     let numeric = 0;
     if (v === "4+") numeric = 4;
     else if (v === "3+") numeric = 3;
@@ -81,7 +70,6 @@ const Sidebar = ({
 
   const onAvailabilityChange = (e) => {
     const v = e.target.value;
-    // Marketplace expects "in" or "out" or "any"
     const mapped =
       v === "In Stock" ? "in" : v === "Out of Stock" ? "out" : "any";
     setLocalAvailability(mapped);
@@ -95,7 +83,6 @@ const Sidebar = ({
   };
 
   const handleCategoryClick = (catId) => {
-    // keep the Link navigation but also notify parent to set the category filter
     if (onCategoryClick) onCategoryClick(catId);
     emit({ category: catId });
   };
@@ -108,12 +95,9 @@ const Sidebar = ({
         </h3>
         <ul className="space-y-2">
           {categories.map((c) => {
-            // active if selectedCategory matches this category id
             const isActive = selectedCategory === c.id;
-
             return (
               <li key={c.id}>
-                {/* Use Link for semantic navigation; also accept onCategoryClick */}
                 <Link
                   to={`/category/${c.id}`}
                   onClick={() => handleCategoryClick(c.id)}
@@ -147,7 +131,6 @@ const Sidebar = ({
               Price Range
             </label>
 
-            {/* Range now maps to KES 0..1000 (no design change) */}
             <input
               id="price-range"
               type="range"
@@ -258,6 +241,7 @@ const Sidebar = ({
               onChange={onAvailabilityChange}
               className="mt-1 block w-full py-2 px-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-black rounded-lg shadow-sm focus:outline-none focus:ring-emerald-400 focus:border-emerald-400 text-sm"
             >
+              <option>Any</option>
               <option>In Stock</option>
               <option>Out of Stock</option>
             </select>

@@ -3,26 +3,55 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 
+const DEFAULT_PLACEHOLDER =
+  "https://images.unsplash.com/photo-1518976024611-0a4e3d1c9f05?auto=format&fit=crop&w=1200&q=60";
+
+const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
+
+function resolveImageSrc(img) {
+  if (!img) return DEFAULT_PLACEHOLDER;
+  if (typeof img !== "string") return DEFAULT_PLACEHOLDER;
+  if (img.startsWith("http://") || img.startsWith("https://")) return img;
+  if (img.startsWith("/")) return `${API_BASE || window.location.origin}${img}`;
+  return `${API_BASE || window.location.origin}/${img}`;
+}
+
 /**
- * Props:
- *  - id, title, vendor, price, img
- *  - special (optional) -> shows SPECIAL badge (like Freshpicks)
- *  - onView(id) optional
- *  - onAdd() optional (if provided, this will be called instead of default add)
+ * Robust parse to extract currency, numeric amount and trailing unit
+ * Accepts "KSh 120", "KES 150.00/kg", "150/kg", numbers, etc.
  */
-const ProductCard = ({
-  id,
-  title,
-  vendor,
-  price = "",
-  img,
-  special = false,
-  onView,
-  onAdd,
-}) => {
-  const unitMatch = (price || "").match(/(\/\S.*)$/);
-  const unit = unitMatch ? unitMatch[0] : "";
-  const basePrice = unit ? price.replace(unit, "").trim() : price;
+function parsePrice(price) {
+  if (price == null)
+    return { currency: "KSh", amount: "", unit: "", display: "" };
+  const raw = String(price).trim();
+  // trailing unit like "/kg"
+  const unitMatch = raw.match(/(\/\S.*)$/);
+  const unit = unitMatch ? unitMatch[0].trim() : "";
+  // numeric amount
+  const numMatch = raw.replace(/,/g, "").match(/(\d+(\.\d+)?)/);
+  const amount = numMatch ? numMatch[0] : "";
+  // leading currency (non-digit chars before the number)
+  const currencyMatch = raw.match(/^[^\d\.\s\/]+/);
+  const currency = currencyMatch
+    ? currencyMatch[0].trim().replace(/\.$/, "")
+    : "KSh";
+  const display = amount ? `${currency} ${amount}` : raw;
+  return { currency, amount, unit, display };
+}
+
+const ProductCard = (props) => {
+  // accept both legacy and backend shapes
+  const id = props.id || props._id;
+  const title = props.title || props.name || "";
+  const vendor = props.vendor || props.vendorName || props.vendorId || "";
+  const img = props.img || props.image || props.imagePath || props.imgPath;
+  const priceRaw = props.priceLabel || props.price || props.priceStr || "";
+  const special = !!props.special;
+  const onView = props.onView;
+  const onAdd = props.onAdd;
+
+  const { currency, amount, unit, display } = parsePrice(priceRaw);
+  const resolvedImg = resolveImageSrc(img);
 
   const { addItem } = useCart();
 
@@ -37,22 +66,33 @@ const ProductCard = ({
       {
         id,
         title,
-        price,
-        img,
+        priceLabel: priceRaw || display,
+        price: amount || 0,
+        img: resolvedImg,
         vendor,
       },
       1
     );
   };
 
+  const onLinkClick = (e) => {
+    if (typeof onView === "function") {
+      e.preventDefault();
+      onView(id);
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden group flex flex-col transition-transform hover:-translate-y-1">
       <div className="relative">
-        <Link to={`/product/${id}`} onClick={() => onView?.(id)}>
+        <Link to={`/product/${id}`} onClick={onLinkClick}>
           <img
             loading="lazy"
-            src={img}
+            src={resolvedImg}
             alt={title}
+            onError={(e) => {
+              e.currentTarget.src = DEFAULT_PLACEHOLDER;
+            }}
             className="w-full h-56 sm:h-48 md:h-56 object-cover"
           />
         </Link>
@@ -86,7 +126,7 @@ const ProductCard = ({
       </div>
 
       <div className="p-4 flex-1 flex flex-col">
-        <Link to={`/product/${id}`} onClick={() => onView?.(id)}>
+        <Link to={`/product/${id}`} onClick={onLinkClick}>
           <p className="font-semibold text-gray-900 dark:text-white line-clamp-2">
             {title}
           </p>
@@ -98,14 +138,16 @@ const ProductCard = ({
 
         <div className="mt-4 flex items-end justify-between">
           <div className="flex items-baseline gap-2">
-            <span className="text-xl font-extrabold text-emerald-600">
-              {basePrice}
+            {/* Currency subtle */}
+            <span className="text-sm text-gray-500">{currency}</span>
+
+            {/* Amount — sleek, not overly bold green */}
+            <span className="text-lg font-medium text-gray-800">
+              {amount || display || ""}
             </span>
-            {unit && (
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {unit}
-              </span>
-            )}
+
+            {/* unit */}
+            {unit && <span className="text-sm text-gray-500 ml-1">{unit}</span>}
           </div>
 
           <button

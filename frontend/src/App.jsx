@@ -69,6 +69,7 @@ function App() {
             <Route path="/vendorproducts" element={<VendorProducts />} />
             <Route path="/farmily" element={<Farmily />} />
             <Route path="/vendorwallet" element={<VendorWallet />} />
+            <Route path="/vendorpage" element={<VendorPage />} />
 
             {/* Rider routes */}
             <Route path="/riderdashboard" element={<RiderDashboard />} />

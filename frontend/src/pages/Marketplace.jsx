@@ -8,23 +8,17 @@ import VendorCard from "../components/VendorCard";
 import ProductCard from "../components/ProductCard";
 import SearchInput from "../components/SearchInput";
 import Footer from "../components/FooterSection";
-import { categories, vendors, products } from "../constants";
+import { categories, vendors, sampleProducts } from "../constants";
 import { useCart } from "../context/CartContext";
+import { fetchProducts as apiFetchProducts } from "../api/products";
 
-/**
- * Small helper to parse numeric price out of labels like "KES 150.00/kg"
- */
+/* parsePriceLabel unchanged */
 function parsePriceLabel(label = "") {
   if (!label) return 0;
-  // remove commas and find first number
   const m = label.replace(/,/g, "").match(/(\d+(\.\d+)?)/);
   return m ? parseFloat(m[0]) : 0;
 }
 
-/**
- * Create a vendor map at module scope — vendors is a static module import so
- * computing this once avoids unnecessary hooks and silences ESLint warnings.
- */
 const VENDOR_MAP = (() => {
   const m = new Map();
   vendors.forEach((v) => m.set(v.id, v));
@@ -38,21 +32,24 @@ const Marketplace = () => {
 
   // filters state
   const [query, setQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState(null); // categoryId
-  const [selectedVendor, setSelectedVendor] = useState(null); // vendorId
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedVendor, setSelectedVendor] = useState(null);
   const [locationFilter, setLocationFilter] = useState("All Locations");
-  const [maxPrice, setMaxPrice] = useState(0); // 0 means no cap
-  const [minRating, setMinRating] = useState(0); // 0 = any
-  const [availability, setAvailability] = useState("any"); // "any", "in", "out"
-  const [sortBy, setSortBy] = useState("relevance"); // or price-asc, price-desc
+  const [maxPrice, setMaxPrice] = useState(0);
+  const [minRating, setMinRating] = useState(0);
+  const [availability, setAvailability] = useState("any");
+  const [sortBy, setSortBy] = useState("relevance");
 
-  // navigation to product
+  // products from backend
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
+
   const goToProduct = useCallback(
     (id) => navigate(`/product/${id}`),
     [navigate]
   );
 
-  // initial search from URL query param ?query=...
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const q = params.get("query") ?? "";
@@ -62,32 +59,49 @@ const Marketplace = () => {
   const onSearch = (q) => {
     const trimmed = (q || "").trim();
     setQuery(trimmed);
-    // update url so user can share the search
     navigate(
       `/marketplace${trimmed ? `?query=${encodeURIComponent(trimmed)}` : ""}`
     );
   };
 
+  // fetch products from API
+  const loadProducts = useCallback(async () => {
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const data = await apiFetchProducts();
+      // expect array, but fallback to sampleProducts if shape unexpected
+      if (Array.isArray(data)) setProducts(data);
+      else setProducts(sampleProducts || []);
+    } catch (err) {
+      console.error("Failed to fetch products:", err);
+      setFetchError(String(err));
+      setProducts(sampleProducts || []);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
   const handleAddToCart = (product) => {
     addItem(
       {
-        id: product.id,
-        title: product.title,
+        id: product.id || product._id,
+        title: product.title || product.name,
         price: product.price ?? product.priceLabel ?? "",
-        img: product.img,
+        img: product.img || product.image || product.imagePath,
         vendor: product.vendor,
       },
       1
     );
   };
 
-  // Filtering pipeline
-  // NOTE: products is a static import and won't change at runtime, so we omit it from the deps.
   const filteredProducts = useMemo(() => {
-    // work on a copy
-    let list = products.slice();
+    let list = (products || []).slice();
 
-    // search query (title, description, vendor)
     if (query && query.trim().length > 0) {
       const q = query.toLowerCase();
       list = list.filter(
@@ -99,7 +113,6 @@ const Marketplace = () => {
       );
     }
 
-    // category filter
     if (selectedCategory) {
       list = list.filter(
         (p) =>
@@ -109,14 +122,12 @@ const Marketplace = () => {
       );
     }
 
-    // vendor filter
     if (selectedVendor) {
       list = list.filter(
         (p) => p.vendorId === selectedVendor || p.vendor === selectedVendor
       );
     }
 
-    // location filter (vendor.location)
     if (locationFilter && locationFilter !== "All Locations") {
       list = list.filter((p) => {
         const v = VENDOR_MAP.get(p.vendorId);
@@ -127,7 +138,6 @@ const Marketplace = () => {
       });
     }
 
-    // price filter
     if (maxPrice && maxPrice > 0) {
       list = list.filter((p) => {
         const price = parsePriceLabel(p.price ?? p.priceLabel ?? "");
@@ -135,7 +145,6 @@ const Marketplace = () => {
       });
     }
 
-    // rating filter (vendor rating is often a string like "4.8 (120+ reviews)")
     if (minRating && minRating > 0) {
       list = list.filter((p) => {
         const v = VENDOR_MAP.get(p.vendorId);
@@ -146,14 +155,10 @@ const Marketplace = () => {
       });
     }
 
-    // availability filter - for demo we interpret presence of `inStock: false` or `stock` field
-    if (availability === "in") {
-      list = list.filter((p) => p.inStock !== false); // treat missing as in-stock
-    } else if (availability === "out") {
+    if (availability === "in") list = list.filter((p) => p.inStock !== false);
+    else if (availability === "out")
       list = list.filter((p) => p.inStock === false);
-    }
 
-    // sorting
     if (sortBy === "price-asc") {
       list.sort(
         (a, b) =>
@@ -166,13 +171,11 @@ const Marketplace = () => {
           parsePriceLabel(b.price ?? b.priceLabel ?? "") -
           parsePriceLabel(a.price ?? a.priceLabel ?? "")
       );
-    } else {
-      // relevance / default — keep original order
     }
 
     return list;
-    // omit `products` from deps because it's a static import and not expected to change at runtime
   }, [
+    products,
     query,
     selectedCategory,
     selectedVendor,
@@ -183,7 +186,6 @@ const Marketplace = () => {
     sortBy,
   ]);
 
-  // Handler passed to Sidebar to update filters
   const onFiltersChange = (filters) => {
     if ("category" in filters) setSelectedCategory(filters.category);
     if ("vendor" in filters) setSelectedVendor(filters.vendor);
@@ -196,10 +198,8 @@ const Marketplace = () => {
     if ("query" in filters) setQuery(filters.query ?? "");
   };
 
-  // when user clicks a vendor card in the featured vendors list, we filter to that vendor
   const handleVendorClick = (vendorId) => {
     setSelectedVendor(vendorId);
-    // navigate to vendor page as well (optional)
     navigate(`/vendor/${vendorId}`);
   };
 
@@ -228,7 +228,6 @@ const Marketplace = () => {
 
           <section className="lg:col-span-9">
             <div className="space-y-8">
-              {/* Categories + Search */}
               <div>
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -267,7 +266,6 @@ const Marketplace = () => {
                 </div>
               </div>
 
-              {/* Vendors */}
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                   Featured Vendors
@@ -283,30 +281,36 @@ const Marketplace = () => {
                 </div>
               </div>
 
-              {/* Products */}
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                     Shop Fresh Produce
                   </h2>
-
                   <div className="text-sm text-gray-600 dark:text-gray-300">
                     {filteredProducts.length} item(s) found
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {filteredProducts.map((p) => (
-                    <ProductCard
-                      key={p.id}
-                      {...p}
-                      onView={() => goToProduct(p.id)}
-                      onAdd={() => handleAddToCart(p)}
-                    />
-                  ))}
-                </div>
+                {loading ? (
+                  <div className="text-center py-12">Loading products...</div>
+                ) : fetchError ? (
+                  <div className="text-center py-12 text-red-600">
+                    Failed to load products. Showing sample items.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {filteredProducts.map((p) => (
+                      <ProductCard
+                        key={p.id ?? p._id}
+                        {...p}
+                        onView={() => goToProduct(p.id ?? p._id)}
+                        onAdd={() => handleAddToCart(p)}
+                      />
+                    ))}
+                  </div>
+                )}
 
-                {filteredProducts.length === 0 && (
+                {!loading && filteredProducts.length === 0 && (
                   <div className="mt-8 text-center text-gray-500">
                     No products match your filters. Try clearing some filters.
                   </div>

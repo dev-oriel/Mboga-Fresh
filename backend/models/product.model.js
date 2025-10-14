@@ -12,9 +12,9 @@ const ProductSchema = new mongoose.Schema(
       enum: ["In Stock", "Out of Stock"],
       default: "In Stock",
     },
-    imagePath: { type: String, default: "" }, // server relative URL: /uploads/filename
+    imagePath: { type: String, default: "" },
     description: { type: String, default: "" },
-    vendorId: { type: String, default: "" }, // optional vendor reference for future auth
+    vendorId: { type: String, default: "" },
   },
   { timestamps: true }
 );

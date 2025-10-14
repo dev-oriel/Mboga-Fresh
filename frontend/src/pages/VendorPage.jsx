@@ -5,7 +5,7 @@ import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/FooterSection";
 import ProductGrid from "../components/ProductGrid";
-import { vendors, categories, products } from "../constants";
+import { vendors, categories, sampleProducts } from "../constants";
 import { useCart } from "../context/CartContext";
 
 const VendorPage = () => {
@@ -20,7 +20,7 @@ const VendorPage = () => {
   );
 
   const filtered = useMemo(() => {
-    return products.filter((p) => {
+    return sampleProducts.filter((p) => {
       if (!p) return false;
       if (p.vendorId && p.vendorId === vendorId) return true;
       // some products store vendor as string name
@@ -42,14 +42,14 @@ const VendorPage = () => {
     });
   }, [vendorId, vendor]);
 
-  const handleAdd = (product) => {
+  const handleAdd = (sampleProducts) => {
     addItem(
       {
-        id: product.id,
-        title: product.title,
-        price: product.price ?? product.priceLabel ?? "",
-        img: product.img,
-        vendor: product.vendor,
+        id: sampleProducts.id,
+        title: sampleProducts.title,
+        price: sampleProducts.price ?? sampleProducts.priceLabel ?? "",
+        img: sampleProducts.img,
+        vendor: sampleProducts.vendor,
       },
       1
     );
@@ -85,8 +85,8 @@ const VendorPage = () => {
               </button>
             </div>
 
-            <ProductGrid
-              products={filtered}
+            <productsGrid
+              productss={filtered}
               onView={(id) => navigate(`/product/${id}`)}
               onAdd={handleAdd}
             />

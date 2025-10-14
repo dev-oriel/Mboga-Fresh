@@ -5,7 +5,7 @@ import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/FooterSection";
 import ProductGrid from "../components/ProductGrid";
-import { categories, products } from "../constants";
+import { categories, sampleProducts } from "../constants";
 import { useCart } from "../context/CartContext";
 
 const CategoryPage = () => {
@@ -22,7 +22,7 @@ const CategoryPage = () => {
   // 3. product.tags includes categoryId
   // if none match, we show a friendly message
   const filtered = useMemo(() => {
-    return products.filter((p) => {
+    return sampleProducts.filter((p) => {
       if (!p) return false;
       if (p.category === categoryId) return true;
       if (p.categoryId === categoryId) return true;
@@ -77,7 +77,7 @@ const CategoryPage = () => {
             </div>
 
             <ProductGrid
-              products={filtered}
+              sampleProducts={filtered}
               onView={(id) => navigate(`/product/${id}`)}
               onAdd={handleAdd}
             />

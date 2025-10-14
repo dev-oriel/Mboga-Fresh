@@ -1,17 +1,71 @@
 // frontend/src/components/ProductDetails.jsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Header from "./Header";
-import { products, vendors, RECOMMENDATIONS } from "../constants";
+import { vendors, RECOMMENDATIONS, sampleProducts } from "../constants";
 import { useCart } from "../context/CartContext";
+import { fetchProduct } from "../api/products";
 
-const ProductDetails = () => {
+const DEFAULT_PLACEHOLDER =
+  "https://images.unsplash.com/photo-1518976024611-0a4e3d1c9f05?auto=format&fit=crop&w=1200&q=60";
+
+export default function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addItem } = useCart();
 
-  // Try to find product from constants; fall back to undefined
-  const product = products.find((p) => p.id === id);
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setProduct(null);
+
+    fetchProduct(id)
+      .then((data) => {
+        if (!mounted) return;
+        if (data && typeof data === "object") {
+          setProduct(data);
+        } else {
+          // backend returned something unexpected
+          console.warn("fetchProduct returned unexpected data:", data);
+          setProduct(null);
+        }
+      })
+      .catch((err) => {
+        console.warn(
+          "fetchProduct error - falling back to local sampleProducts:",
+          err?.message || err
+        );
+        // Fallback: try to find product in local sampleProducts (developer convenience)
+        const local = (sampleProducts || []).find(
+          (p) => String(p.id) === String(id)
+        );
+        if (local) {
+          console.info("Using local sampleProducts fallback for", id);
+          setProduct(local);
+        } else {
+          setProduct(null);
+        }
+      })
+      .finally(() => mounted && setLoading(false));
+
+    return () => {
+      mounted = false;
+    };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+        <Header />
+        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+          <div>Loading product...</div>
+        </main>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -41,30 +95,42 @@ const ProductDetails = () => {
     );
   }
 
-  const vendorInfo = vendors.find(
-    (v) =>
-      v.name === product.vendor ||
-      v.id === product.vendorId ||
-      v.name === (product.vendor && product.vendor.name)
-  );
+  const vendorInfo =
+    vendors.find(
+      (v) =>
+        v.name === product.vendor ||
+        v.id === product.vendorId ||
+        v.name === (product.vendor && product.vendor.name)
+    ) || null;
 
-  const vendorName = product.vendor?.name ?? product.vendor ?? "vendor";
+  const vendorName = product.vendor?.name ?? product.vendor ?? "Vendor";
+
+  // normalize image path (attempt to use imagePath or img)
+  const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
+  const imageSrc =
+    product.imagePath && typeof product.imagePath === "string"
+      ? product.imagePath.startsWith("http")
+        ? product.imagePath
+        : `${API_BASE || ""}${
+            product.imagePath.startsWith("/")
+              ? product.imagePath
+              : `/${product.imagePath}`
+          }`
+      : product.img || product.image || DEFAULT_PLACEHOLDER;
 
   const handleAddToCart = () => {
     addItem(
       {
-        id: product.id,
-        title: product.title,
-        price: product.price ?? "",
-        img: product.img,
-        vendor: product.vendor ?? vendorName,
+        id: product._id || product.id,
+        title: product.title || product.name,
+        priceLabel: product.priceLabel || product.price || "",
+        img: imageSrc,
+        vendor: product.vendor || vendorName,
       },
       1
     );
-    // Header opens preview automatically on cart count increase.
   };
 
-  // Replaced "Chat with Vendor" with simple navigation to vendor page
   const handleViewVendor = () => {
     const slug = (vendorName || "").replace(/\s+/g, "-").toLowerCase();
     navigate(`/vendor/${slug}`);
@@ -99,26 +165,25 @@ const ProductDetails = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-          {/* Left: Product image */}
           <div>
             <div className="aspect-[4/3] rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700">
               <img
-                src={product.img}
-                alt={product.title}
+                src={imageSrc}
+                alt={product.title || product.name}
                 loading="lazy"
                 className="w-full h-full object-cover"
+                onError={(e) => (e.currentTarget.src = DEFAULT_PLACEHOLDER)}
               />
             </div>
           </div>
 
-          {/* Right: Product content */}
           <div className="flex flex-col gap-6">
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {product.category ?? ""}
               </p>
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mt-1">
-                {product.title}
+                {product.title || product.name}
               </h1>
               <p className="mt-4 text-gray-600 dark:text-gray-300">
                 {product.description}
@@ -126,7 +191,7 @@ const ProductDetails = () => {
             </div>
 
             <div className="text-3xl font-bold text-emerald-400">
-              {product.price}
+              {product.priceLabel ?? product.price ?? ""}
             </div>
 
             <div className="border-t border-b border-gray-200 dark:border-gray-700 py-6">
@@ -139,19 +204,17 @@ const ProductDetails = () => {
                   style={{
                     backgroundImage: vendorInfo
                       ? `url("${vendorInfo.img}")`
-                      : product.vendor?.avatar
-                      ? `url("${product.vendor.avatar}")`
                       : undefined,
                   }}
                   aria-hidden
                 />
                 <div>
                   <p className="font-bold text-gray-900 dark:text-white">
-                    {product.vendor?.name ?? product.vendor}
+                    {product.vendor?.name ?? product.vendor ?? vendorName}
                   </p>
-                  {product.vendor?.location && (
+                  {vendorInfo?.location && (
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {product.vendor.location}
+                      {vendorInfo.location}
                     </p>
                   )}
                 </div>
@@ -161,57 +224,19 @@ const ProductDetails = () => {
                 <span className="material-symbols-outlined text-lg">
                   local_shipping
                 </span>
-                <span>Estimated Delivery: {product.deliveryEstimate}</span>
+                <span>
+                  Estimated Delivery: {product.deliveryEstimate ?? "25 minutes"}
+                </span>
               </div>
 
               <div className="mt-4 flex items-center gap-2">
                 <div className="flex items-center">
-                  {/* rating icons (static) */}
-                  <svg
-                    className="w-5 h-5 text-yellow-500"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    aria-hidden
-                  >
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.31 4.036a1 1 0 00.95.69h4.243c.969 0 1.371 1.24.588 1.81l-3.432 2.49a1 1 0 00-.364 1.118l1.31 4.036c.3.921-.755 1.688-1.54 1.118l-3.432-2.49a1 1 0 00-1.175 0l-3.432 2.49c-.785.57-1.84-.197-1.54-1.118l1.31-4.036a1 1 0 00-.364-1.118L2.918 9.463c-.783-.57-.38-1.81.588-1.81h4.243a1 1 0 00.95-.69L9.05 2.927z" />
-                  </svg>
-                  <svg
-                    className="w-5 h-5 text-yellow-500"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    aria-hidden
-                  >
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.31 4.036a1 1 0 00.95.69h4.243c.969 0 1.371 1.24.588 1.81l-3.432 2.49a1 1 0 00-.364 1.118l1.31 4.036c.3.921-.755 1.688-1.54 1.118l-3.432-2.49a1 1 0 00-1.175 0l-3.432 2.49c-.785.57-1.84-.197-1.54-1.118l1.31-4.036a1 1 0 00-.364-1.118L2.918 9.463c-.783-.57-.38-1.81.588-1.81h4.243a1 1 0 00.95-.69L9.05 2.927z" />
-                  </svg>
-                  <svg
-                    className="w-5 h-5 text-yellow-500"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    aria-hidden
-                  >
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.31 4.036a1 1 0 00.95.69h4.243c.969 0 1.371 1.24.588 1.81l-3.432 2.49a1 1 0 00-.364 1.118l1.31 4.036c.3.921-.755 1.688-1.54 1.118l-3.432-2.49a1 1 0 00-1.175 0l-3.432 2.49c-.785.57-1.84-.197-1.54-1.118l1.31-4.036a1 1 0 00-.364-1.118L2.918 9.463c-.783-.57-.38-1.81.588-1.81h4.243a1 1 0 00.95-.69L9.05 2.927z" />
-                  </svg>
-                  <svg
-                    className="w-5 h-5 text-yellow-500"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    aria-hidden
-                  >
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.31 4.036a1 1 0 00.95.69h4.243c.969 0 1.371 1.24.588 1.81l-3.432 2.49a1 1 0 00-.364 1.118l1.31 4.036c.3.921-.755 1.688-1.54 1.118l-3.432-2.49a1 1 0 00-1.175 0l-3.432 2.49c-.785.57-1.84-.197-1.54-1.118l1.31-4.036a1 1 0 00-.364-1.118L2.918 9.463c-.783-.57-.38-1.81.588-1.81h4.243a1 1 0 00.95-.69L9.05 2.927z" />
-                  </svg>
-                  <svg
-                    className="w-5 h-5 text-yellow-500"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    aria-hidden
-                  >
-                    <path d="M10.879 13.5c-.3.18-.66.18-.96 0l-2.39-1.57a1 1 0 01-.36-1.12l.91-2.79a1 1 0 00-.29-1.02L4.09 4.94C3.6 4.47 4.02 3.5 4.66 3.5h3.26a1 1 0 00.95-.69L10.88 0" />
-                  </svg>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                    {vendorInfo?.rating ?? "4.8"}
+                  </div>
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {product.vendor?.rating ?? vendorInfo?.rating ?? "4.8"} (
-                  {product.vendor?.reviews ?? vendorInfo?.reviews ?? "125"}{" "}
-                  reviews)
+                <p className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                  {vendorInfo?.reviews ?? "120"} reviews
                 </p>
               </div>
             </div>
@@ -223,28 +248,26 @@ const ProductDetails = () => {
               >
                 <span className="material-symbols-outlined">
                   add_shopping_cart
-                </span>
+                </span>{" "}
                 Add to Cart
               </button>
 
-              {/* Replaced chat button with "View Vendor" */}
               <button
                 onClick={handleViewVendor}
                 className="flex-1 py-3 px-6 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-center hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2"
               >
-                <span className="material-symbols-outlined">storefront</span>
+                <span className="material-symbols-outlined">storefront</span>{" "}
                 View Vendor
               </button>
             </div>
           </div>
         </div>
 
-        {/* Recommendations */}
+        {/* Recommendations (unchanged) */}
         <div className="mt-16">
           <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
             You Might Also Like
           </h2>
-
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {RECOMMENDATIONS.map((r) => (
               <div key={r.id} className="group relative">
@@ -282,6 +305,4 @@ const ProductDetails = () => {
       </main>
     </div>
   );
-};
-
-export default ProductDetails;
+}

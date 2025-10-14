@@ -1,17 +1,15 @@
-// src/components/SearchInput.jsx
-import React, { useState } from "react";
+import React from "react";
 
-const SearchInput = ({ onSearch }) => {
-  const [q, setQ] = useState("");
+const SearchInput = ({ value = "", onChange, onSearch }) => {
   const submit = (e) => {
     if (e) e.preventDefault();
-    onSearch?.(q);
+    onSearch?.(value);
   };
 
   return (
     <form
       onSubmit={submit}
-      className="hidden md:block relative"
+      className="relative"
       role="search"
       aria-label="Marketplace search"
     >
@@ -19,9 +17,9 @@ const SearchInput = ({ onSearch }) => {
         search
       </span>
       <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Search..."
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
+        placeholder="Search fresh produce, vendors, tags..."
         type="search"
         className="bg-gray-50 dark:bg-black border border-transparent rounded-lg pl-10 pr-4 py-2 w-48 focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 text-sm transition-all"
       />

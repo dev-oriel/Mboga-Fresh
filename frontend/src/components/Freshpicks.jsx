@@ -15,7 +15,7 @@ const products = [
     vendor: "Akinyi's Fruits",
     price: "KES 150",
     unit: "/kg",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCwnzou5lc3WiX7eXMazgyOAO7eL0tiQvDfCmP34Vwfhon_PcLKQeODAkngLZyvWVv8g5FRxOLapboxvii4HdDRDWe_dCq-Fe-i7uSeiUS-EfSInZniT6S59gKb8h2_TzZRJzBZlImKeCahArlizUwOU-uyLoc8bh68irsE6RQq-qH3BYTj-OpUgMMzJqD4nqg1qMvJlk8QUQ1tS4KROx92bxwFPAMwkA0_5Yx4645teRV6VrkgjPe56qBHWT24y2KE3NPOhRvmBC4",
+    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBV8gBbKDa7cnMo9Dd_h-fyu4f1jiSE04nHoEkLNmImaNTqW_itR65qLuIFDIy4loHjhJGzzmb0dRdiodmUR4SR4tObd-gXkt64n3DsrJoy1DjfS74qMY9Tfg0xfB_d8-9Nq8CQqOVLD7FqjVurOP6UI1rZCj-Qe6GCrmx87UmvQdPA6VXx_Zmhn2zxzE_Nhi0FgYDA-CnO7ZXYrbubdEE72AIpZh9pqmyWoPqkUeFvjSsWV3Sp5NDBK2wLd_VXxHmMemnOdC3EKcU",
     special: false,
   },
   {
@@ -23,7 +23,7 @@ const products = [
     vendor: "Kimani's",
     price: "KES 120",
     unit: "/kg",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDXof8TOg2xCYv1AAbNTW90ulUID-epdFPv9rjZ6MiQZfgRxCDeWbZMjZu1X1zPkdJAsTcBemdJKGL0nokJIOvDH3W7nUXGaHmK741GYDhJW-IONT7uP80OPfxjs3agGsFNBtHkvhpbAkaXYcJPP4CSBa9UpvxoA6V4L9rLRGBVwcyMdAfNhRFiAA13O9gm8XfR9S3JTFWDr8vo-_Zg845LXF2rH_Ea_aVqbZFwDK_NdO9WGv51gvNuehG8yi4h4SX1HwAlsilXqWY",
+    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuATQit1JrF5Jnyt4wkvgo4gg9AE35WZUHYu4bkP8Ug9C24i6Hq1pNoyB6sLrOU8lTrlw08oS_T1yAyCSoFN6GBDhXyWuTyePSown1zYI1IdMrIa_s7q3R85HYOD-V4TQtSPgpFWQ4LJFw-8rwhCMVpOnTZuUJWySzBEnWCg6X2TJG7zO-c5S8NdyRVip8br5YvWYZb3AkCpH2K7OdAX80AZ36gBsL552hxuZRtmFY-68iwn-ESSyvtSyqLf1RcvFa55S4lzOUzCDRM",
     special: false,
   },
 ];
