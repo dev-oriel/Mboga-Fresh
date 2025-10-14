@@ -14,7 +14,7 @@ const RiderHeader = ({ userAvatarUrl = "" }) => {
   const navItems = [
     { label: "Dashboard", path: "/riderdashboard", icon: "dashboard" },
     { label: "Orders", path: "/riderdeliveryqueue", icon: "local_shipping" },
-    { label: "Earnings", path: "/vendorwallet", icon: "payments" },
+    { label: "Earnings", path: "/riderearnings", icon: "payments" }, // Changed from /vendorwallet to /riderearnings
     { label: "Help", path: "/riderhelp", icon: "help" },
   ];
 
