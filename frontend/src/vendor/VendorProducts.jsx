@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Edit2, Trash2, Plus } from "lucide-react";
 import Header from "../components/vendorComponents/Header";
-import Footer from "../components/vendorComponents/Footer"; // New import for the reusable footer component
+import Footer from "../components/vendorComponents/Footer"; 
 
 export default function VendorProductManagement() {
   const [products, setProducts] = useState([

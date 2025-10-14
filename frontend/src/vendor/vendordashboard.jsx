@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 // Importing Lucide icons for a cleaner UI
 import { CheckCircle, DollarSign, Package, AlertTriangle, X, Clock, Plus, ClipboardList, Trash2 } from "lucide-react";
 import Header from "../components/vendorComponents/Header";
-import Footer from "../components/vendorComponents/Footer"; // 👈 New import for the reusable footer component
+import Footer from "../components/vendorComponents/Footer";
 
 // --- DUMMY DATA FOR DEMONSTRATION ---
 const DUMMY_DASHBOARD_DATA = {

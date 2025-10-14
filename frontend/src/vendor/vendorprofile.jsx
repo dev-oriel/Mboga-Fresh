@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 import Header from "../components/vendorComponents/Header";
-import Footer from "../components/vendorComponents/Footer"; // New import for the reusable footer component
+import Footer from "../components/vendorComponents/Footer"; 
 
 
 export default function FreshHarvestProfile() {

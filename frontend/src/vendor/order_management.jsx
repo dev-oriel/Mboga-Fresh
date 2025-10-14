@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { orders as initialOrders } from "../constants";
 import Header from "../components/vendorComponents/Header";
-import Footer from "../components/vendorComponents/Footer"; // 👈 New import for the reusable footer component
+import Footer from "../components/vendorComponents/Footer"; 
 
 export default function OrderManagement() {
   const [activeTab, setActiveTab] = useState("new");
