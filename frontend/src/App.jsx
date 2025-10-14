@@ -24,11 +24,11 @@ import BuyerProfile from "./pages/BuyerProfile.jsx";
 
 // Vendor pages
 import Vendorprofile from "./vendor/vendorprofile.jsx";
-import VendorDashboard from "./vendor/vendordashboard.jsx";
-import OrderManagement from "./vendor/order_management.jsx";
+import VendorDashboard from "./vendor/VendoDashboard.jsx";
+import OrderManagement from "./vendor/OrderManagement.jsx";
 import VendorProducts from "./vendor/VendorProducts.jsx";
 import Farmily from "./vendor/Farmily.jsx";
-import VendorWallet from "./vendor/vendorwalletandpayments.jsx";
+import VendorWallet from "./vendor/VendorWallet.jsx";
 
 // Rider pages
 import RiderDashboard from "./rider/RiderDashboard.jsx";
@@ -37,7 +37,7 @@ import RiderHelpPage from "./rider/RiderHelpPage.jsx";
 import RiderProfile from "./rider/RiderProfileSettings.jsx";
 
 function App() {
-  return (
+  return ( 
     <CartProvider>
       <div>
         <Routes>
@@ -58,14 +58,14 @@ function App() {
           <Route path="/order-placed" element={<OrderPlaced />} />
           <Route path="/category/:id" element={<CategoryPage />} />
           <Route path="/vendor/:id" element={<VendorPage />} />
-          <Route path="/vendorprofile" element={<Vendorprofile />} />
-rmil
+
           {/* Vendor routes */}
           <Route path="/vendordashboard" element={<VendorDashboard />} />
           <Route path="/ordermanagement" element={<OrderManagement />} />
           <Route path="/vendorproducts" element={<VendorProducts />} />
           <Route path="/farmily" element={<Farmily />} />
           <Route path="/vendorwallet" element={<VendorWallet />} />
+          <Route path="/vendorprofile" element={<Vendorprofile />} />
 
           {/* Rider routes */}
           <Route path="/riderdashboard" element={<RiderDashboard />} />
