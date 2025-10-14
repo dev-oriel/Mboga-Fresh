@@ -377,6 +377,8 @@ export const sampleProducts = [
     price: "KSh 400 per sack",
     image:
       "https://lh3.googleusercontent.com/aida-public/AB6AXuCUB54unNuvXwcPHBd4-AX5IqpBWz7pK5PvDd6JCSOIZ9VBsk2uuL80YiNMa63jy7QYJWABHsFK9-J4andr_kWOxXGSABAzhRPZc08ZI4wkKDTE6WO-ksuWYR6LnGvumJhAfYfsncY3Mep2-ZkxsBQH8kXi35KAZPvPvxw4EvY_StLpj8pMMbR0ngOfZ2oWVFZT-nQg5-p56anBLD-7eJKw0DxfUuWb6ZL4A2yB_Xusx_VVms2YAWgEDxeymbDfmzjVYyz6eWFGSp0",
+    category: "Vegetables",
+    featured: true,
   },
   {
     id: "tomatoes",
@@ -385,6 +387,8 @@ export const sampleProducts = [
     price: "KSh 300 per crate",
     image:
       "https://lh3.googleusercontent.com/aida-public/AB6AXuAQZjr4wRojn9tUMcyNwCsPdep4PE1iQ_0AFm5w7e9RIyASOgL69iXfZFF43s6NIT-NNlYUJWOpXTxU7o0-Prqe7ezBF7kNioy_TOY3RZNCuL59Ke2G-e_aV0vt6qCJPrnt3gamr6C5IOMg8UBbqhXVsBrTNMz70UL8r2qMbhqSI0sNLhh9yPiQl_i_rRUHVofwFuiajGj68ihTGUU_UkEObOsNO3-N5TucqWNK82imPvSELg5OEZF2jzWtuyOE05NsZW0P4LLpMEw",
+    category: "Vegetables",
+    featured: false,
   },
   {
     id: "onions",
@@ -393,6 +397,8 @@ export const sampleProducts = [
     price: "KSh 250 per bag",
     image:
       "https://lh3.googleusercontent.com/aida-public/AB6AXuB8exSDYGnRzaFWRcUWkU0eK9ibLqjwMat7Jvy8OE8XYHM9kwn0fbxKLGL404GpUJessTHKU9I75bk9Ju7cVtqqut1OECMWrBpPiRIZ1jm6-BtXfcw9pKS245VZK6Dl5MgiSu9A3giifO302gL5avUqg60z4Zh1PdTN2qBKUdltCJ4BEfaUIyiyhsydgJ4ZfMy9n0QRrEFnBE_k4VMlpnTRkq7snusubVM00b26osV0uXjgtrMYFRaGz4o4cJkCvIztXJrF2MggJus",
+    category: "Vegetables",
+    featured: false,
   },
   {
     id: "potatoes",
@@ -401,6 +407,8 @@ export const sampleProducts = [
     price: "KSh 350 per sack",
     image:
       "https://lh3.googleusercontent.com/aida-public/AB6AXuB0V6NltLNSDtwIt3T876Patd1it8y8pnZyb6A6kQ5h7md4Rh6oci3ccJwNVLDhURZG-WAXLs5XOltbwWX8C53i4BaUDBVTRhtNjxnmIEtgvW6sZZEr5HR_ClhKFepPxgesHGNMqbh9PeyWcU8koJPn_iHLn2r23mNx5d41w_ZSongfzdiebO7p0HFTEPGZCAlqY-JAaVRlQxnER8J3q4XBjkeNnrWt_KiotYZUy1BHBzlBKHy-oHOO1VIYDEBWyuzw-zyoNbq0GK4",
+    category: "Grains & Cereals",
+    featured: false,
   },
   {
     id: "bananas",
@@ -409,6 +417,8 @@ export const sampleProducts = [
     price: "KSh 200 per bunch",
     image:
       "https://lh3.googleusercontent.com/aida-public/AB6AXuDBHJsLYWe1QkPdFPIqg3PQSDZ1Yc_Fl8Ys5WRIngBhLtqw47UXuh5Mlpq-gs16qwlLoTxUnSiRGuU6zIXE5XuQNEQzrYuhcLlwNtMVEe0qvF3Oc2SuoCfWMPQV7L5SRAsp9bLSUZAlYJ852krlXqxVxBi8LuWGwfw9Id73uE6JsDbUkX6hWmYn6h1I0B2blzbRExSGawgutQsQnl8Coa1tgofRrUtsIsPDMdOybLHijY9ruwDA1KxKDIAgx2ftR1x06VDyl2wUiOs",
+    category: "Fruits",
+    featured: false,
   },
   {
     id: "mangoes",
@@ -417,7 +427,30 @@ export const sampleProducts = [
     price: "KSh 150 per basket",
     image:
       "https://lh3.googleusercontent.com/aida-public/AB6AXuBZXMZhxIVDwrzKiGhL2xs8GCDNEM_6CMnrp_EOtb0qQIUmmHA8U6hc9T56qLk59pnHGLQd_TDhmjHUP5ufcgIs-PiaJjxmTqMY6DV6ZwYiV_qyQAXJNkFUk7RVXGkZ2K5OjUzUSONBijiC2NCLES-uD9TN3CuPn2NAqy4oKr92PaEVqOiW2Q4HhKu8JcXincO8kusoiAjD-cSTFpwClnVMchW4dNUiBCuClQIpZljD_hiTOeed2jcr5OzXRS0hi-QnFQz2DPbbhz4",
+    category: "Fruits",
+    featured: true,
   },
+];
+
+// categories to render in the sidebar (order matters)
+export const vendorCategories = [
+  {
+    label: "All Products",
+    to: "/products",
+    icon: "grid_view",
+    highlight: true,
+  },
+  { label: "Vegetables", to: "/category/vegetables", icon: "eco" },
+  { label: "Fruits", to: "/category/fruits", icon: "ios" },
+  { label: "Grains & Cereals", to: "/category/grains", icon: "grain" },
+  { label: "Dairy", to: "/category/dairy", icon: "egg" },
+  { label: "Herbs & Spices", to: "/category/herbs", icon: "spa" },
+];
+
+// quick links (My Cart, Orders)
+export const sidebarLinks = [
+  { label: "My Cart", to: "/cart", icon: "shopping_cart" },
+  { label: "Orders & Deliveries", to: "/orders", icon: "local_shipping" },
 ];
 export const orders = [
   {
