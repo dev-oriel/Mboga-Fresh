@@ -1,119 +1,34 @@
-// frontend/src/vendor/VendorProductManagement.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Edit2, Trash2, Plus, X } from "lucide-react";
 import Header from "../components/vendorComponents/Header";
-import Footer from "../components/vendorComponents/Footer"; 
+import Footer from "../components/vendorComponents/Footer";
 import { vendorCategories } from "../constants";
+import {
+  fetchProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from "../api/products";
 
 /**
  * VendorProductManagement
- * - image upload (reads file, converts to base64 data URL for preview & storage)
- * - category dropdown uses vendorCategories from constants
- * - add / edit / delete persisted to localStorage (STORAGE_KEY)
- *
- * Notes:
- * - For production, replace client-side base64 storage with server upload (S3/Cloudinary) and store only URLs.
- * - Keep vendorCategories authoritative; label is used for product.category.
+ * - prettier uploader (drag & drop + file input)
+ * - preview & size checks
+ * - robust image URL resolution (uses VITE_API_BASE when available)
+ * - polished form placeholders and validation feedback
  */
 
-const STORAGE_KEY = "vendor_products_v2";
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const DEFAULT_PLACEHOLDER =
+  "https://images.unsplash.com/photo-1518976024611-0a4e3d1c9f05?auto=format&fit=crop&w=1200&q=60"; // nice fallback
 
-function readStored() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-function writeStored(items) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  } catch {}
-}
-
-async function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    if (!file) return resolve(null);
-    const reader = new FileReader();
-    reader.onerror = () => {
-      reader.abort();
-      reject(new Error("Problem reading file."));
-    };
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(file);
-  });
-}
-
-function normalizePriceInput(val = "") {
-  // allow "120", "Ksh 120", "120.00", etc -> "KSh 120" (string) and numeric cents not needed
-  const digits = String(val).replace(/[^\d.]/g, "");
-  if (!digits) return { label: "KSh 0", number: 0 };
-  const n = Number(digits);
-  return { label: `KSh ${n}`, number: isFinite(n) ? n : 0 };
-}
+const API_BASE = import.meta.env.VITE_API_BASE || ""; // set frontend/.env VITE_API_BASE=http://localhost:5000 or use proxy for /uploads
 
 export default function VendorProductManagement() {
-  const [products, setProducts] = useState(() => {
-    const stored = readStored();
-    if (stored && Array.isArray(stored) && stored.length) return stored;
-    // reasonable initial set (images empty)
-    return [
-      {
-        id: 1,
-        image: "",
-        name: "Ripe Tomatoes",
-        category: "Vegetables",
-        priceLabel: "KSh 120",
-        price: 120,
-        stock: "50 kg",
-        status: "In Stock",
-      },
-      {
-        id: 2,
-        image: "",
-        name: "Red Potatoes",
-        category: "Vegetables",
-        priceLabel: "KSh 80",
-        price: 80,
-        stock: "100 kg",
-        status: "In Stock",
-      },
-      {
-        id: 3,
-        image: "",
-        name: "Cavendish Bananas",
-        category: "Fruits",
-        priceLabel: "KSh 60",
-        price: 60,
-        stock: "200 kg",
-        status: "In Stock",
-      },
-      {
-        id: 4,
-        image: "",
-        name: "White Onions",
-        category: "Vegetables",
-        priceLabel: "KSh 90",
-        price: 90,
-        stock: "75 kg",
-        status: "In Stock",
-      },
-      {
-        id: 5,
-        image: "",
-        name: "Kent Mangoes",
-        category: "Fruits",
-        priceLabel: "KSh 150",
-        price: 150,
-        stock: "30 kg",
-        status: "Out of Stock",
-      },
-    ];
-  });
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // modal + form state
+  // modal/form state
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formErrors, setFormErrors] = useState({});
@@ -121,148 +36,204 @@ export default function VendorProductManagement() {
   const firstInputRef = useRef(null);
 
   const [form, setForm] = useState({
-    imageDataUrl: "", // base64 or remote url
+    file: null,
+    imagePreview: "",
     name: "",
     category: vendorCategories?.[0]?.label ?? "",
     priceLabel: "",
     price: 0,
     stock: "",
     status: "In Stock",
+    description: "",
   });
 
-  // persist products
-  useEffect(() => writeStored(products), [products]);
+  // load products
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchProducts();
+      setProducts(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to load products:", err);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  // helper: reset form to defaults
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // helpers
   function resetForm() {
     setForm({
-      imageDataUrl: "",
+      file: null,
+      imagePreview: "",
       name: "",
       category: vendorCategories?.[0]?.label ?? "",
       priceLabel: "",
       price: 0,
       stock: "",
       status: "In Stock",
+      description: "",
     });
     setFormErrors({});
     setEditingId(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  // open add modal
-  function handleAddOpen() {
+  function openAdd() {
     resetForm();
+    setEditingId(null);
     setOpen(true);
     requestAnimationFrame(() => firstInputRef.current?.focus());
   }
 
-  // open edit modal (prefill)
-  function handleEditOpen(product) {
+  function openEdit(product) {
     setForm({
-      imageDataUrl: product.image || "",
+      file: null,
+      imagePreview: product.imagePath || product.image || "",
       name: product.name || "",
-      category: product.category || (vendorCategories?.[0]?.label ?? ""),
+      category: product.category || vendorCategories?.[0]?.label,
       priceLabel:
-        product.priceLabel || product.price ? `KSh ${product.price}` : "",
-      price: product.price ?? 0,
+        product.priceLabel || (product.price ? `KSh ${product.price}` : ""),
+      price: product.price || 0,
       stock: product.stock || "",
       status: product.status || "In Stock",
+      description: product.description || "",
     });
-    setEditingId(product.id);
+    setEditingId(product._id || product.id);
     setOpen(true);
     requestAnimationFrame(() => firstInputRef.current?.focus());
   }
 
-  // delete product
-  function handleDelete(id) {
+  async function handleDelete(id) {
     const ok = window.confirm("Delete this product? This cannot be undone.");
     if (!ok) return;
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+    try {
+      await deleteProduct(id);
+      setProducts((p) => p.filter((x) => (x._id || x.id) !== id));
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete product");
+    }
   }
 
-  // handle file select -> convert to data URL
+  // image helpers
+  function fileToPreview(file) {
+    return new Promise((resolve, reject) => {
+      if (!file) return resolve("");
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+  }
+
   async function handleFileChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // basic size check (5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > MAX_IMAGE_BYTES) {
       setFormErrors((s) => ({ ...s, image: "Image must be under 5MB." }));
       return;
     }
     try {
-      const dataUrl = await fileToDataUrl(file);
-      setForm((s) => ({ ...s, imageDataUrl: dataUrl }));
+      const preview = await fileToPreview(file);
+      setForm((s) => ({ ...s, file, imagePreview: preview }));
       setFormErrors((s) => ({ ...s, image: undefined }));
-    } catch {
+    } catch (err) {
+      console.error(err);
       setFormErrors((s) => ({ ...s, image: "Failed to read image." }));
     }
   }
 
-  // remove selected image
-  function handleRemoveImage() {
-    setForm((s) => ({ ...s, imageDataUrl: "" }));
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  // drag & drop
+  function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    // reuse same checks
+    if (file.size > MAX_IMAGE_BYTES) {
+      setFormErrors((s) => ({ ...s, image: "Image must be under 5MB." }));
+      return;
+    }
+    fileToPreview(file)
+      .then((preview) =>
+        setForm((s) => ({ ...s, file, imagePreview: preview }))
+      )
+      .catch(() =>
+        setFormErrors((s) => ({ ...s, image: "Failed to read dropped file." }))
+      );
+  }
+  function preventDefault(e) {
+    e.preventDefault();
+    e.stopPropagation();
   }
 
-  // price input change
   function handlePriceChange(val) {
-    const { label, number } = normalizePriceInput(val);
-    setForm((s) => ({ ...s, priceLabel: label, price: number }));
+    const digits = String(val).replace(/[^\d.]/g, "");
+    const n = Number(digits) || 0;
+    setForm((s) => ({ ...s, priceLabel: `KSh ${n}`, price: n }));
   }
 
-  // basic validation
   function validateForm() {
     const errors = {};
     if (!form.name || String(form.name).trim().length < 2)
-      errors.name = "Product name is required (min 2 characters).";
-    if (!form.category) errors.category = "Please choose a category.";
+      errors.name = "Product name required (min 2 chars)";
+    if (!form.category) errors.category = "Select a category";
     if (!form.price || Number(form.price) <= 0)
-      errors.price = "Enter a valid price.";
-    // optional: stock non-empty
+      errors.price = "Enter a valid price (> 0)";
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   }
 
-  // submit add/edit
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!validateForm()) return;
 
-    const cleaned = {
-      image: form.imageDataUrl || "",
-      name: form.name.trim(),
-      category: form.category,
-      priceLabel: form.priceLabel || `KSh ${form.price}`,
-      price: Number(form.price) || 0,
-      stock: form.stock || "0",
-      status: form.status || "In Stock",
-    };
+    const fd = new FormData();
+    fd.append("name", form.name.trim());
+    fd.append("category", form.category);
+    fd.append("priceLabel", form.priceLabel);
+    fd.append("price", String(form.price));
+    fd.append("stock", form.stock);
+    fd.append("status", form.status);
+    fd.append("description", form.description || "");
 
-    if (editingId) {
-      setProducts((prev) =>
-        prev.map((p) => (p.id === editingId ? { ...p, ...cleaned } : p))
-      );
-    } else {
-      // robust id generation
-      const id = Date.now() + Math.floor(Math.random() * 1000);
-      setProducts((prev) => [{ id, ...cleaned }, ...prev]);
+    if (form.file) fd.append("image", form.file);
+
+    try {
+      if (editingId) {
+        await updateProduct(editingId, fd);
+      } else {
+        await createProduct(fd);
+      }
+      await load();
+      setOpen(false);
+      resetForm();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save product. See console for details.");
     }
-
-    setOpen(false);
-    resetForm();
   }
 
-  // keyboard: close modal on Esc
-  useEffect(() => {
-    function onKey(e) {
-      if (e.key === "Escape" && open) {
-        setOpen(false);
-        resetForm();
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  // image URL resolver:
+  function resolveImageUrl(imagePath) {
+    if (!imagePath) return DEFAULT_PLACEHOLDER;
+    if (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
+      return imagePath;
+    // server returns something like "/uploads/xxxx.jpg"
+    if (API_BASE)
+      return `${API_BASE.replace(/\/$/, "")}${
+        imagePath.startsWith("/") ? imagePath : `/${imagePath}`
+      }`;
+    // fallback: try /uploads on current origin — this works if you proxied /uploads in vite.config
+    return `${window.location.origin}${
+      imagePath.startsWith("/") ? imagePath : `/${imagePath}`
+    }`;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
@@ -277,16 +248,13 @@ export default function VendorProductManagement() {
           <div>
             <h2 className="text-3xl font-bold">My Products</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Manage the items you sell. Upload real images and categorize
-              products.
+              Products are stored in the backend database. Upload real images.
             </p>
           </div>
 
           <button
-            onClick={handleAddOpen}
+            onClick={openAdd}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow"
-            aria-label="Add product"
-            title="Add product"
           >
             <Plus className="w-4 h-4" />
             <span>Add Product</span>
@@ -322,91 +290,329 @@ export default function VendorProductManagement() {
             </thead>
 
             <tbody>
-              {products.length === 0 && (
+              {loading && (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-gray-500">
-                    No products found. Click "Add Product" to create your first
-                    product.
+                  <td colSpan={7} className="p-8 text-center">
+                    Loading...
                   </td>
                 </tr>
               )}
 
-              {products.map((product, index) => (
-                <tr
-                  key={product.id}
-                  className={
-                    index !== products.length - 1
-                      ? "border-b border-gray-100"
-                      : ""
-                  }
-                >
-                  <td className="py-4 px-6">
-                    <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                      {product.image ? (
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="text-2xl">
-                          {/* fallback emoji or placeholder */}📦
-                        </div>
-                      )}
-                    </div>
-                  </td>
-
-                  <td className="py-4 px-6 text-sm text-gray-900">
-                    {product.name}
-                  </td>
-                  <td className="py-4 px-6 text-sm text-gray-600">
-                    {product.category}
-                  </td>
-                  <td className="py-4 px-6 text-sm text-gray-900">
-                    {product.priceLabel}
-                  </td>
-                  <td className="py-4 px-6 text-sm text-gray-900">
-                    {product.stock}
-                  </td>
-                  <td className="py-4 px-6">
-                    <span
-                      className={`px-3 py-1 rounded text-xs font-medium ${
-                        product.status === "In Stock"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {product.status}
-                    </span>
-                  </td>
-
-                  <td className="py-4 px-6">
-                    <div className="flex items-center space-x-3">
-                      <button
-                        onClick={() => handleEditOpen(product)}
-                        className="text-gray-600 hover:text-gray-900"
-                        aria-label={`Edit ${product.name}`}
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(product.id)}
-                        className="text-red-500 hover:text-red-700"
-                        aria-label={`Delete ${product.name}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+              {!loading && products.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center">
+                    No products yet.
                   </td>
                 </tr>
-              ))}
+              )}
+
+              {!loading &&
+                products.map((product, idx) => {
+                  const id = product._id || product.id;
+                  return (
+                    <tr
+                      key={id}
+                      className={
+                        idx !== products.length - 1
+                          ? "border-b border-gray-100"
+                          : ""
+                      }
+                    >
+                      <td className="py-4 px-6">
+                        <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden border">
+                          <img
+                            src={resolveImageUrl(
+                              product.imagePath || product.image || ""
+                            )}
+                            alt={product.name || "product"}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = DEFAULT_PLACEHOLDER;
+                            }}
+                          />
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-6 text-sm text-gray-900">
+                        {product.name}
+                      </td>
+                      <td className="py-4 px-6 text-sm text-gray-600">
+                        {product.category}
+                      </td>
+                      <td className="py-4 px-6 text-sm text-gray-900">
+                        {product.priceLabel}
+                      </td>
+                      <td className="py-4 px-6 text-sm text-gray-900">
+                        {product.stock}
+                      </td>
+                      <td className="py-4 px-6">
+                        <span
+                          className={`px-3 py-1 rounded text-xs font-medium ${
+                            product.status === "In Stock"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {product.status}
+                        </span>
+                      </td>
+
+                      <td className="py-4 px-6">
+                        <div className="flex items-center space-x-3">
+                          <button
+                            onClick={() => openEdit(product)}
+                            className="text-gray-600 hover:text-gray-900"
+                            aria-label={`Edit ${product.name}`}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(id)}
+                            className="text-red-500 hover:text-red-700"
+                            aria-label={`Delete ${product.name}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
         </div>
       </div>
 
+      {/* Modal (Add/Edit) */}
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 md:items-center">
+          <div
+            className="fixed inset-0 bg-black/40"
+            onClick={() => {
+              setOpen(false);
+              resetForm();
+            }}
+            aria-hidden
+          />
+
+          <form
+            onSubmit={handleSubmit}
+            className="relative z-10 w-full max-w-3xl bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">
+                {editingId ? "Edit Product" : "Add Product"}
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    resetForm();
+                  }}
+                  className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <X />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* left: image upload / drag/drop */}
+              <div className="md:col-span-1">
+                <label className="block text-sm font-medium mb-2">
+                  Product image
+                </label>
+
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={preventDefault}
+                  onDragEnter={preventDefault}
+                  onDragLeave={preventDefault}
+                  className="w-full aspect-[4/3] bg-gray-50 rounded-md overflow-hidden flex items-center justify-center mb-2 border border-dashed border-gray-200 hover:border-gray-300 cursor-pointer"
+                  onClick={() => fileInputRef.current?.click()}
+                  role="button"
+                  tabIndex={0}
+                >
+                  {form.imagePreview ? (
+                    <img
+                      src={form.imagePreview}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-center px-4">
+                      <div className="text-gray-400 mb-1">
+                        Drag & drop or click to browse
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        PNG, JPG, HEIC — max 5MB
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="sr-only"
+                />
+                {formErrors.image && (
+                  <div className="text-sm text-red-600 mt-1">
+                    {formErrors.image}
+                  </div>
+                )}
+                {form.imagePreview && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((s) => ({ ...s, file: null, imagePreview: "" }))
+                    }
+                    className="text-sm text-red-600 mt-2"
+                  >
+                    Remove image
+                  </button>
+                )}
+              </div>
+
+              {/* right: fields */}
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Product name
+                  </label>
+                  <input
+                    ref={firstInputRef}
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm((s) => ({ ...s, name: e.target.value }))
+                    }
+                    placeholder="E.g. Ripe tomatoes (sack)"
+                    className="w-full rounded-md border px-3 py-2"
+                    required
+                  />
+                  {formErrors.name && (
+                    <div className="text-sm text-red-600 mt-1">
+                      {formErrors.name}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={form.category}
+                    onChange={(e) =>
+                      setForm((s) => ({ ...s, category: e.target.value }))
+                    }
+                    className="w-full rounded-md border px-3 py-2"
+                    required
+                  >
+                    {vendorCategories?.map((c) => (
+                      <option key={c.label} value={c.label}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  {formErrors.category && (
+                    <div className="text-sm text-red-600 mt-1">
+                      {formErrors.category}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Price / Unit
+                  </label>
+                  <input
+                    value={form.priceLabel}
+                    onChange={(e) => handlePriceChange(e.target.value)}
+                    placeholder="KSh 120"
+                    className="w-full rounded-md border px-3 py-2"
+                    required
+                  />
+                  {formErrors.price && (
+                    <div className="text-sm text-red-600 mt-1">
+                      {formErrors.price}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Stock / Unit qty
+                  </label>
+                  <input
+                    value={form.stock}
+                    onChange={(e) =>
+                      setForm((s) => ({ ...s, stock: e.target.value }))
+                    }
+                    placeholder="E.g. 50 kg"
+                    className="w-full rounded-md border px-3 py-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={form.status}
+                    onChange={(e) =>
+                      setForm((s) => ({ ...s, status: e.target.value }))
+                    }
+                    className="w-full rounded-md border px-3 py-2"
+                  >
+                    <option>In Stock</option>
+                    <option>Out of Stock</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">
+                    Optional description
+                  </label>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm((s) => ({ ...s, description: e.target.value }))
+                    }
+                    className="w-full rounded-md border px-3 py-2"
+                    rows={3}
+                    placeholder="Short description for buyers (ripeness, packing, etc.)"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  resetForm();
+                }}
+                className="px-4 py-2 rounded-lg border"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-lg bg-emerald-600 text-white"
+              >
+                {editingId ? "Save Changes" : "Add Product"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
       {/* Footer */}
-      <Footer /> {/* 👈 The reusable Footer component is now used here */}
+      <Footer />
     </div>
   );
 }

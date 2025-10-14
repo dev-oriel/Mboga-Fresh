@@ -13,6 +13,7 @@
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
@@ -20,6 +21,7 @@
     "lucide-react": "^0.545.0",
     "mailtrap": "^4.3.0",
     "mongoose": "^8.19.0",
+    "multer": "^2.0.2",
     "react-router-dom": "^7.9.4"
   },
   "devDependencies": {
