@@ -56,7 +56,12 @@ export default function OrderManagement() {
       setOrders((prev) =>
         prev.map((o) =>
           o.id === order.id
-            ? { ...o, status: "QR Scanning", action: "Show QR Code", payment: "Escrow" }
+            ? {
+                ...o,
+                status: "QR Scanning",
+                action: "Show QR Code",
+                payment: "Escrow",
+              }
             : o
         )
       );
@@ -74,7 +79,12 @@ export default function OrderManagement() {
     setOrders((prev) =>
       prev.map((o) =>
         o.id === orderId
-          ? { ...o, status: "Delivered", action: "View Details", payment: "Paid" }
+          ? {
+              ...o,
+              status: "Delivered",
+              action: "View Details",
+              payment: "Paid",
+            }
           : o
       )
     );
@@ -89,10 +99,14 @@ export default function OrderManagement() {
   });
 
   const getTabCount = (tab) => {
-    if (tab === "new") return orders.filter((o) => o.status === "Pending").length;
-    if (tab === "qr") return orders.filter((o) => o.status === "QR Scanning").length;
-    if (tab === "delivery") return orders.filter((o) => o.status === "Confirmed").length;
-    if (tab === "completed") return orders.filter((o) => o.status === "Delivered").length;
+    if (tab === "new")
+      return orders.filter((o) => o.status === "Pending").length;
+    if (tab === "qr")
+      return orders.filter((o) => o.status === "QR Scanning").length;
+    if (tab === "delivery")
+      return orders.filter((o) => o.status === "Confirmed").length;
+    if (tab === "completed")
+      return orders.filter((o) => o.status === "Delivered").length;
     return 0;
   };
 
@@ -105,7 +119,9 @@ export default function OrderManagement() {
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Order Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Order Management
+          </h1>
           <p className="text-gray-600">
             Manage your incoming and ongoing orders, Mama Mboga.
           </p>
@@ -122,8 +138,18 @@ export default function OrderManagement() {
             }`}
           >
             <div className="flex items-center space-x-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
               </svg>
               <span>New Orders</span>
               <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -145,8 +171,18 @@ export default function OrderManagement() {
             }`}
           >
             <div className="flex items-center space-x-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4h5v5H4zM15 4h5v5h-5zM4 15h5v5H4zM15 15h5v5h-5z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4h5v5H4zM15 4h5v5h-5zM4 15h5v5H4zM15 15h5v5h-5z"
+                />
               </svg>
               <span>QR Scanning</span>
               <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -168,8 +204,18 @@ export default function OrderManagement() {
             }`}
           >
             <div className="flex items-center space-x-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9"
+                />
               </svg>
               <span>In Delivery</span>
               <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -191,8 +237,18 @@ export default function OrderManagement() {
             }`}
           >
             <div className="flex items-center space-x-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               <span>Completed</span>
               <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -233,12 +289,24 @@ export default function OrderManagement() {
             <tbody className="divide-y divide-gray-200">
               {filteredOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="py-4 px-6 text-sm text-gray-900 font-medium">{order.id}</td>
-                  <td className="py-4 px-6 text-sm text-gray-700">{order.buyer}</td>
-                  <td className="py-4 px-6 text-sm text-gray-700">{order.items}</td>
-                  <td className="py-4 px-6 text-sm text-gray-900 font-medium">{order.amount}</td>
+                  <td className="py-4 px-6 text-sm text-gray-900 font-medium">
+                    {order.id}
+                  </td>
+                  <td className="py-4 px-6 text-sm text-gray-700">
+                    {order.buyer}
+                  </td>
+                  <td className="py-4 px-6 text-sm text-gray-700">
+                    {order.items}
+                  </td>
+                  <td className="py-4 px-6 text-sm text-gray-900 font-medium">
+                    {order.amount}
+                  </td>
                   <td className="py-4 px-6">
-                    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
+                    <span
+                      className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                        order.status
+                      )}`}
+                    >
                       {order.status}
                     </span>
                   </td>
@@ -256,7 +324,9 @@ export default function OrderManagement() {
                     {activeTab !== "delivery" && (
                       <button
                         onClick={() => handleAction(order)}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${getActionButton(order.action)}`}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${getActionButton(
+                          order.action
+                        )}`}
                       >
                         {order.action}
                       </button>
@@ -277,15 +347,15 @@ export default function OrderManagement() {
               Customer Scan Code
             </h2>
             <p className="text-gray-600 text-sm mb-6 text-center">
-              Show this QR code to the customer to scan
+              Show this QR code to the Rider to scan
             </p>
             <div className="flex justify-center mb-6 bg-white p-4 rounded">
-              <QRCodeCanvas 
+              <QRCodeCanvas
                 value={JSON.stringify({
                   orderId: qrCodeOrder.id,
                   buyer: qrCodeOrder.buyer,
                   amount: qrCodeOrder.amount,
-                  timestamp: Date.now()
+                  timestamp: Date.now(),
                 })}
                 size={256}
                 level="H"
@@ -293,8 +363,12 @@ export default function OrderManagement() {
               />
             </div>
             <div className="text-center mb-4">
-              <p className="text-sm font-medium text-gray-700">Order: {qrCodeOrder.id}</p>
-              <p className="text-sm text-gray-600">Buyer: {qrCodeOrder.buyer}</p>
+              <p className="text-sm font-medium text-gray-700">
+                Order: {qrCodeOrder.id}
+              </p>
+              <p className="text-sm text-gray-600">
+                Buyer: {qrCodeOrder.buyer}
+              </p>
             </div>
             <div className="flex gap-2">
               <button
@@ -322,13 +396,25 @@ export default function OrderManagement() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-start mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">Order Details</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Order Details
+              </h2>
               <button
                 onClick={() => setSelectedOrder(null)}
                 className="text-gray-400 hover:text-gray-600"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -337,37 +423,55 @@ export default function OrderManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Order ID</p>
-                  <p className="text-lg font-semibold text-gray-900">{selectedOrder.id}</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {selectedOrder.id}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Buyer</p>
-                  <p className="text-lg font-semibold text-gray-900">{selectedOrder.buyer}</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {selectedOrder.buyer}
+                  </p>
                 </div>
               </div>
 
               <div>
                 <p className="text-sm text-gray-500">Items</p>
-                <p className="text-lg font-semibold text-gray-900">{selectedOrder.items}</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {selectedOrder.items}
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Total Amount</p>
-                  <p className="text-lg font-semibold text-gray-900">{selectedOrder.amount}</p>
+                  <p className="text-lg font-semibold text-gray-900">
+                    {selectedOrder.amount}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Payment Status</p>
-                  <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getPaymentColor(
-                    selectedOrder.status === "Delivered" ? "Paid" : selectedOrder.payment
-                  )}`}>
-                    {selectedOrder.status === "Delivered" ? "Paid" : selectedOrder.payment}
+                  <span
+                    className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getPaymentColor(
+                      selectedOrder.status === "Delivered"
+                        ? "Paid"
+                        : selectedOrder.payment
+                    )}`}
+                  >
+                    {selectedOrder.status === "Delivered"
+                      ? "Paid"
+                      : selectedOrder.payment}
                   </span>
                 </div>
               </div>
 
               <div>
                 <p className="text-sm text-gray-500">Order Status</p>
-                <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedOrder.status)}`}>
+                <span
+                  className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                    selectedOrder.status
+                  )}`}
+                >
                   {selectedOrder.status}
                 </span>
               </div>

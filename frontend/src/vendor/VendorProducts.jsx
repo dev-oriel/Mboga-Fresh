@@ -241,14 +241,14 @@ export default function VendorProductManagement() {
         avatarUrl="https://via.placeholder.com/150"
         userName="Daniel Mutuku"
       />
-
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-3xl font-bold">My Products</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Products are stored in the backend database. Upload real images.
+              Manage your products here, Upload good images amd provide good
+              description.
             </p>
           </div>
 
@@ -382,7 +382,6 @@ export default function VendorProductManagement() {
           </table>
         </div>
       </div>
-
       {/* Modal (Add/Edit) */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 md:items-center">
@@ -611,8 +610,6 @@ export default function VendorProductManagement() {
           </form>
         </div>
       )}
-      {/* Footer */}
-      <Footer />
     </div>
   );
 }
