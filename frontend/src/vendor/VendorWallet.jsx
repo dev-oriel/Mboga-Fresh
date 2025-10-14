@@ -1,62 +1,39 @@
+// vendor/VendorWallet.jsx
 import React, { useState } from "react";
 import Header from "../components/vendorComponents/Header";
-import Footer from "../components/vendorComponents/Footer"; // 👈 Imported the reusable footer component
+import Footer from "../components/vendorComponents/Footer";
+import { useVendorData } from "../context/VendorDataContext";
 
-// Single-file React component for the "Wallet & Payments" page.
-// Designed for Tailwind CSS (v2+ / v3+). Paste into your project as a page/component.
-
-function vendorwalletandpayments() {
+function VendorWallet() {
   const [mpesa, setMpesa] = useState("254712345678");
   const [amount, setAmount] = useState("");
-  const [balance] = useState({
-    escrow: 12500,
-    available: 8750,
-    earnings: 21250,
-  });
+  const { balances, transactions, handleWithdraw } = useVendorData();
 
-  const transactions = [
-    {
-      date: "2024-07-26",
-      id: "ORD-20240726-001",
-      desc: "Sale of Sukuma Wiki",
-      amount: 5000,
-      status: "Released",
-    },
-    {
-      date: "2024-07-25",
-      id: "ORD-20240725-002",
-      desc: "Sale of Tomatoes",
-      amount: 3750,
-      status: "Released",
-    },
-    {
-      date: "2024-07-24",
-      id: "ORD-20240724-003",
-      desc: "Sale of Cabbages",
-      amount: 7500,
-      status: "Released",
-    },
-    {
-      date: "2024-07-23",
-      id: "WTH-20240723-001",
-      desc: "Withdrawal to M-Pesa",
-      amount: -2500,
-      status: "Completed",
-    },
-    {
-      date: "2024-07-22",
-      id: "DEP-20240722-001",
-      desc: "Float Deposit",
-      amount: 2500,
-      status: "Processed",
-    },
-  ];
-
-  function handleWithdraw(e) {
+  function handleWithdrawSubmit(e) {
     e.preventDefault();
-    if (!amount) return alert("Enter an amount to withdraw");
-    alert(`Withdrawing Ksh ${amount} to ${mpesa}`);
-    setAmount("");
+    if (!amount) {
+      alert("Enter an amount to withdraw");
+      return;
+    }
+
+    const withdrawAmount = parseFloat(amount);
+    if (isNaN(withdrawAmount) || withdrawAmount <= 0) {
+      alert("Please enter a valid amount");
+      return;
+    }
+
+    if (withdrawAmount > balances.available) {
+      alert("Insufficient funds");
+      return;
+    }
+
+    const success = handleWithdraw(withdrawAmount, mpesa);
+    if (success) {
+      alert(`Withdrawing Ksh ${withdrawAmount.toLocaleString()} to ${mpesa}`);
+      setAmount("");
+    } else {
+      alert("Withdrawal failed. Please try again.");
+    }
   }
 
   return (
@@ -77,21 +54,21 @@ function vendorwalletandpayments() {
               <div className="bg-white rounded-lg p-6 shadow-sm flex flex-col">
                 <div className="text-xs text-gray-500">Funds in Escrow</div>
                 <div className="mt-4 text-2xl font-bold">
-                  Ksh {balance.escrow.toLocaleString()}
+                  Ksh {balances.escrow.toLocaleString()}
                 </div>
               </div>
 
               <div className="bg-white rounded-lg p-6 shadow-sm flex flex-col">
                 <div className="text-xs text-gray-500">Available Balance</div>
                 <div className="mt-4 text-2xl font-bold">
-                  Ksh {balance.available.toLocaleString()}
+                  Ksh {balances.available.toLocaleString()}
                 </div>
               </div>
 
               <div className="bg-white rounded-lg p-6 shadow-sm flex flex-col">
                 <div className="text-xs text-gray-500">Total Earnings</div>
                 <div className="mt-4 text-2xl font-bold">
-                  Ksh {balance.earnings.toLocaleString()}
+                  Ksh {balances.earnings.toLocaleString()}
                 </div>
               </div>
             </div>
@@ -151,7 +128,7 @@ function vendorwalletandpayments() {
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
               <h4 className="font-semibold text-lg mb-4">Withdraw Funds</h4>
 
-              <form onSubmit={handleWithdraw} className="space-y-4">
+              <form onSubmit={handleWithdrawSubmit} className="space-y-4">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">
                     M-Pesa Number
@@ -168,14 +145,23 @@ function vendorwalletandpayments() {
                     Amount
                   </label>
                   <input
+                    type="number"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="e.g., 5000"
                     className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
+                    max={balances.available}
                   />
+                  <div className="text-xs text-gray-500 mt-1">
+                    Available: Ksh {balances.available.toLocaleString()}
+                  </div>
                 </div>
 
-                <button className="w-full bg-green-500 hover:bg-green-600 text-white rounded-md py-2 font-medium">
+                <button 
+                  type="submit"
+                  className="w-full bg-green-500 hover:bg-green-600 text-white rounded-md py-2 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  disabled={!amount || parseFloat(amount) <= 0 || parseFloat(amount) > balances.available}
+                >
                   Withdraw Now
                 </button>
 
@@ -195,4 +181,4 @@ function vendorwalletandpayments() {
   );
 }
 
-export default vendorwalletandpayments;
+export default VendorWallet;

@@ -1,6 +1,8 @@
+// App.jsx
 import React from "react";
 import { Route, Routes } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
+import { VendorDataProvider } from "./context/VendorDataContext";
 
 // Signup pages
 import VendorSignup from "./signup/VendorSignup";
@@ -39,41 +41,43 @@ import RiderProfile from "./rider/RiderProfileSettings.jsx";
 function App() {
   return ( 
     <CartProvider>
-      <div>
-        <Routes>
-          {/* General routes */}
-          <Route path="/" element={<Home />} />
-          <Route path="/signup/vendor" element={<VendorSignup />} />
-          <Route path="/signup/farmer" element={<FarmerSignUp />} />
-          <Route path="/signup/rider" element={<RiderSignup />} />
-          <Route path="/signup/buyer" element={<BuyerSignup />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/marketplace" element={<Marketplace />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/help" element={<Help />} />
-          <Route path="/product/:id" element={<ProductDetails />} />
-          <Route path="/cart" element={<ShoppingCart />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/profile" element={<BuyerProfile />} />
-          <Route path="/order-placed" element={<OrderPlaced />} />
-          <Route path="/category/:id" element={<CategoryPage />} />
-          <Route path="/vendor/:id" element={<VendorPage />} />
+      <VendorDataProvider>
+        <div>
+          <Routes>
+            {/* General routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/signup/vendor" element={<VendorSignup />} />
+            <Route path="/signup/farmer" element={<FarmerSignUp />} />
+            <Route path="/signup/rider" element={<RiderSignup />} />
+            <Route path="/signup/buyer" element={<BuyerSignup />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/help" element={<Help />} />
+            <Route path="/product/:id" element={<ProductDetails />} />
+            <Route path="/cart" element={<ShoppingCart />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/profile" element={<BuyerProfile />} />
+            <Route path="/order-placed" element={<OrderPlaced />} />
+            <Route path="/category/:id" element={<CategoryPage />} />
+            <Route path="/vendor/:id" element={<VendorPage />} />
+            <Route path="/vendorprofile" element={<Vendorprofile />} />
 
-          {/* Vendor routes */}
-          <Route path="/vendordashboard" element={<VendorDashboard />} />
-          <Route path="/ordermanagement" element={<OrderManagement />} />
-          <Route path="/vendorproducts" element={<VendorProducts />} />
-          <Route path="/farmily" element={<Farmily />} />
-          <Route path="/vendorwallet" element={<VendorWallet />} />
-          <Route path="/vendorprofile" element={<Vendorprofile />} />
+            {/* Vendor routes */}
+            <Route path="/vendordashboard" element={<VendorDashboard />} />
+            <Route path="/ordermanagement" element={<OrderManagement />} />
+            <Route path="/vendorproducts" element={<VendorProducts />} />
+            <Route path="/farmily" element={<Farmily />} />
+            <Route path="/vendorwallet" element={<VendorWallet />} />
 
-          {/* Rider routes */}
-          <Route path="/riderdashboard" element={<RiderDashboard />} />
-          <Route path="/riderdeliveryqueue" element={<RiderDeliveryQueue />} />
-          <Route path="/riderhelp" element={<RiderHelpPage />} />
-          <Route path="/riderprofile" element={<RiderProfile />} />
-        </Routes>
-      </div>
+            {/* Rider routes */}
+            <Route path="/riderdashboard" element={<RiderDashboard />} />
+            <Route path="/riderdeliveryqueue" element={<RiderDeliveryQueue />} />
+            <Route path="/riderhelp" element={<RiderHelpPage />} />
+            <Route path="/riderprofile" element={<RiderProfile />} />
+          </Routes>
+        </div>
+      </VendorDataProvider>
     </CartProvider>
   );
 }
