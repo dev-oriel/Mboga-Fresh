@@ -1,18 +1,15 @@
-// src/pages/RiderDeliveryDetail.jsx
-
 import React from 'react';
-// Import the existing RiderHeader component
+import { useParams } from 'react-router-dom'; // Add this import
 import Header from '../components/riderComponents/RiderHeader';
-// Import the new QRCodeScanner component
 import QRCodeScanner from '../components/riderComponents/QRCodeScanner';
 
 const RiderDeliveryDetail = () => {
-  // Define a variable for the active order ID
-  const activeOrderId = '12345'; 
+  // Get the order ID from URL parameters instead of hardcoding
+  const { orderId } = useParams(); 
 
   const pageContainerStyle = {
     minHeight: '100vh',
-    backgroundColor: '#f5f5f5', // Light background for the overall page
+    backgroundColor: '#f5f5f5',
   };
 
   const titleBarStyle = {
@@ -26,18 +23,17 @@ const RiderDeliveryDetail = () => {
 
   return (
     <div style={pageContainerStyle}>
-      {/* 1. Page Title Bar */}
+      {/* 1. Page Title Bar - Show dynamic order ID */}
       <div style={titleBarStyle}>
-        Rider Delivery Detail
+        Delivery Details - Order #{orderId}
       </div>
 
-      {/* 2. Navigation Header (Mboga Fresh, Dashboard, Orders, etc.) */}
+      {/* 2. Navigation Header */}
       <Header />
 
-      {/* 3. Main Content Area */}
+      {/* 3. Main Content Area - Pass dynamic orderId */}
       <main>
-        {/* Pass the active order ID to the scanner component */}
-        <QRCodeScanner orderId={activeOrderId} />
+        <QRCodeScanner orderId={orderId} />
       </main>
     </div>
   );
