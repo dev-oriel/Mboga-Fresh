@@ -1,6 +1,8 @@
+// App.jsx
 import React from "react";
 import { Route, Routes } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
+import { VendorDataProvider } from "./context/VendorDataContext";
 
 // Signup pages
 import VendorSignup from "./signup/VendorSignup";
@@ -41,33 +43,34 @@ import RiderDeliveryDetail from "./rider/RiderDeliveryDetail.jsx"
 function App() {
   return ( 
     <CartProvider>
-      <div>
-        <Routes>
-          {/* General routes */}
-          <Route path="/" element={<Home />} />
-          <Route path="/signup/vendor" element={<VendorSignup />} />
-          <Route path="/signup/farmer" element={<FarmerSignUp />} />
-          <Route path="/signup/rider" element={<RiderSignup />} />
-          <Route path="/signup/buyer" element={<BuyerSignup />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/marketplace" element={<Marketplace />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/help" element={<Help />} />
-          <Route path="/product/:id" element={<ProductDetails />} />
-          <Route path="/cart" element={<ShoppingCart />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/profile" element={<BuyerProfile />} />
-          <Route path="/order-placed" element={<OrderPlaced />} />
-          <Route path="/category/:id" element={<CategoryPage />} />
-          <Route path="/vendor/:id" element={<VendorPage />} />
+      <VendorDataProvider>
+        <div>
+          <Routes>
+            {/* General routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/signup/vendor" element={<VendorSignup />} />
+            <Route path="/signup/farmer" element={<FarmerSignUp />} />
+            <Route path="/signup/rider" element={<RiderSignup />} />
+            <Route path="/signup/buyer" element={<BuyerSignup />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/help" element={<Help />} />
+            <Route path="/product/:id" element={<ProductDetails />} />
+            <Route path="/cart" element={<ShoppingCart />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/profile" element={<BuyerProfile />} />
+            <Route path="/order-placed" element={<OrderPlaced />} />
+            <Route path="/category/:id" element={<CategoryPage />} />
+            <Route path="/vendor/:id" element={<VendorPage />} />
+            <Route path="/vendorprofile" element={<Vendorprofile />} />
 
-          {/* Vendor routes */}
-          <Route path="/vendordashboard" element={<VendorDashboard />} />
-          <Route path="/ordermanagement" element={<OrderManagement />} />
-          <Route path="/vendorproducts" element={<VendorProducts />} />
-          <Route path="/farmily" element={<Farmily />} />
-          <Route path="/vendorwallet" element={<VendorWallet />} />
-          <Route path="/vendorprofile" element={<Vendorprofile />} />
+            {/* Vendor routes */}
+            <Route path="/vendordashboard" element={<VendorDashboard />} />
+            <Route path="/ordermanagement" element={<OrderManagement />} />
+            <Route path="/vendorproducts" element={<VendorProducts />} />
+            <Route path="/farmily" element={<Farmily />} />
+            <Route path="/vendorwallet" element={<VendorWallet />} />
 
           {/* Rider routes */}
           <Route path="/riderdashboard" element={<RiderDashboard />} />
@@ -76,8 +79,10 @@ function App() {
           <Route path="/riderprofile" element={<RiderProfile />} />
           <Route path="/riderearnings" element={<RiderEarningsAndHistory />} />
           <Route path="/riderdelivery/:orderid" element={<RiderDeliveryDetail/>}/>
-        </Routes>
-      </div>
+            
+          </Routes>
+        </div>
+      </VendorDataProvider>
     </CartProvider>
   );
 }
