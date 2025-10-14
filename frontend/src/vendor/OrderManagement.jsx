@@ -72,7 +72,8 @@ export default function OrderManagement() {
 
   // 🔹 Count for each tab
   const getTabCount = (tab) => {
-    if (tab === "new") return orders.filter((o) => o.status === "Pending").length;
+    if (tab === "new")
+      return orders.filter((o) => o.status === "Pending").length;
     if (tab === "delivery")
       return orders.filter((o) => o.status === "Confirmed").length;
     if (tab === "completed")
