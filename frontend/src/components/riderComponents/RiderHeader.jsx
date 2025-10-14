@@ -1,6 +1,23 @@
 import React from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
-const Header = ({ userAvatarUrl = "" }) => {
+const RiderHeader = ({ userAvatarUrl = "" }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Function to check if a path is active
+  const isActive = (path) => {
+    return location.pathname === path;
+  };
+
+  // Navigation items with icons
+  const navItems = [
+    { label: "Dashboard", path: "/riderdashboard", icon: "dashboard" },
+    { label: "Orders", path: "/riderdeliveryqueue", icon: "local_shipping" },
+    { label: "Earnings", path: "/riderearnings", icon: "payments" }, // Changed from /vendorwallet to /riderearnings
+    { label: "Help", path: "/riderhelp", icon: "help" },
+  ];
+
   return (
     <header className="flex items-center justify-between whitespace-nowrap border-b border-green-200 px-6 py-4 bg-white dark:bg-gray-900">
       <div className="flex items-center gap-4 text-green-600">
@@ -22,34 +39,53 @@ const Header = ({ userAvatarUrl = "" }) => {
         </h2>
       </div>
 
-      <nav className="hidden md:flex items-center gap-6 text-base font-medium text-gray-700 dark:text-gray-300">
-        <a className="text-green-600" href="#">
-          Dashboard
-        </a>
-        <a className="hover:text-green-600 transition-colors" href="#">
-          Orders
-        </a>
-        <a className="hover:text-green-600 transition-colors" href="#">
-          Earnings
-        </a>
-        <a className="hover:text-green-600 transition-colors" href="#">
-          Help
-        </a>
+      <nav className="hidden md:flex items-center gap-3">
+        {navItems.map((item) => (
+          <button 
+            key={item.path}
+            onClick={() => navigate(item.path)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+              isActive(item.path) 
+                ? 'text-green-700 bg-green-100 dark:bg-green-700/20 dark:text-green-300' 
+                : 'text-gray-700 hover:text-green-600 dark:text-gray-200 dark:hover:text-green-300'
+            }`}
+          >
+            {item.icon === "dashboard" ? (
+              // Custom symmetrical dashboard icon
+              <svg 
+                className="w-5 h-5" 
+                fill="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+            ) : (
+              <span className="material-symbols-outlined text-lg">
+                {item.icon}
+              </span>
+            )}
+            <span className="text-sm font-medium">{item.label}</span>
+          </button>
+        ))}
       </nav>
 
       <div className="flex items-center justify-end">
-        <div
-          className="w-10 h-10 rounded-full bg-center bg-cover"
+        <button 
+          onClick={() => navigate('/riderprofile')}
+          className="w-10 h-10 rounded-full bg-center bg-cover hover:opacity-80 transition-opacity"
           style={{
             backgroundImage: `url("${
               userAvatarUrl || "https://via.placeholder.com/150"
             }")`,
           }}
-          aria-hidden="true"
+          aria-label="Profile settings"
         />
       </div>
     </header>
   );
 };
 
-export default Header;
+export default RiderHeader;

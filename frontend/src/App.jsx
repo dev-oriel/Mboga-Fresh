@@ -37,6 +37,8 @@ import RiderDashboard from "./rider/RiderDashboard.jsx";
 import RiderDeliveryQueue from "./rider/RiderDeliveryQueue.jsx";
 import RiderHelpPage from "./rider/RiderHelpPage.jsx";
 import RiderProfile from "./rider/RiderProfileSettings.jsx";
+import RiderEarningsAndHistory from "./rider/RiderEarningsAndHistory.jsx";
+import RiderDeliveryDetail from "./rider/RiderDeliveryDetail.jsx"
 
 function App() {
   return ( 
@@ -70,11 +72,14 @@ function App() {
             <Route path="/farmily" element={<Farmily />} />
             <Route path="/vendorwallet" element={<VendorWallet />} />
 
-            {/* Rider routes */}
-            <Route path="/riderdashboard" element={<RiderDashboard />} />
-            <Route path="/riderdeliveryqueue" element={<RiderDeliveryQueue />} />
-            <Route path="/riderhelp" element={<RiderHelpPage />} />
-            <Route path="/riderprofile" element={<RiderProfile />} />
+          {/* Rider routes */}
+          <Route path="/riderdashboard" element={<RiderDashboard />} />
+          <Route path="/riderdeliveryqueue" element={<RiderDeliveryQueue />} />
+          <Route path="/riderhelp" element={<RiderHelpPage />} />
+          <Route path="/riderprofile" element={<RiderProfile />} />
+          <Route path="/riderearnings" element={<RiderEarningsAndHistory />} />
+          <Route path="/riderdelivery/:orderid" element={<RiderDeliveryDetail/>}/>
+            
           </Routes>
         </div>
       </VendorDataProvider>

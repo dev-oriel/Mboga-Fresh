@@ -1,10 +1,12 @@
 import StatsCard from "../components/riderComponents/StatsCard";
 import RecentDeliveriesTable from "../components/riderComponents/RecentDeliveriesTable";
 import RiderHeader from "../components/riderComponents/RiderHeader";
-
 import { sampleDeliveries } from "../constants/index";
+import { useNavigate } from "react-router-dom"; // Add this import
 
 const RiderDashboard = () => {
+  const navigate = useNavigate(); // Add this hook
+
   // NOTE: data is currently static. Replace with props or fetch from an API later.
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100">
@@ -22,7 +24,12 @@ const RiderDashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-            <StatsCard label="Active Deliveries" value="3" />
+            <StatsCard 
+              label="Active Deliveries" 
+              value="3" 
+              onClick={() => navigate('/riderdeliveryqueue')} // Add click handler
+              clickable={true} // Add this prop
+            />
             <StatsCard label="Total Earnings" value="Ksh 1,500" />
             <StatsCard label="Distance Covered" value="25 km" />
             <StatsCard
@@ -43,9 +50,18 @@ const RiderDashboard = () => {
           </div>
 
           <div className="flex flex-col gap-4">
-            <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-              Recent Deliveries
-            </h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+                Recent Deliveries
+              </h2>
+              {/* Add View All Orders Button */}
+              <button 
+                onClick={() => navigate('/riderdeliveryqueue')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                View All Orders
+              </button>
+            </div>
             <RecentDeliveriesTable deliveries={sampleDeliveries} />
           </div>
         </div>
