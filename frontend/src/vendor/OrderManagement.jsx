@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { orders as initialOrders } from "../constants";
 import Header from "../components/vendorComponents/Header";
+import Footer from "../components/vendorComponents/Footer"; 
 
 export default function OrderManagement() {
   const [activeTab, setActiveTab] = useState("new");
@@ -368,6 +369,7 @@ export default function OrderManagement() {
           </div>
         </div>
       )}
+      <Footer /> {/* Footer integration */}
     </div>
   );
 }

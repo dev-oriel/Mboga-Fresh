@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 
 import Header from "../components/vendorComponents/Header";
+import Footer from "../components/vendorComponents/Footer"; 
+
 
 export default function FreshHarvestProfile() {
   const [activeSection, setActiveSection] = useState("store");
@@ -447,6 +449,9 @@ export default function FreshHarvestProfile() {
           </section>
         </div>
       </main>
+
+      {/* Footer */}
+      <Footer />
 
       {/* modal image */}
       {modalImage && (

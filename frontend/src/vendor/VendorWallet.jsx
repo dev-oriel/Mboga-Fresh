@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Header from "../components/vendorComponents/Header";
+import Footer from "../components/vendorComponents/Footer"; // 👈 Imported the reusable footer component
 
 // Single-file React component for the "Wallet & Payments" page.
 // Designed for Tailwind CSS (v2+ / v3+). Paste into your project as a page/component.
@@ -187,19 +188,9 @@ function vendorwalletandpayments() {
             </div>
           </aside>
         </div>
-
-        <footer className="mt-10 text-sm text-gray-500 flex justify-between">
-          <div>© 2024 Mboga Fresh. All rights reserved.</div>
-          <div className="space-x-4">
-            <a className="hover:underline" href="#">
-              Terms of Service
-            </a>
-            <a className="hover:underline" href="#">
-              Privacy Policy
-            </a>
-          </div>
-        </footer>
       </main>
+
+      <Footer />
     </div>
   );
 }
