@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+
 // Importing Lucide icons for a cleaner UI
 import { CheckCircle, DollarSign, Package, AlertTriangle, X, Clock, Plus, ClipboardList, Trash2 } from "lucide-react";
 import Header from "../components/vendorComponents/Header";
+import Footer from "../components/vendorComponents/Footer"; // 👈 New import for the reusable footer component
 
 // --- DUMMY DATA FOR DEMONSTRATION ---
 const DUMMY_DASHBOARD_DATA = {
@@ -82,7 +84,7 @@ const VendorDashboard = () => {
   };
 
   // --- QUICK ACTIONS ---
-  const handleAddProduct = () => navigate("/vendorproducts"); 
+  const handleAddProduct = () => navigate("/vendorproducts");
   const handleViewOrders = () => navigate("/ordermanagement");
 
   // Functional: Handles the simulated withdrawal of funds
@@ -115,28 +117,28 @@ const VendorDashboard = () => {
   }, [dashboardData.earningsReleased, setDashboardData, setNotifications]);
 
   // --- NOTIFICATION HANDLERS ---
-  
+
   // Functional: Marks a notification as read
   const markNotificationAsRead = (id) => {
     setNotifications(
       notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n))
     );
   };
-  
+
   // Functional: Deletes all notifications that have been marked as read
   const handleDeleteReadNotifications = () => {
-      const readCount = notifications.filter(n => n.isRead).length;
-      if (readCount === 0) return;
+    const readCount = notifications.filter(n => n.isRead).length;
+    if (readCount === 0) return;
 
-      const confirmed = window.confirm(`Are you sure you want to delete ${readCount} read notification(s)?`);
-      
-      if (!confirmed) return;
-      
-      // Filter the current list, keeping only notifications where isRead is false
-      const unreadNotifications = notifications.filter(n => !n.isRead);
-      
-      // Update the state with the filtered list
-      setNotifications(unreadNotifications);
+    const confirmed = window.confirm(`Are you sure you want to delete ${readCount} read notification(s)?`);
+
+    if (!confirmed) return;
+
+    // Filter the current list, keeping only notifications where isRead is false
+    const unreadNotifications = notifications.filter(n => !n.isRead);
+
+    // Update the state with the filtered list
+    setNotifications(unreadNotifications);
   };
 
   return (
@@ -182,7 +184,7 @@ const VendorDashboard = () => {
             Loading dashboard data...
           </div>
         )}
-        
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {[
@@ -246,8 +248,8 @@ const VendorDashboard = () => {
               disabled={dashboardData.earningsReleased <= 0}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium shadow-sm transition transform hover:scale-105 ${
                 dashboardData.earningsReleased > 0
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
               }`}
             >
               <DollarSign className="w-5 h-5" />
@@ -263,85 +265,89 @@ const VendorDashboard = () => {
               Recent Notifications
             </h2>
             <div className="flex items-center space-x-4">
-                {/* Delete All Read Notifications Button */}
-                <button
-                    onClick={handleDeleteReadNotifications}
-                    className="flex items-center space-x-1 text-sm font-medium text-red-500 hover:text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed transition"
-                    disabled={notifications.filter(n => n.isRead).length === 0}
-                    title="Delete all read notifications"
-                >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Delete Read</span>
-                </button>
-                <span className="text-sm text-gray-500">
-                    {notifications.filter((n) => !n.isRead).length} unread
-                </span>
+              {/* Delete All Read Notifications Button */}
+              <button
+                onClick={handleDeleteReadNotifications}
+                className="flex items-center space-x-1 text-sm font-medium text-red-500 hover:text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed transition"
+                disabled={notifications.filter(n => n.isRead).length === 0}
+                title="Delete all read notifications"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete Read</span>
+              </button>
+              <span className="text-sm text-gray-500">
+                {notifications.filter((n) => !n.isRead).length} unread
+              </span>
             </div>
           </div>
           <div className="space-y-4">
             {notifications.length === 0 ? (
-                <div className="text-gray-500 p-6 bg-white rounded-lg text-center border">
-                    All caught up! No notifications to display.
-                </div>
+              <div className="text-gray-500 p-6 bg-white rounded-lg text-center border">
+                All caught up! No notifications to display.
+              </div>
             ) : (
-                notifications.map((notification) => (
-                    <div
-                        key={notification.id}
-                        className={`bg-white rounded-lg p-4 shadow-sm border border-gray-200 flex items-start space-x-4 transition ${
-                        notification.isRead 
-                            ? "opacity-70 border-l-4 border-l-gray-300" 
-                            : "border-l-4 border-l-green-600 hover:shadow-lg"
-                        }`}
-                    >
-                        {/* Icon Container */}
-                        <div
-                            className={`w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0 ${
-                                notification.isRead ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-600'
-                            }`}
-                        >
-                            {notification.icon}
-                        </div>
+              notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`bg-white rounded-lg p-4 shadow-sm border border-gray-200 flex items-start space-x-4 transition ${
+                    notification.isRead
+                      ? "opacity-70 border-l-4 border-l-gray-300"
+                      : "border-l-4 border-l-green-600 hover:shadow-lg"
+                  }`}
+                >
+                  {/* Icon Container */}
+                  <div
+                    className={`w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0 ${
+                      notification.isRead ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-600'
+                    }`}
+                  >
+                    {notification.icon}
+                  </div>
 
-                        <div className="flex-1">
-                        <div className="flex items-start justify-between">
-                            <h3
-                            className={`font-semibold ${
-                                notification.isRead ? "text-gray-600" : "text-gray-900"
-                            }`}
-                            >
-                            {notification.title}
-                            </h3>
-                        </div>
-                        <p
-                            className={`text-sm mt-1 ${
-                            notification.isRead ? "text-gray-500" : "text-gray-600"
-                            }`}
-                        >
-                            {notification.message}
-                        </p>
-                        </div>
-                        
-                        {/* Mark as Read / Read Status */}
-                        {!notification.isRead ? (
-                            <button
-                                onClick={() => markNotificationAsRead(notification.id)}
-                                className="text-xs font-semibold text-green-600 hover:text-green-800 ml-4 flex items-center space-x-1 flex-shrink-0"
-                                title="Mark as Read"
-                            >
-                                <CheckCircle className="w-4 h-4" />
-                                <span>Mark Read</span>
-                            </button>
-                        ) : (
-                            <X className="w-4 h-4 text-gray-400 ml-4 flex-shrink-0" title="Dismissed" />
-                        )}
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between">
+                      <h3
+                        className={`font-semibold ${
+                          notification.isRead ? "text-gray-600" : "text-gray-900"
+                        }`}
+                      >
+                        {notification.title}
+                      </h3>
                     </div>
-                ))
+                    <p
+                      className={`text-sm mt-1 ${
+                        notification.isRead ? "text-gray-500" : "text-gray-600"
+                      }`}
+                    >
+                      {notification.message}
+                    </p>
+                  </div>
+
+                  {/* Mark as Read / Read Status */}
+                  {!notification.isRead ? (
+                    <button
+                      onClick={() => markNotificationAsRead(notification.id)}
+                      className="text-xs font-semibold text-green-600 hover:text-green-800 ml-4 flex items-center space-x-1 flex-shrink-0"
+                      title="Mark as Read"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Mark Read</span>
+                    </button>
+                  ) : (
+                    <X className="w-4 h-4 text-gray-400 ml-4 flex-shrink-0" title="Dismissed" />
+                  )}
+                </div>
+              ))
             )}
           </div>
         </div>
       </main>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };
 
 export default VendorDashboard;
+

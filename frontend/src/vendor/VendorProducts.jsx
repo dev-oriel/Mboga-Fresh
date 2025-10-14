@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Edit2, Trash2, Plus } from "lucide-react";
 import Header from "../components/vendorComponents/Header";
+import Footer from "../components/vendorComponents/Footer"; // New import for the reusable footer component
 
 export default function VendorProductManagement() {
   const [products, setProducts] = useState([
@@ -58,7 +59,6 @@ export default function VendorProductManagement() {
         avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDeL7radWSj-FEteEjqLpufXII3-tc_o7GMvLvB07AaD_bYBkfAcIOnNbOXkTdMOHRgJQwLZE-Z_iw72Bd8bpHzfXP_m0pIvteSw7FKZ1qV9GD1KfgyDVG90bCO7OGe6JyYIkm9DBo2ArC60uEqSfDvnnYWeo6IqVEjWxsVX6dUoxjm9ozyVlriiMdVLc_jU9ZxS01QcxNa8hn-ePNbB6IcXSwExf2U61R-epab8nsOkbq95E7z6b-fH4zOt0j2MPt20nrqtPM1NHI"
         userName="Daniel Mutuku"
       />
-
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
@@ -155,25 +155,7 @@ export default function VendorProductManagement() {
       </div>
 
       {/* Footer */}
-      <div className="max-w-7xl mx-auto px-6 py-6 mt-12">
-        <div className="flex items-center justify-between text-sm text-gray-600">
-          <div>© 2024 Mboga Fresh. All rights reserved.</div>
-          <div className="flex items-center space-x-6">
-            <a href="#" className="hover:text-gray-900">
-              About
-            </a>
-            <a href="#" className="hover:text-gray-900">
-              Contact
-            </a>
-            <a href="#" className="hover:text-gray-900">
-              Terms of Service
-            </a>
-            <a href="#" className="hover:text-gray-900">
-              Privacy Policy
-            </a>
-          </div>
-        </div>
-      </div>
+      <Footer /> {/* 👈 The reusable Footer component is now used here */}
     </div>
   );
 }
