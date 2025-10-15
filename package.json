@@ -1,7 +1,7 @@
 {
   "name": "mbogafresh",
   "version": "1.0.0",
-  "description": "This repository implements a **B2B2C marketplace** that connects **farmers**, **mama mboga vendors**, **riders**, and **urban buyers** using a **platform-controlled escrow mechanism**. The platform’s core promise is **freshness**, **trust**, and **simplicity** for vendors with **low digital literacy**.",
+  "description": "This repository implements a **B2B2C marketplace** that connects **farmers**, **mama mboga vendors**, **riders**, and **urban buyers** using a **platform-controlled escrow mechanism**. The platformâ€™s core promise is **freshness**, **trust**, and **simplicity** for vendors with **low digital literacy**.",
   "main": "backend/index.js",
   "scripts": {
     "dev": "nodemon backend/index.js"
@@ -11,6 +11,7 @@
   "type": "module",
   "license": "ISC",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -21,7 +22,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.545.0",
     "mailtrap": "^4.3.0",
-    "mongoose": "^8.19.0",
+    "mongoose": "^8.19.1",
     "multer": "^2.0.2",
     "react-router-dom": "^7.9.4"
   },
