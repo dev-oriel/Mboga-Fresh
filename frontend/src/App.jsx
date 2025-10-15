@@ -43,7 +43,14 @@ import RiderDeliveryQueue from "./rider/RiderDeliveryQueue.jsx";
 import RiderHelpPage from "./rider/RiderHelpPage.jsx";
 import RiderProfile from "./rider/RiderProfileSettings.jsx";
 import RiderEarningsAndHistory from "./rider/RiderEarningsAndHistory.jsx";
-import RiderDeliveryDetail from "./rider/RiderDeliveryDetail.jsx"
+import RiderDeliveryDetail from "./rider/RiderDeliveryDetail.jsx";
+
+// Farmer pages
+import SupplierDashboard from "./farmer/SupplierDashboard.jsx";
+import Products from "./farmer/Products.jsx";
+import FarmerOrderManagement from "./farmer/OrderManagement.jsx";
+import SupplierProfile from "./farmer/SupplierProfile.jsx";
+import SupplierWallet from "./farmer/SupplierWallet.jsx";
 
 function App() {
   return ( 
@@ -90,6 +97,14 @@ function App() {
           <Route path="/riderprofile" element={<RiderProfile />} />
           <Route path="/riderearnings" element={<RiderEarningsAndHistory />} />
           <Route path="/riderdelivery/:orderid" element={<RiderDeliveryDetail/>}/>
+
+          {/* Farmer routes */}
+          <Route path="/supplierdashboard" element={<SupplierDashboard />} />
+          <Route path="/SupplierDashboard" element={<SupplierDashboard />} />
+          <Route path="/supplierproducts" element={<Products />} />
+          <Route path="/supplierorders" element={<FarmerOrderManagement />} />
+          <Route path="/supplierwallet" element={<SupplierWallet />} />
+          <Route path="/supplierprofile" element={<SupplierProfile />} />
             
           </Routes>
         </div>
