@@ -73,14 +73,17 @@ const RiderHeader = ({ userAvatarUrl = "" }) => {
       </nav>
 
       <div className="flex items-center justify-end">
-        <button 
-          onClick={() => navigate('/riderprofile')}
-          className="w-10 h-10 rounded-full bg-center bg-cover hover:opacity-80 transition-opacity"
+        {/* Profile icon/avatar with active state */}
+        <div 
+          className={`h-10 w-10 rounded-full bg-cover bg-center cursor-pointer transition-all ${
+            isActive('/riderprofile') 
+              ? 'ring-2 ring-green-500 ring-offset-2 dark:ring-offset-gray-900' 
+              : 'hover:opacity-80'
+          }`}
           style={{
-            backgroundImage: `url("${
-              userAvatarUrl || "https://via.placeholder.com/150"
-            }")`,
+            backgroundImage: `url("https://lh3.googleusercontent.com/aida-public/AB6AXuBJvhCPfy-faTmiNp5FaD8U8OQDrurmKSUnSlYuQ2M14fH-YG6cSyDmfPQv316Sa4RaWG5adOiTrlQ6HjYDZjeSNmtOqWjsF3bGxuvj-3nBhufGuw33616fohvQFG4vxviW4rpjnuSGe95qI4-UobmFyYjCzyRUdYApeklvcJ-jx_Yp_M2wdXFzSMb4Q5eDRWObm8ty8xhDuFhgyu9PWpuLUcGgS1ELu0eAw7FolOnHmBzE6TjCegb2ctjgbhRNo9AH1F5KPK2lDcc")`
           }}
+          onClick={() => navigate('/riderprofile')}
           aria-label="Profile settings"
         />
       </div>
