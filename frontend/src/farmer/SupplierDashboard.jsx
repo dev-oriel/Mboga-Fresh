@@ -85,7 +85,7 @@ const SupplierDashboard = () => {
     <div className="min-h-screen bg-gray-50">
       <Header
         avatarUrl={user ? user.avatarUrl : "default_avatar.jpg"}
-        userName={user ? user.name : "Demo Vendor"}
+        userName={user ? user.name : "Demo Farmer"}
         onLogout={handleLogout}
       />
 
