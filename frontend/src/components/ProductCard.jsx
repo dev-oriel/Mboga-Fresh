@@ -22,7 +22,7 @@ function resolveImageSrc(img) {
  */
 function parsePrice(price) {
   if (price == null)
-    return { currency: "KSh", amount: "", unit: "", display: "" };
+    return { currency: "KES", amount: "", unit: "", display: "" };
   const raw = String(price).trim();
   // trailing unit like "/kg"
   const unitMatch = raw.match(/(\/\S.*)$/);
@@ -34,7 +34,7 @@ function parsePrice(price) {
   const currencyMatch = raw.match(/^[^\d\.\s\/]+/);
   const currency = currencyMatch
     ? currencyMatch[0].trim().replace(/\.$/, "")
-    : "KSh";
+    : "KES";
   const display = amount ? `${currency} ${amount}` : raw;
   return { currency, amount, unit, display };
 }
@@ -142,7 +142,7 @@ const ProductCard = (props) => {
             <span className="text-sm text-gray-500">{currency}</span>
 
             {/* Amount — sleek, not overly bold green */}
-            <span className="text-lg font-medium text-gray-800">
+            <span className="text-xl font-extrabold text-emerald-600">
               {amount || display || ""}
             </span>
 

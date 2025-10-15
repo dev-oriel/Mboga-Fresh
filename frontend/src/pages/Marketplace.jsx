@@ -19,18 +19,20 @@ function parsePriceLabel(label = "") {
   return m ? parseFloat(m[0]) : 0;
 }
 
+/* vendor map by id => vendor */
 const VENDOR_MAP = (() => {
   const m = new Map();
   vendors.forEach((v) => m.set(v.id, v));
   return m;
 })();
 
+const normalize = (v) => (typeof v === "string" ? v.trim().toLowerCase() : "");
+
 const Marketplace = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { addItem } = useCart();
 
-  // filters state
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedVendor, setSelectedVendor] = useState(null);
@@ -40,7 +42,6 @@ const Marketplace = () => {
   const [availability, setAvailability] = useState("any");
   const [sortBy, setSortBy] = useState("relevance");
 
-  // products from backend
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
@@ -64,13 +65,11 @@ const Marketplace = () => {
     );
   };
 
-  // fetch products from API
   const loadProducts = useCallback(async () => {
     setLoading(true);
     setFetchError(null);
     try {
       const data = await apiFetchProducts();
-      // expect array, but fallback to sampleProducts if shape unexpected
       if (Array.isArray(data)) setProducts(data);
       else setProducts(sampleProducts || []);
     } catch (err) {
@@ -86,11 +85,18 @@ const Marketplace = () => {
     loadProducts();
   }, [loadProducts]);
 
+  // debug: show one product object so you can paste it here if anything mismatches
+  useEffect(() => {
+    if (products && products.length > 0) {
+      console.debug("Marketplace: sample product (first):", products[0]);
+    }
+  }, [products]);
+
   const handleAddToCart = (product) => {
     addItem(
       {
         id: product.id || product._id,
-        title: product.title || product.name,
+        title: product.title || product.name || "",
         price: product.price ?? product.priceLabel ?? "",
         img: product.img || product.image || product.imagePath,
         vendor: product.vendor,
@@ -104,37 +110,53 @@ const Marketplace = () => {
 
     if (query && query.trim().length > 0) {
       const q = query.toLowerCase();
-      list = list.filter(
-        (p) =>
-          (p.title && p.title.toLowerCase().includes(q)) ||
-          (p.description && p.description.toLowerCase().includes(q)) ||
-          (p.vendor && p.vendor.toLowerCase().includes(q)) ||
-          (Array.isArray(p.tags) && p.tags.join(" ").toLowerCase().includes(q))
-      );
+      list = list.filter((p) => {
+        const title = (p.title || p.name || "").toString().toLowerCase();
+        const desc = (p.description || "").toString().toLowerCase();
+        const vendorName = (p.vendor || "").toString().toLowerCase();
+        const tags = Array.isArray(p.tags)
+          ? p.tags.join(" ").toLowerCase()
+          : "";
+        return (
+          title.includes(q) ||
+          desc.includes(q) ||
+          vendorName.includes(q) ||
+          tags.includes(q)
+        );
+      });
     }
 
     if (selectedCategory) {
-      list = list.filter(
-        (p) =>
-          p.categoryId === selectedCategory ||
-          p.category === selectedCategory ||
-          (Array.isArray(p.tags) && p.tags.includes(selectedCategory))
-      );
+      const want = normalize(selectedCategory);
+      list = list.filter((p) => {
+        const catId = normalize(p.categoryId);
+        const catName = normalize(p.category);
+        if (catId && catId === want) return true;
+        if (catName && catName === want) return true;
+        if (Array.isArray(p.tags) && p.tags.some((t) => normalize(t) === want))
+          return true;
+        return false;
+      });
     }
 
     if (selectedVendor) {
-      list = list.filter(
-        (p) => p.vendorId === selectedVendor || p.vendor === selectedVendor
-      );
+      const wantId = selectedVendor;
+      const mappedName = VENDOR_MAP.get(wantId)?.name;
+      const wantName = mappedName ? normalize(mappedName) : normalize(wantId);
+      list = list.filter((p) => {
+        if (p.vendorId && normalize(p.vendorId) === normalize(wantId))
+          return true;
+        if (p.vendor && normalize(p.vendor) === wantName) return true;
+        return false;
+      });
     }
 
     if (locationFilter && locationFilter !== "All Locations") {
+      const wantLoc = normalize(locationFilter);
       list = list.filter((p) => {
         const v = VENDOR_MAP.get(p.vendorId);
         if (!v) return false;
-        return (v.location || "")
-          .toLowerCase()
-          .includes(locationFilter.toLowerCase());
+        return (v.location || "").toLowerCase().includes(wantLoc);
       });
     }
 
@@ -155,9 +177,14 @@ const Marketplace = () => {
       });
     }
 
-    if (availability === "in") list = list.filter((p) => p.inStock !== false);
+    if (availability === "in")
+      list = list.filter(
+        (p) => p.status !== "Out of Stock" && p.inStock !== false
+      );
     else if (availability === "out")
-      list = list.filter((p) => p.inStock === false);
+      list = list.filter(
+        (p) => p.status === "Out of Stock" || p.inStock === false
+      );
 
     if (sortBy === "price-asc") {
       list.sort(
@@ -171,6 +198,10 @@ const Marketplace = () => {
           parsePriceLabel(b.price ?? b.priceLabel ?? "") -
           parsePriceLabel(a.price ?? a.priceLabel ?? "")
       );
+    } else {
+      // relevance: prefer server order. If server gives createdAt, show newest first
+      if (list.length && list[0].createdAt)
+        list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 
     return list;

@@ -2,14 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-/**
- * Props:
- *  - categories: array
- *  - vendors: array (optional)
- *  - selectedCategory, selectedVendor, locationFilter, maxPrice, minRating, availability
- *  - onCategoryClick(categoryId)
- *  - onFiltersChange(filters) // receives partial filters object
- */
 const Sidebar = ({
   categories = [],
   vendors = [],
@@ -130,7 +122,6 @@ const Sidebar = ({
             >
               Price Range
             </label>
-
             <input
               id="price-range"
               type="range"
@@ -140,7 +131,6 @@ const Sidebar = ({
               onChange={onRangeChange}
               className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-400"
             />
-
             <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
               <span>KES 0</span>
               <div className="text-right">
