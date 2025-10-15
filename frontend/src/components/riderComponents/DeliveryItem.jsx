@@ -1,8 +1,8 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom'; // Add this import
+import { useNavigate } from 'react-router-dom';
 
 const DeliveryItem = ({ id, pickup, dropoff, earnings }) => {
-  const navigate = useNavigate(); // Add this hook
+  const navigate = useNavigate();
 
   const handleAccept = () => {
     // Navigate to delivery detail page with the order ID
@@ -10,8 +10,8 @@ const DeliveryItem = ({ id, pickup, dropoff, earnings }) => {
   };
 
   const handleViewRoute = () => {
-    // Optional: Handle route viewing
-    console.log(`View route for order ${id}`);
+    // Navigate to the delivery route page
+    navigate('/riderdeliveryroute');
   };
 
   return (
@@ -33,14 +33,14 @@ const DeliveryItem = ({ id, pickup, dropoff, earnings }) => {
 
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
           <button 
-            onClick={handleViewRoute} // Add onClick handler
-            className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-lg bg-transparent px-6 py-3 text-sm font-bold text-green-600 dark:text-green-400 ring-2 ring-green-600/50 dark:ring-green-400/50 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all"
+            onClick={handleViewRoute}
+            className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-lg bg-transparent px-6 py-3 text-sm font-bold text-green-600 dark:text-green-400 ring-2 ring-green-600/50 dark:ring-green-400/50 hover:bg-green-600 hover:text-white dark:hover:bg-green-600 hover:ring-green-600 transition-all duration-200"
           >
             <span className="material-symbols-outlined">map</span>
             <span>Route</span>
           </button>
           <button 
-            onClick={handleAccept} // Add onClick handler
+            onClick={handleAccept}
             className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-lg bg-green-600 hover:bg-green-700 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all"
           >
             <span className="material-symbols-outlined">check_circle</span>
