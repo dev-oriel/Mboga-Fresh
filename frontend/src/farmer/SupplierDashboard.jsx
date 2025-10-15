@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle, DollarSign, Package, AlertTriangle, X, Clock, Plus, ClipboardList, Trash2 } from "lucide-react";
-import Header from "../components/vendorComponents/Header";
+import Header from "../components/FarmerComponents/Header";
 import { useVendorData } from "../context/VendorDataContext";
 
 // Icon mapping
@@ -14,7 +14,7 @@ const iconComponents = {
   Clock: Clock,
 };
 
-const VendorDashboard = () => {
+const SupplierDashboard = () => {
   const {
     dashboardData,
     notifications,
@@ -85,7 +85,7 @@ const VendorDashboard = () => {
     <div className="min-h-screen bg-gray-50">
       <Header
         avatarUrl={user ? user.avatarUrl : "default_avatar.jpg"}
-        userName={user ? user.name : "Demo Vendor"}
+        userName={user ? user.name : "Demo Farmer"}
         onLogout={handleLogout}
       />
 
@@ -284,4 +284,4 @@ const VendorDashboard = () => {
   );
 };
 
-export default VendorDashboard;
+export default SupplierDashboard;

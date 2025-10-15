@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 
-import Header from "../components/vendorComponents/Header";
-import Footer from "../components/vendorComponents/Footer"; 
+import Header from "../components/FarmerComponents/Header";
+import Footer from "../components/FarmerComponents/Footer"; 
 
 
-export default function FreshHarvestProfile() {
+export default function SupplierProfile() {
   const [activeSection, setActiveSection] = useState("store");
 
   const initialStore = {

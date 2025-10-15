@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Edit2, Trash2, Plus, X } from "lucide-react";
-import Header from "../components/vendorComponents/Header";
-import Footer from "../components/vendorComponents/Footer";
+import Header from "../components/FarmerComponents/Header";
+import Footer from "../components/FarmerComponents/Footer";
 import { vendorCategories } from "../constants";
 import {
   fetchProducts,
@@ -23,7 +23,7 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_PLACEHOLDER =
   "https://images.unsplash.com/photo-1518976024611-0a4e3d1c9f05?auto=format&fit=crop&w=1200&q=60"; // nice fallback
 
-export default function VendorProductManagement() {
+export default function Products() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -605,6 +605,10 @@ export default function VendorProductManagement() {
               >
                 {editingId ? "Save Changes" : "Add Product"}
               </button>
+              <div>
+                <Footer />
+              </div>
+      
             </div>
           </form>
         </div>

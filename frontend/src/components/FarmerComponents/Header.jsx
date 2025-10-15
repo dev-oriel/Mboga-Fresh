@@ -10,11 +10,10 @@ import { NavLink, useNavigate } from "react-router-dom";
 
 const Header = ({
   navItems = [
-    { label: "Dashboard", to: "/vendordashboard", icon: "grid_view" },
-    { label: "Orders", to: "/ordermanagement", icon: "shopping_cart" },
-    { label: "Products", to: "/vendorproducts", icon: "inventory_2" },
-    { label: "Payments", to: "/vendorwallet", icon: "paid" },
-    { label: "Farm-ily Market", to: "/farmily", icon: "agriculture" },
+    { label: "Dashboard", to: "/supplierdashboard", icon: "grid_view" },
+    { label: "Orders", to: "/supplierorders", icon: "shopping_cart" },
+    { label: "Products", to: "/supplierproducts", icon: "inventory_2" },
+    { label: "Payments", to: "/supplierwallet", icon: "paid" },
   ],
   userName = "Daniel Mutuku",
   avatarUrl,

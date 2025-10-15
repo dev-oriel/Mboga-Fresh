@@ -1,10 +1,10 @@
 // vendor/VendorWallet.jsx
 import React, { useState } from "react";
-import Header from "../components/vendorComponents/Header";
-import Footer from "../components/vendorComponents/Footer";
+import Header from "../components/FarmerComponents/Header";
+import Footer from "../components/FarmerComponents/Footer";
 import { useVendorData } from "../context/VendorDataContext";
 
-function VendorWallet() {
+function SupplierWallet() {
   const [mpesa, setMpesa] = useState("254712345678");
   const [amount, setAmount] = useState("");
   const { balances, transactions, handleWithdraw } = useVendorData();
@@ -181,4 +181,4 @@ function VendorWallet() {
   );
 }
 
-export default VendorWallet;
+export default SupplierWallet;
