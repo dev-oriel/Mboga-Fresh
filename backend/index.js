@@ -19,9 +19,13 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// CORS - dev-friendly: set CLIENT_URL in .env to your front-end URL when ready
-const client = process.env.CLIENT_URL || "*";
-app.use(cors({ origin: client === "*" ? "*" : client, credentials: true }));
+const client = process.env.CLIENT_URL || "http://localhost:5173"; // set your frontend origin
+app.use(
+  cors({
+    origin: client, // explicitly the front-end origin
+    credentials: true, // allow cookies/auth if needed
+  })
+);
 
 // serve uploads (images)
 const uploadsPath = path.join(process.cwd(), "backend", "uploads");
