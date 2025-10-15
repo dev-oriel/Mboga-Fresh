@@ -1,4 +1,6 @@
+// backend/models/riderProfile.model.js
 import mongoose from "mongoose";
+
 const riderProfileSchema = new mongoose.Schema(
   {
     user: {

@@ -1,4 +1,6 @@
+// backend/models/farmerProfile.model.js
 import mongoose from "mongoose";
+
 const farmerProfileSchema = new mongoose.Schema(
   {
     user: {

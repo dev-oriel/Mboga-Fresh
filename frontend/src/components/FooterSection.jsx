@@ -69,7 +69,7 @@ const Footer = () => {
               <li>
                 <a
                   className="text-sm hover:underline"
-                  href="#"
+                  href="#orders"
                   style={{ color: "#586F54" }}
                 >
                   My Orders

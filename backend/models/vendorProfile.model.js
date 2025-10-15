@@ -1,3 +1,4 @@
+// backend/models/vendorProfile.model.js
 import mongoose from "mongoose";
 
 const vendorProfileSchema = new mongoose.Schema(
@@ -11,8 +12,7 @@ const vendorProfileSchema = new mongoose.Schema(
     businessName: { type: String, required: true },
     ownerName: { type: String, required: true },
     location: { type: String, required: true },
-    docs: [{ path: String, originalName: String }], // optional uploaded verification docs
-    metadata: { type: mongoose.Schema.Types.Mixed }, // e.g., openingHours, tags
+    docs: [{ path: String, originalName: String }],
     verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     verifiedAt: Date,
   },
