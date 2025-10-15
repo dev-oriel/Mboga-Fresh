@@ -1,4 +1,3 @@
-// App.jsx
 import React from "react";
 import { Route, Routes } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
@@ -24,6 +23,12 @@ import CategoryPage from "./pages/CategoryPage";
 import VendorPage from "./pages/VendorPage";
 import BuyerProfile from "./pages/BuyerProfile.jsx";
 
+// footer
+import Contact from "./pages/Contact.jsx";
+import Faq from "./pages/Faq.jsx";
+import Terms from "./pages/Terms.jsx";
+import Privacy from "./pages/Privacy.jsx";
+
 // Vendor pages
 import Vendorprofile from "./vendor/vendorprofile.jsx";
 import VendorDashboard from "./vendor/VendoDashboard.jsx";
@@ -38,7 +43,7 @@ import RiderDeliveryQueue from "./rider/RiderDeliveryQueue.jsx";
 import RiderHelpPage from "./rider/RiderHelpPage.jsx";
 import RiderProfile from "./rider/RiderProfileSettings.jsx";
 import RiderEarningsAndHistory from "./rider/RiderEarningsAndHistory.jsx";
-import RiderDeliveryDetail from "./rider/RiderDeliveryDetail.jsx"
+import RiderDeliveryDetail from "./rider/RiderDeliveryDetail.jsx";
 
 function App() {
   return ( 
@@ -65,22 +70,26 @@ function App() {
             <Route path="/vendor/:id" element={<VendorPage />} />
             <Route path="/vendorprofile" element={<Vendorprofile />} />
 
+            {/* footer routes */}
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/faq" element={<Faq />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+
             {/* Vendor routes */}
             <Route path="/vendordashboard" element={<VendorDashboard />} />
             <Route path="/ordermanagement" element={<OrderManagement />} />
             <Route path="/vendorproducts" element={<VendorProducts />} />
             <Route path="/farmily" element={<Farmily />} />
             <Route path="/vendorwallet" element={<VendorWallet />} />
-            <Route path="/vendorpage" element={<VendorPage />} />
 
-          {/* Rider routes */}
-          <Route path="/riderdashboard" element={<RiderDashboard />} />
-          <Route path="/riderdeliveryqueue" element={<RiderDeliveryQueue />} />
-          <Route path="/riderhelp" element={<RiderHelpPage />} />
-          <Route path="/riderprofile" element={<RiderProfile />} />
-          <Route path="/riderearnings" element={<RiderEarningsAndHistory />} />
-          <Route path="/riderdelivery/:orderid" element={<RiderDeliveryDetail/>}/>
-            
+            {/* Rider routes */}
+            <Route path="/riderdashboard" element={<RiderDashboard />} />
+            <Route path="/riderdeliveryqueue" element={<RiderDeliveryQueue />} />
+            <Route path="/riderhelp" element={<RiderHelpPage />} />
+            <Route path="/riderprofile" element={<RiderProfile />} />
+            <Route path="/riderearnings" element={<RiderEarningsAndHistory />} />
+            <Route path="/riderdelivery/:orderid" element={<RiderDeliveryDetail/>}/>
           </Routes>
         </div>
       </VendorDataProvider>
