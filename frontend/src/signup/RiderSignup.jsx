@@ -1,115 +1,189 @@
-import React from "react";
+// src/signup/RiderSignup.jsx
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { signupWithFormData } from "../api/auth";
 
 const RiderSignup = () => {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [idNumber, setIdNumber] = useState("");
+  const [vehicleType, setVehicleType] = useState("");
+  const [vehicleName, setVehicleName] = useState("");
+  const [password, setPassword] = useState("");
+  const [idFile, setIdFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    // basic client-side validation to avoid unnecessary requests
+    if (
+      !fullName ||
+      !email ||
+      !phone ||
+      !idNumber ||
+      !vehicleType ||
+      !password
+    ) {
+      setError("Please fill all required fields (including email).");
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append("role", "rider");
+    fd.append("name", fullName);
+    fd.append("email", email);
+    fd.append("phone", phone);
+    fd.append("password", password);
+    fd.append("idNumber", idNumber);
+    fd.append("vehicleType", vehicleType);
+    fd.append("vehicleName", vehicleName || "");
+    if (idFile) fd.append("doc0", idFile);
+
+    setLoading(true);
+    try {
+      await signupWithFormData(fd);
+      navigate("/login", {
+        state: { info: "Rider account created (pending verification)" },
+      });
+    } catch (err) {
+      // err may be string or object; try to show a helpful message
+      setError(
+        err?.message ||
+          (err?.message === undefined && JSON.stringify(err)) ||
+          "Signup failed"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-200">
-      <div className="w-full max-w-md">
-        {/* Logo and Header */}
-        <div className="text-center mb-8">
-          <div className="inline-block p-4 bg-green-600/10 dark:bg-green-600/20 rounded-full mb-4 animate-pulse">
-            <svg
-              className="w-16 h-16 text-green-600"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M19.88 13.31A1.003 1.003 0 0 0 19 13H5.79l-1.1-2H19a1 1 0 0 0 .95-.68l1-3a1 1 0 0 0-.15-1.09A1 1 0 0 0 20 6H5.43l-.68-1.36A1 1 0 0 0 3.86 4H3a1 1 0 0 0 0 2h.42l3.43 6.84-1.5 2.62a1 1 0 0 0-.15.84A1 1 0 0 0 6 17h12a1 1 0 0 0 0-2H7.22l.81-1.42h9.85a1 1 0 0 0 .94-.69l1.06-2.58zM6.5 19a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm11 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"></path>
-            </svg>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Mboga Fresh
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Freshness You Can Trust.
-          </p>
-        </div>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
+        <h2 className="text-2xl font-bold text-center mb-4">Become a Rider</h2>
 
-        {/* Form Container */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-center mb-6 text-gray-900 dark:text-white">
-            Become a Rider
-          </h2>
-          <form className="space-y-4">
+        {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label className="block text-sm text-gray-700">Full Name</label>
             <input
-              id="full-name"
-              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
               placeholder="Full Name"
-              className="w-full bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+              className="w-full border p-2 rounded"
+              required
             />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-700">Email</label>
             <input
-              id="phone-number"
-              type="tel"
-              placeholder="Phone Number"
-              className="w-full bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              placeholder="you@example.com"
+              className="w-full border p-2 rounded"
+              required
             />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-700">Phone Number</label>
             <input
-              id="id-number"
-              type="text"
-              placeholder="ID Number"
-              className="w-full bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+254 7XX XXX XXX"
+              className="w-full border p-2 rounded"
+              required
             />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-700">ID Number</label>
+            <input
+              value={idNumber}
+              onChange={(e) => setIdNumber(e.target.value)}
+              placeholder="National ID / Passport"
+              className="w-full border p-2 rounded"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-700">Vehicle Type</label>
             <select
-              id="vehicle-type"
-              defaultValue=""
-              className="w-full bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg p-3 appearance-none focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent text-gray-500 dark:text-gray-400"
+              value={vehicleType}
+              onChange={(e) => setVehicleType(e.target.value)}
+              className="w-full border p-2 rounded"
+              required
             >
-              <option disabled value="">
-                Vehicle Type
-              </option>
-              <option
-                className="text-gray-900 dark:text-white"
-                value="motorbike"
-              >
-                Motorbike
-              </option>
-              <option className="text-gray-900 dark:text-white" value="bicycle">
-                Bicycle
-              </option>
-              <option className="text-gray-900 dark:text-white" value="truck">
-                Truck
-              </option>
-              <option className="text-gray-900 dark:text-white" value="van">
-                Van
-              </option>
+              <option value="">Select vehicle type</option>
+              <option value="motorbike">Motorbike</option>
+              <option value="bicycle">Bicycle</option>
+              <option value="truck">Truck</option>
+              <option value="van">Van</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-700">
+              Vehicle Name (optional)
+            </label>
             <input
-              id="password"
-              type="password"
-              placeholder="Password"
-              className="w-full bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+              value={vehicleName}
+              onChange={(e) => setVehicleName(e.target.value)}
+              placeholder="e.g. Bajaj Boxer"
+              className="w-full border p-2 rounded"
             />
-            <button
-              type="submit"
-              className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-all duration-300 transform hover:scale-105"
-            >
-              Sign Up
-            </button>
-          </form>
+          </div>
 
-          <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-6">
-            Already have an account?{" "}
-            <a className="font-bold text-green-600 hover:underline" href="#">
-              Sign In
-            </a>
-          </p>
-        </div>
+          <div>
+            <label className="block text-sm text-gray-700">Password</label>
+            <input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              placeholder="Choose a strong password"
+              className="w-full border p-2 rounded"
+              required
+            />
+          </div>
 
-        {/* Language Links */}
-        <div className="text-center mt-6">
-          <a
-            className="text-sm text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-600"
-            href="#"
+          <div>
+            <label className="block text-sm text-gray-700">
+              Upload ID (optional)
+            </label>
+            <input
+              type="file"
+              accept="image/*,application/pdf"
+              onChange={(e) => setIdFile(e.target.files?.[0] ?? null)}
+              className="mt-1"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full py-3 rounded text-white ${
+              loading ? "bg-gray-400" : "bg-emerald-600"
+            }`}
           >
-            English
+            {loading ? "Creating..." : "Sign Up"}
+          </button>
+        </form>
+
+        <p className="text-sm mt-4 text-center">
+          Already have an account?{" "}
+          <a href="/login" className="text-emerald-600">
+            Sign in
           </a>
-          <span className="text-gray-400 dark:text-gray-600 mx-1">|</span>
-          <a
-            className="text-sm text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-600"
-            href="#"
-          >
-            Swahili
-          </a>
-        </div>
+        </p>
       </div>
     </div>
   );

@@ -1,4 +1,7 @@
+// src/signup/BuyerSignup.jsx
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { signupBuyer } from "../api/auth";
 
 const BuyerSignup = () => {
   const [formData, setFormData] = useState({
@@ -7,24 +10,51 @@ const BuyerSignup = () => {
     phoneNumber: "",
     password: "",
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setError("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
-    alert("Account created successfully!");
+    setError("");
+    // minimal client-side validation
+    if (
+      !formData.fullName ||
+      !formData.email ||
+      !formData.phoneNumber ||
+      !formData.password
+    ) {
+      setError("All fields are required");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await signupBuyer({
+        name: formData.fullName,
+        email: formData.email,
+        phone: formData.phoneNumber,
+        password: formData.password,
+      });
+      // show success and redirect to login
+      navigate("/login", {
+        state: { info: "Account created — please log in" },
+      });
+    } catch (err) {
+      setError(err?.message || "Signup failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gray-50 font-inter">
-      {/* Logo Section */}
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gray-50">
       <div className="flex flex-col items-center mb-8">
         <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center">
           <span className="text-gray-400 text-sm">Logo</span>
@@ -33,13 +63,14 @@ const BuyerSignup = () => {
         <p className="text-gray-500">Fresh from the farm to your table</p>
       </div>
 
-      {/* Signup Card */}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-md p-8">
         <h2 className="text-2xl font-semibold text-center text-gray-800">
           Create your Buyer Account
         </h2>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+          {error && <div className="text-sm text-red-600">{error}</div>}
+
           <div>
             <label
               htmlFor="fullName"
@@ -118,13 +149,15 @@ const BuyerSignup = () => {
 
           <button
             type="submit"
-            className="w-full bg-[#42cf17] text-white font-semibold py-3 rounded-md hover:bg-[#36a813] transition-colors"
+            disabled={loading}
+            className={`w-full ${
+              loading ? "bg-gray-400" : "bg-[#42cf17]"
+            } text-white font-semibold py-3 rounded-md transition-colors`}
           >
-            Sign Up
+            {loading ? "Creating..." : "Sign Up"}
           </button>
         </form>
 
-        {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-sm text-gray-600">
             Already have an account?{" "}
@@ -135,11 +168,6 @@ const BuyerSignup = () => {
               Log In
             </a>
           </p>
-          <div className="mt-3 flex justify-center items-center gap-2 text-gray-500 text-sm">
-            <button className="hover:underline">English</button>
-            <span>|</span>
-            <button className="hover:underline">Swahili</button>
-          </div>
         </div>
       </div>
     </div>

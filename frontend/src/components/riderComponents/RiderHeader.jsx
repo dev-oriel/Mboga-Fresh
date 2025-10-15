@@ -41,22 +41,18 @@ const RiderHeader = ({ userAvatarUrl = "" }) => {
 
       <nav className="hidden md:flex items-center gap-3">
         {navItems.map((item) => (
-          <button 
+          <button
             key={item.path}
             onClick={() => navigate(item.path)}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-              isActive(item.path) 
-                ? 'text-green-700 bg-green-100 dark:bg-green-700/20 dark:text-green-300' 
-                : 'text-gray-700 hover:text-green-600 dark:text-gray-200 dark:hover:text-green-300'
+              isActive(item.path)
+                ? "text-green-700 bg-green-100 dark:bg-green-700/20 dark:text-green-300"
+                : "text-gray-700 hover:text-green-600 dark:text-gray-200 dark:hover:text-green-300"
             }`}
           >
             {item.icon === "dashboard" ? (
               // Custom symmetrical dashboard icon
-              <svg 
-                className="w-5 h-5" 
-                fill="currentColor" 
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <rect x="3" y="3" width="7" height="7" rx="1" />
                 <rect x="14" y="3" width="7" height="7" rx="1" />
                 <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -74,16 +70,16 @@ const RiderHeader = ({ userAvatarUrl = "" }) => {
 
       <div className="flex items-center justify-end">
         {/* Profile icon/avatar with active state */}
-        <div 
+        <div
           className={`h-10 w-10 rounded-full bg-cover bg-center cursor-pointer transition-all ${
-            isActive('/riderprofile') 
-              ? 'ring-2 ring-green-500 ring-offset-2 dark:ring-offset-gray-900' 
-              : 'hover:opacity-80'
+            isActive("/riderprofile")
+              ? "ring-2 ring-green-500 ring-offset-2 dark:ring-offset-gray-900"
+              : "hover:opacity-80"
           }`}
           style={{
-            backgroundImage: `url("https://lh3.googleusercontent.com/aida-public/AB6AXuBJvhCPfy-faTmiNp5FaD8U8OQDrurmKSUnSlYuQ2M14fH-YG6cSyDmfPQv316Sa4RaWG5adOiTrlQ6HjYDZjeSNmtOqWjsF3bGxuvj-3nBhufGuw33616fohvQFG4vxviW4rpjnuSGe95qI4-UobmFyYjCzyRUdYApeklvcJ-jx_Yp_M2wdXFzSMb4Q5eDRWObm8ty8xhDuFhgyu9PWpuLUcGgS1ELu0eAw7FolOnHmBzE6TjCegb2ctjgbhRNo9AH1F5KPK2lDcc")`
+            backgroundImage: `url("https://lh3.googleusercontent.com/aida-public/AB6AXuBJvhCPfy-faTmiNp5FaD8U8OQDrurmKSUnSlYuQ2M14fH-YG6cSyDmfPQv316Sa4RaWG5adOiTrlQ6HjYDZjeSNmtOqWjsF3bGxuvj-3nBhufGuw33616fohvQFG4vxviW4rpjnuSGe95qI4-UobmFyYjCzyRUdYApeklvcJ-jx_Yp_M2wdXFzSMb4Q5eDRWObm8ty8xhDuFhgyu9PWpuLUcGgS1ELu0eAw7FolOnHmBzE6TjCegb2ctjgbhRNo9AH1F5KPK2lDcc")`,
           }}
-          onClick={() => navigate('/riderprofile')}
+          onClick={() => navigate("/riderprofile")}
           aria-label="Profile settings"
         />
       </div>

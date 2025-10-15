@@ -27,7 +27,7 @@ const Hero = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto flex flex-col items-center gap-6">
             <h1 className="text-5xl md:text-7xl font-black text-white leading-tight drop-shadow-xl">
-              Karibu Mboga Fresh – Your Local Market, Digitized!
+              Karibu Mboga Fresh - Your Local Market, Digitized!
             </h1>
             <p className="text-xl md:text-2xl text-white/90 drop-shadow-lg max-w-2xl">
               Shop fresh, support local farmers and mama mbogas near you.
