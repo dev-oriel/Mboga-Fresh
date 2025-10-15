@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { orders as initialOrders } from "../constants";
-import Header from "../components/vendorComponents/Header";
+import Header from "../components/FarmerComponents/Header";
 
 export default function OrderManagement() {
   const [activeTab, setActiveTab] = useState("new");
