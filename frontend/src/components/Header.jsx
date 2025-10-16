@@ -1,9 +1,9 @@
-// frontend/src/components/Header.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import CartPreview from "./CartPreview";
+import { DEFAULT_AVATAR } from "../constants";
 
 const Header = ({ avatarUrl } = {}) => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -13,7 +13,6 @@ const Header = ({ avatarUrl } = {}) => {
 
   // cart context
   const { count, items } = useCart?.() ?? { count: 0, items: [] };
-
   const [cartOpen, setCartOpen] = useState(false);
   const prevCountRef = useRef(count);
 
@@ -35,19 +34,15 @@ const Header = ({ avatarUrl } = {}) => {
     { name: "Orders", to: "/orders" },
     { name: "Help", to: "/help" },
   ];
-  // vendor specific
-  if (role === "vendor") {
+  if (role === "vendor")
     baseLinks.splice(2, 0, {
       name: "Vendor Dashboard",
       to: "/vendordashboard",
     });
-  }
-  if (role === "rider") {
+  if (role === "rider")
     baseLinks.splice(2, 0, { name: "Rider", to: "/riderdashboard" });
-  }
-  if (role === "farmer" || role === "supplier") {
+  if (role === "farmer" || role === "supplier")
     baseLinks.splice(2, 0, { name: "Supplier", to: "/supplierdashboard" });
-  }
 
   const handleSubmitSearch = (e) => {
     e?.preventDefault?.();
@@ -56,6 +51,20 @@ const Header = ({ avatarUrl } = {}) => {
       `/marketplace${trimmed ? `?query=${encodeURIComponent(trimmed)}` : ""}`
     );
   };
+
+  // Final avatar selection: priority
+  // 1) avatarUrl prop (explicit)
+  // 2) user.avatar or user.avatarUrl
+  // 3) DEFAULT_AVATAR import
+  // 4) built-in fallback
+  const builtInFallback =
+    "https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=512&h=512&fit=crop&auto=format";
+  const avatarSrc =
+    avatarUrl ||
+    user?.avatar ||
+    user?.avatarUrl ||
+    (typeof DEFAULT_AVATAR === "string" && DEFAULT_AVATAR) ||
+    builtInFallback;
 
   return (
     <>
@@ -79,7 +88,6 @@ const Header = ({ avatarUrl } = {}) => {
                     fill="currentColor"
                   />
                 </svg>
-
                 <span className="text-3xl font-bold text-gray-900 dark:text-white tracking-tighter">
                   Mboga Fresh
                 </span>
@@ -128,7 +136,6 @@ const Header = ({ avatarUrl } = {}) => {
                     d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"
                   />
                 </svg>
-
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -159,7 +166,6 @@ const Header = ({ avatarUrl } = {}) => {
                     d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 7M7 13l-2 5m5-5v5m4-5v5m4-5l2 5"
                   />
                 </svg>
-
                 {count > 0 && (
                   <span className="absolute -top-1 -right-2 bg-emerald-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                     {count}
@@ -186,24 +192,8 @@ const Header = ({ avatarUrl } = {}) => {
                     >
                       <div
                         className="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-12 h-12 ring-2 ring-transparent group-hover:ring-emerald-600 transition-all"
-                        style={{
-                          backgroundImage: `url('${
-                            avatarUrl ||
-                            user.avatar ||
-                            user.avatarUrl ||
-                            "https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=512&h=512&fit=crop&auto=format"
-                          }')`,
-                        }}
+                        style={{ backgroundImage: `url('${avatarSrc}')` }}
                       />
-                    </button>
-                    <button
-                      onClick={async () => {
-                        await logout();
-                        navigate("/");
-                      }}
-                      className="ml-3 text-sm bg-emerald-50 text-emerald-700 px-3 py-2 rounded-md"
-                    >
-                      Logout
                     </button>
                   </div>
                   <div className="lg:hidden">
@@ -278,7 +268,6 @@ const Header = ({ avatarUrl } = {}) => {
                   {link.name}
                 </NavLink>
               ))}
-
               <form
                 onSubmit={handleSubmitSearch}
                 className="mt-2"
@@ -309,7 +298,6 @@ const Header = ({ avatarUrl } = {}) => {
       </header>
 
       {cartOpen && <CartPreview onClose={() => setCartOpen(false)} />}
-
       {!cartOpen && items?.length > 0 && (
         <button
           onClick={() => setCartOpen(true)}

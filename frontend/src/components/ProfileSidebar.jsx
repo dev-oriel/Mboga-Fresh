@@ -1,31 +1,64 @@
-// frontend/src/components/ProfileSidebar.jsx
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-
+import axios from "axios";
 import { DEFAULT_AVATAR } from "../constants";
 
 const ProfileSidebar = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, refresh } = useAuth();
   const profileImageDefault =
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuCGsWq5QqWwF5f66c9kSicNkfyDw_dLYwhgqbTufkto3Cv95U7ah6Lpf7dxekVzJy7qtEuTMbSEMtzCsRdn_drhMsyEEFdvv-ktwLdeIdvdhXBKQf_f92jO-owfsZtFSRN1AnfO8VdV-vB-pUk5fJVCTKuLcXTQdcoADz4hP9cno0sovnYaZCswMomwMtLaD0H1t7htob_NXd0ApLJO7HIW7NyuZEkGHFj13FeiqxpfhWJLfwkkDOoJ9NitW6lF8OQQTWL6syZp4ng";
-  const [profileImage, setProfileImage] = useState(
-    user?.avatar || user?.avatarUrl || profileImageDefault
+    (typeof DEFAULT_AVATAR === "string" && DEFAULT_AVATAR) ||
+    "https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=512&h=512&fit=crop&auto=format";
+
+  // Local preview state only — authoritative avatar comes from user.avatar
+  const [profileImagePreview, setProfileImagePreview] = useState(
+    user?.avatar || profileImageDefault
   );
+  const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+
+  // Keep preview in sync if user.avatar changes (e.g., after refresh())
+  useEffect(() => {
+    setProfileImagePreview(user?.avatar || profileImageDefault);
+  }, [user?.avatar, profileImageDefault]);
 
   const handleEditClick = () => {
     fileInputRef.current?.click();
   };
 
+  // Read file as data URL and send as avatar string to backend
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setProfileImage(reader.result);
-      // NOTE: to persist to backend, send FormData to profile update endpoint.
+    reader.onloadend = async () => {
+      const dataUrl = reader.result;
+      // optimistic preview
+      setProfileImagePreview(dataUrl);
+      // Persist to backend via PUT /api/profile
+      try {
+        setSaving(true);
+        await axios.put(
+          "http://localhost:5000/api/profile",
+          { avatar: dataUrl },
+          { withCredentials: true }
+        );
+        // refresh the canonical user object (so header and other areas update)
+        if (typeof refresh === "function") {
+          await refresh();
+        }
+      } catch (err) {
+        console.error(
+          "Failed to upload avatar:",
+          err?.response?.data || err.message || err
+        );
+        // roll back to user.avatar (or default) on failure
+        setProfileImagePreview(user?.avatar || profileImageDefault);
+        alert("Failed to save avatar. Try again.");
+      } finally {
+        setSaving(false);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -40,11 +73,13 @@ const ProfileSidebar = () => {
         <div className="relative mb-4">
           <div
             className="w-24 h-24 rounded-full bg-cover bg-center border-4 border-emerald-600"
-            style={{ backgroundImage: `url(${profileImage})` }}
+            style={{ backgroundImage: `url(${profileImagePreview})` }}
           />
           <button
             onClick={handleEditClick}
-            className="absolute bottom-0 right-0 bg-emerald-600 text-white rounded-full p-1.5 hover:bg-opacity-90"
+            disabled={saving}
+            title={saving ? "Saving..." : "Edit profile picture"}
+            className="absolute bottom-0 right-0 bg-emerald-600 text-white rounded-full p-1.5 hover:bg-opacity-90 disabled:opacity-60"
           >
             <span className="material-symbols-outlined text-sm">edit</span>
           </button>
@@ -96,6 +131,7 @@ const ProfileSidebar = () => {
           <span className="material-symbols-outlined">credit_card</span>
           <span>Payment Methods</span>
         </a>
+
         <button
           onClick={async () => {
             await logout();
