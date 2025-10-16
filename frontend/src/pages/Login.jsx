@@ -1,4 +1,4 @@
-// src/pages/Login.jsx
+// frontend/src/pages/Login.jsx
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -14,16 +14,33 @@ const Login = () => {
   const location = useLocation();
   const info = location.state?.info ?? null;
 
+  const roleRedirectMap = {
+    buyer: "/",
+    vendor: "/vendordashboard",
+    farmer: "/farmily",
+    supplier: "/farmily",
+    rider: "/riderdashboard",
+    admin: "/admin",
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const res = await login(email, password);
-      // res.user contains role; you can redirect by role if you want
-      navigate("/");
+      const res = await login(email, password, role);
+      // server returns actual user.role; respect server's truth
+      const actualRole = res?.user?.role || role;
+      const to = roleRedirectMap[actualRole] || "/";
+      navigate(to);
     } catch (err) {
-      setError(err?.message || "Login failed");
+      // err may be object from server or string
+      const msg =
+        (err && (err.message || err?.msg || err?.message?.toString())) ||
+        err?.message ||
+        JSON.stringify(err) ||
+        "Login failed";
+      setError(msg);
     } finally {
       setLoading(false);
     }

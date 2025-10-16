@@ -1,47 +1,49 @@
-// src/context/AuthContext.jsx
+// frontend/src/context/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { loginApi, me, logoutApi } from "../api/auth";
+import { loginRequest, meRequest, logoutRequest } from "../api/auth";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loadingUser, setLoadingUser] = useState(true);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
-  // try to fetch current user (optional endpoint)
+  // try to get session on mount
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const data = await me();
-        if (mounted) setUser(data.user ?? null);
+        const res = await meRequest();
+        if (mounted && res?.success) setUser(res.user);
       } catch (err) {
-        // not logged in or endpoint missing
-        if (mounted) setUser(null);
+        setUser(null);
       } finally {
-        if (mounted) setLoadingUser(false);
+        if (mounted) setLoadingAuth(false);
       }
     })();
     return () => (mounted = false);
   }, []);
 
-  const login = async (email, password) => {
-    const res = await loginApi({ email, password });
-    setUser(res.user || null);
-    return res;
+  // login: returns server response or throws
+  const login = async (email, password, role) => {
+    const res = await loginRequest(email, password, role);
+    if (res?.success) {
+      setUser(res.user);
+      return res;
+    }
+    throw res;
   };
 
   const logout = async () => {
     try {
-      await logoutApi();
-    } catch (err) {
-      // ignore
+      await logoutRequest();
+    } finally {
+      setUser(null);
     }
-    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loadingUser, login, logout }}>
+    <AuthContext.Provider value={{ user, setUser, login, logout, loadingAuth }}>
       {children}
     </AuthContext.Provider>
   );

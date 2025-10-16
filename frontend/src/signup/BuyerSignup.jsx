@@ -20,14 +20,31 @@ const BuyerSignup = () => {
     setError("");
   };
 
+  const normalizeError = (err) => {
+    if (!err) return "Signup failed";
+    // If backend returned an object-like error
+    if (typeof err === "object") {
+      if (err.message) return err.message;
+      if (err.msg) return err.msg;
+      // Joi style validation error shape { details: [...] }
+      if (Array.isArray(err.details) && err.details.length) {
+        return err.details.map((d) => d.message).join(", ");
+      }
+      return JSON.stringify(err);
+    }
+    // string
+    return String(err);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
     // minimal client-side validation
     if (
-      !formData.fullName ||
-      !formData.email ||
-      !formData.phoneNumber ||
+      !formData.fullName.trim() ||
+      !formData.email.trim() ||
+      !formData.phoneNumber.trim() ||
       !formData.password
     ) {
       setError("All fields are required");
@@ -37,17 +54,20 @@ const BuyerSignup = () => {
     setLoading(true);
     try {
       await signupBuyer({
-        name: formData.fullName,
-        email: formData.email,
-        phone: formData.phoneNumber,
+        name: formData.fullName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phoneNumber.trim(),
         password: formData.password,
+        role: "buyer", // explicit role so backend is unambiguous
       });
-      // show success and redirect to login
+
+      // success -> clear password, redirect to login with info message
+      setFormData((prev) => ({ ...prev, password: "" }));
       navigate("/login", {
         state: { info: "Account created — please log in" },
       });
     } catch (err) {
-      setError(err?.message || "Signup failed");
+      setError(normalizeError(err));
     } finally {
       setLoading(false);
     }
@@ -68,7 +88,7 @@ const BuyerSignup = () => {
           Create your Buyer Account
         </h2>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5" noValidate>
           {error && <div className="text-sm text-red-600">{error}</div>}
 
           <div>
@@ -79,6 +99,7 @@ const BuyerSignup = () => {
               Full Name
             </label>
             <input
+              autoFocus
               type="text"
               id="fullName"
               name="fullName"
@@ -150,6 +171,7 @@ const BuyerSignup = () => {
           <button
             type="submit"
             disabled={loading}
+            aria-disabled={loading}
             className={`w-full ${
               loading ? "bg-gray-400" : "bg-[#42cf17]"
             } text-white font-semibold py-3 rounded-md transition-colors`}

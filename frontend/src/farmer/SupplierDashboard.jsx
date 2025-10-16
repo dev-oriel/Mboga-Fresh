@@ -1,7 +1,17 @@
 // vendor/VendoDashboard.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle, DollarSign, Package, AlertTriangle, X, Clock, Plus, ClipboardList, Trash2 } from "lucide-react";
+import {
+  CheckCircle,
+  DollarSign,
+  Package,
+  AlertTriangle,
+  X,
+  Clock,
+  Plus,
+  ClipboardList,
+  Trash2,
+} from "lucide-react";
 import Header from "../components/FarmerComponents/Header";
 import { useVendorData } from "../context/VendorDataContext";
 
@@ -51,7 +61,7 @@ const SupplierDashboard = () => {
   };
 
   // Quick Actions
-  const handleAddProduct = () => navigate("/vendorproducts"); 
+  const handleAddProduct = () => navigate("/vendorproducts");
   const handleViewOrders = () => navigate("/ordermanagement");
 
   // Withdraw funds
@@ -66,27 +76,30 @@ const SupplierDashboard = () => {
 
     const success = handleWithdraw(amount, "254712345678");
     if (success) {
-      console.log(`Simulating successful withdrawal of Ksh ${amount.toLocaleString()}`);
+      console.log(
+        `Simulating successful withdrawal of Ksh ${amount.toLocaleString()}`
+      );
     }
   };
 
   // Delete read notifications
   const handleDeleteReadNotifications = () => {
-    const readCount = notifications.filter(n => n.isRead).length;
+    const readCount = notifications.filter((n) => n.isRead).length;
     if (readCount === 0) return;
 
-    const confirmed = window.confirm(`Are you sure you want to delete ${readCount} read notification(s)?`);
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${readCount} read notification(s)?`
+    );
     if (!confirmed) return;
-    
+
     deleteReadNotifications();
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header
-        avatarUrl={user ? user.avatarUrl : "default_avatar.jpg"}
-        userName={user ? user.name : "Demo Farmer"}
-        onLogout={handleLogout}
+        avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDeL7radWSj-FEteEjqLpufXII3-tc_o7GMvLvB07AaD_bYBkfAcIOnNbOXkTdMOHRgJQwLZE-Z_iw72Bd8bpHzfXP_m0pIvteSw7FKZ1qV9GD1KfgyDVG90bCO7OGe6JyYIkm9DBo2ArC60uEqSfDvnnYWeo6IqVEjWxsVX6dUoxjm9ozyVlriiMdVLc_jU9ZxS01QcxNa8hn-ePNbB6IcXSwExf2U61R-epab8nsOkbq95E7z6b-fH4zOt0j2MPt20nrqtPM1NHI"
+        userName="Daniel Mutuku"
       />
 
       <main className="p-6">
@@ -122,7 +135,7 @@ const SupplierDashboard = () => {
             Loading dashboard data...
           </div>
         )}
-        
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {[
@@ -186,8 +199,8 @@ const SupplierDashboard = () => {
               disabled={dashboardData.earningsReleased <= 0}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium shadow-sm transition transform hover:scale-105 ${
                 dashboardData.earningsReleased > 0
-                  ? 'bg-green-600 text-white hover:bg-green-700'
-                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  ? "bg-green-600 text-white hover:bg-green-700"
+                  : "bg-gray-200 text-gray-500 cursor-not-allowed"
               }`}
             >
               <DollarSign className="w-5 h-5" />
@@ -206,7 +219,7 @@ const SupplierDashboard = () => {
               <button
                 onClick={handleDeleteReadNotifications}
                 className="flex items-center space-x-1 text-sm font-medium text-red-500 hover:text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed transition"
-                disabled={notifications.filter(n => n.isRead).length === 0}
+                disabled={notifications.filter((n) => n.isRead).length === 0}
                 title="Delete all read notifications"
               >
                 <Trash2 className="w-4 h-4" />
@@ -229,14 +242,16 @@ const SupplierDashboard = () => {
                   <div
                     key={notification.id}
                     className={`bg-white rounded-lg p-4 shadow-sm border border-gray-200 flex items-start space-x-4 transition ${
-                      notification.isRead 
-                        ? "opacity-70 border-l-4 border-l-gray-300" 
+                      notification.isRead
+                        ? "opacity-70 border-l-4 border-l-gray-300"
                         : "border-l-4 border-l-green-600 hover:shadow-lg"
                     }`}
                   >
                     <div
                       className={`w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0 ${
-                        notification.isRead ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-600'
+                        notification.isRead
+                          ? "bg-gray-100 text-gray-500"
+                          : "bg-green-100 text-green-600"
                       }`}
                     >
                       <IconComponent className="w-5 h-5" />
@@ -246,7 +261,9 @@ const SupplierDashboard = () => {
                       <div className="flex items-start justify-between">
                         <h3
                           className={`font-semibold ${
-                            notification.isRead ? "text-gray-600" : "text-gray-900"
+                            notification.isRead
+                              ? "text-gray-600"
+                              : "text-gray-900"
                           }`}
                         >
                           {notification.title}
@@ -254,13 +271,15 @@ const SupplierDashboard = () => {
                       </div>
                       <p
                         className={`text-sm mt-1 ${
-                          notification.isRead ? "text-gray-500" : "text-gray-600"
+                          notification.isRead
+                            ? "text-gray-500"
+                            : "text-gray-600"
                         }`}
                       >
                         {notification.message}
                       </p>
                     </div>
-                    
+
                     {!notification.isRead ? (
                       <button
                         onClick={() => markNotificationAsRead(notification.id)}
@@ -271,7 +290,10 @@ const SupplierDashboard = () => {
                         <span>Mark Read</span>
                       </button>
                     ) : (
-                      <X className="w-4 h-4 text-gray-400 ml-4 flex-shrink-0" title="Dismissed" />
+                      <X
+                        className="w-4 h-4 text-gray-400 ml-4 flex-shrink-0"
+                        title="Dismissed"
+                      />
                     )}
                   </div>
                 );

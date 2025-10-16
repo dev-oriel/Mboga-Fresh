@@ -1,56 +1,80 @@
-// src/api/auth.js
+// frontend/src/api/auth.js
 const BASE = import.meta.env.VITE_API_BASE || "";
 
 async function handleResponse(res) {
-  if (res.ok) return res.json();
   const text = await res.text();
-  // try parse JSON error
+  let data;
   try {
-    return Promise.reject(JSON.parse(text));
+    data = text ? JSON.parse(text) : {};
   } catch {
-    return Promise.reject({ message: text || "API error" });
+    data = text;
+  }
+
+  if (res.ok) {
+    return typeof data === "object" ? data : { data };
+  }
+
+  // Ensure errors are thrown as objects with message
+  if (typeof data === "object") {
+    throw {
+      message: data.message || data.error || JSON.stringify(data),
+      status: res.status,
+      details: data.details,
+      raw: data,
+    };
+  } else {
+    throw {
+      message: data || "API error",
+      status: res.status,
+      raw: data,
+    };
   }
 }
 
-export async function signupBuyer(payload) {
-  const res = await fetch(`${BASE}/api/auth/signup`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  return handleResponse(res);
-}
-
-export async function signupWithFormData(formData) {
-  const res = await fetch(`${BASE}/api/auth/signup`, {
-    method: "POST",
-    body: formData,
-  });
-  return handleResponse(res);
-}
-
-export async function loginApi({ email, password }) {
-  // include credentials to allow httpOnly cookie to be set
+export async function loginRequest(email, password, role = "buyer") {
   const res = await fetch(`${BASE}/api/auth/login`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, role }),
   });
   return handleResponse(res);
 }
 
-export async function me() {
-  const res = await fetch(`${BASE}/api/auth/me`, {
-    credentials: "include",
-  });
+export async function meRequest() {
+  const res = await fetch(`${BASE}/api/auth/me`, { credentials: "include" });
   return handleResponse(res);
 }
 
-export async function logoutApi() {
+export async function logoutRequest() {
   const res = await fetch(`${BASE}/api/auth/logout`, {
     method: "POST",
     credentials: "include",
   });
   return handleResponse(res);
 }
+
+// JSON signup (no files)
+export async function signupJson(payload) {
+  const res = await fetch(`${BASE}/api/auth/signup`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res);
+}
+
+// FormData signup (files). DO NOT set Content-Type header.
+export async function signupWithFormData(formData) {
+  const res = await fetch(`${BASE}/api/auth/signup`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+  return handleResponse(res);
+}
+
+/* Backwards-compatible aliases */
+export const signupRequest = signupJson;
+export const signupBuyer = signupJson;
