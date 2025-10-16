@@ -1,27 +1,60 @@
-import React, { useState } from "react";
+// frontend/src/components/PersonalInfoCard.jsx
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
 
 const PersonalInfoCard = () => {
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const { user, setUser } = useAuth();
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+  });
   const [isEditing, setIsEditing] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
 
-  const handleEdit = () => {
-    if (!isEditing) setIsEditing(true);
+  useEffect(() => {
+    if (user) {
+      setForm({
+        name: user.name ?? user.fullName ?? "",
+        email: user.email ?? "",
+        phone: user.phone ?? user.phoneNumber ?? "",
+        address: user.address ?? user.primaryAddress ?? "",
+      });
+    }
+  }, [user]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((s) => ({ ...s, [name]: value }));
+    setIsEditing(true);
   };
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async (e) => {
+    e?.preventDefault?.();
+    // TODO: send PATCH to /api/users/:id to update. For now, just update context locally.
+    setUser((prev) => ({
+      ...(prev || {}),
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      address: form.address,
+    }));
     setIsEditing(false);
-    alert("Personal information saved successfully!");
+    alert(
+      "Personal information saved (locally). Wire the API call to persist it."
+    );
   };
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6" id="personal-info">
-      {/* Header */}
       <div className="mb-6">
-        <h3 className="text-xl font-bold text-gray-900">Personal Information</h3>
+        <h3 className="text-xl font-bold text-gray-900">
+          Personal Information
+        </h3>
       </div>
 
-      {/* Personal Info Form */}
-      <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+      <form className="space-y-6" onSubmit={handleSaveChanges}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label
@@ -32,13 +65,13 @@ const PersonalInfoCard = () => {
             </label>
             <input
               id="name"
+              name="name"
               type="text"
-              defaultValue="John Doe"
-              onChange={handleEdit}
+              value={form.name}
+              onChange={handleChange}
               className="mt-1 block w-full rounded-lg border border-gray-200 shadow-sm focus:border-emerald-600 focus:ring focus:ring-emerald-100 sm:text-sm p-2"
             />
           </div>
-
           <div>
             <label
               htmlFor="email"
@@ -48,13 +81,13 @@ const PersonalInfoCard = () => {
             </label>
             <input
               id="email"
+              name="email"
               type="email"
-              defaultValue="john.doe@example.com"
-              onChange={handleEdit}
+              value={form.email}
+              onChange={handleChange}
               className="mt-1 block w-full rounded-lg border border-gray-200 shadow-sm focus:border-emerald-600 focus:ring focus:ring-emerald-100 sm:text-sm p-2"
             />
           </div>
-
           <div>
             <label
               htmlFor="phone"
@@ -64,13 +97,13 @@ const PersonalInfoCard = () => {
             </label>
             <input
               id="phone"
+              name="phone"
               type="tel"
-              defaultValue="+254 712 345 678"
-              onChange={handleEdit}
+              value={form.phone}
+              onChange={handleChange}
               className="mt-1 block w-full rounded-lg border border-gray-200 shadow-sm focus:border-emerald-600 focus:ring focus:ring-emerald-100 sm:text-sm p-2"
             />
           </div>
-
           <div>
             <label
               htmlFor="address"
@@ -80,15 +113,15 @@ const PersonalInfoCard = () => {
             </label>
             <input
               id="address"
+              name="address"
               type="text"
-              defaultValue="123 Ngong Road, Nairobi"
-              onChange={handleEdit}
+              value={form.address}
+              onChange={handleChange}
               className="mt-1 block w-full rounded-lg border border-gray-200 shadow-sm focus:border-emerald-600 focus:ring focus:ring-emerald-100 sm:text-sm p-2"
             />
           </div>
         </div>
 
-        {/* Password Change Section */}
         {showPasswordForm && (
           <div className="mt-8">
             <h4 className="text-lg font-semibold text-gray-900 mb-4">
@@ -109,7 +142,6 @@ const PersonalInfoCard = () => {
                   className="mt-1 block w-full rounded-lg border border-gray-200 shadow-sm focus:border-emerald-600 focus:ring focus:ring-emerald-100 sm:text-sm p-2"
                 />
               </div>
-
               <div>
                 <label
                   htmlFor="new-password"
@@ -124,7 +156,6 @@ const PersonalInfoCard = () => {
                   className="mt-1 block w-full rounded-lg border border-gray-200 shadow-sm focus:border-emerald-600 focus:ring focus:ring-emerald-100 sm:text-sm p-2"
                 />
               </div>
-
               <div>
                 <label
                   htmlFor="confirm-password"
@@ -143,23 +174,17 @@ const PersonalInfoCard = () => {
           </div>
         )}
 
-        {/* Action Buttons */}
         <div className="flex justify-between items-center flex-wrap gap-3 pt-8">
-          {/* Left - Cancel or Change Password */}
           <div>
             <button
               type="button"
-              onClick={() => {
-                if (showPasswordForm) setShowPasswordForm(false);
-                else setShowPasswordForm(true);
-              }}
+              onClick={() => setShowPasswordForm((s) => !s)}
               className="text-sm font-medium text-gray-500 hover:text-rose-500 transition-colors"
             >
               {showPasswordForm ? "Cancel" : "Change Password"}
             </button>
           </div>
 
-          {/* Right - Conditional Buttons */}
           <div className="flex gap-3">
             {showPasswordForm ? (
               <button
@@ -169,15 +194,13 @@ const PersonalInfoCard = () => {
                 Update Password
               </button>
             ) : (
-              isEditing && (
-                <button
-                  type="button"
-                  onClick={handleSaveChanges}
-                  className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-colors"
-                >
-                  Save Changes
-                </button>
-              )
+              <button
+                type="submit"
+                disabled={!isEditing}
+                className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-colors disabled:opacity-50"
+              >
+                Save Changes
+              </button>
             )}
           </div>
         </div>

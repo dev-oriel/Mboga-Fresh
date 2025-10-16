@@ -1,14 +1,17 @@
+// frontend/src/components/Header.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import CartPreview from "./CartPreview";
 
 const Header = ({ avatarUrl } = {}) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
-  // cart context (may be present in your app)
+  // cart context
   const { count, items } = useCart?.() ?? { count: 0, items: [] };
 
   const [cartOpen, setCartOpen] = useState(false);
@@ -24,12 +27,27 @@ const Header = ({ avatarUrl } = {}) => {
     prevCountRef.current = count;
   }, [count]);
 
-  const navLinks = [
+  // build navigation based on role
+  const role = user?.role ?? "guest";
+  const baseLinks = [
     { name: "Home", to: "/" },
     { name: "Marketplace", to: "/marketplace" },
     { name: "Orders", to: "/orders" },
     { name: "Help", to: "/help" },
   ];
+  // vendor specific
+  if (role === "vendor") {
+    baseLinks.splice(2, 0, {
+      name: "Vendor Dashboard",
+      to: "/vendordashboard",
+    });
+  }
+  if (role === "rider") {
+    baseLinks.splice(2, 0, { name: "Rider", to: "/riderdashboard" });
+  }
+  if (role === "farmer" || role === "supplier") {
+    baseLinks.splice(2, 0, { name: "Supplier", to: "/supplierdashboard" });
+  }
 
   const handleSubmitSearch = (e) => {
     e?.preventDefault?.();
@@ -71,7 +89,7 @@ const Header = ({ avatarUrl } = {}) => {
                 className="hidden lg:flex items-center gap-8"
                 aria-label="Main navigation"
               >
-                {navLinks.map((link) => (
+                {baseLinks.map((link) => (
                   <NavLink
                     key={link.to}
                     to={link.to}
@@ -149,33 +167,88 @@ const Header = ({ avatarUrl } = {}) => {
                 )}
               </button>
 
-              {/* Avatar always goes to /profile */}
-              <button
-                onClick={() => navigate("/profile")}
-                className="hidden lg:block group"
-                aria-label="Open profile"
-                title="Profile"
-              >
-                <div
-                  className="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-12 h-12 ring-2 ring-transparent group-hover:ring-emerald-600 transition-all"
-                  style={{
-                    backgroundImage: `url('${
-                      avatarUrl ||
-                      "https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=512&h=512&fit=crop&auto=format"
-                    }')`,
-                  }}
-                />
-              </button>
-
-              <button
-                onClick={() => setMobileOpen((s) => !s)}
-                className="lg:hidden text-gray-600 dark:text-gray-300 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-                aria-expanded={mobileOpen}
-                aria-controls="mobile-menu"
-                aria-label="Toggle menu"
-              >
-                <span className="material-symbols-outlined text-3xl">menu</span>
-              </button>
+              {user ? (
+                <>
+                  <div className="hidden lg:flex items-center gap-3">
+                    <div className="text-right mr-2">
+                      <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {user.name ?? user.fullName ?? user.username}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {user.role ?? "buyer"}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => navigate("/profile")}
+                      aria-label="Open profile"
+                      title="Profile"
+                      className="group"
+                    >
+                      <div
+                        className="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-12 h-12 ring-2 ring-transparent group-hover:ring-emerald-600 transition-all"
+                        style={{
+                          backgroundImage: `url('${
+                            avatarUrl ||
+                            user.avatar ||
+                            user.avatarUrl ||
+                            "https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=512&h=512&fit=crop&auto=format"
+                          }')`,
+                        }}
+                      />
+                    </button>
+                    <button
+                      onClick={async () => {
+                        await logout();
+                        navigate("/");
+                      }}
+                      className="ml-3 text-sm bg-emerald-50 text-emerald-700 px-3 py-2 rounded-md"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                  <div className="lg:hidden">
+                    <button
+                      onClick={() => setMobileOpen((s) => !s)}
+                      className="text-gray-600 dark:text-gray-300 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                      aria-expanded={mobileOpen}
+                      aria-controls="mobile-menu"
+                      aria-label="Toggle menu"
+                    >
+                      <span className="material-symbols-outlined text-3xl">
+                        menu
+                      </span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => navigate("/login")}
+                    className="hidden lg:inline-block px-4 py-2 rounded-md bg-emerald-600 text-white font-semibold hover:bg-emerald-700"
+                  >
+                    Sign in
+                  </button>
+                  <button
+                    onClick={() => navigate("/signup/buyer")}
+                    className="hidden lg:inline-block px-3 py-2 rounded-md border border-emerald-600 text-emerald-600 font-medium ml-2"
+                  >
+                    Sign up
+                  </button>
+                  <div className="lg:hidden">
+                    <button
+                      onClick={() => setMobileOpen((s) => !s)}
+                      className="text-gray-600 dark:text-gray-300 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                      aria-expanded={mobileOpen}
+                      aria-controls="mobile-menu"
+                      aria-label="Toggle menu"
+                    >
+                      <span className="material-symbols-outlined text-3xl">
+                        menu
+                      </span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -189,7 +262,7 @@ const Header = ({ avatarUrl } = {}) => {
         >
           <div className="container mx-auto px-4 py-4">
             <nav className="flex flex-col gap-3" aria-label="Mobile navigation">
-              {navLinks.map((link) => (
+              {baseLinks.map((link) => (
                 <NavLink
                   key={link.to}
                   to={link.to}

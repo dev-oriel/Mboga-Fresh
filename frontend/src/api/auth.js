@@ -11,10 +11,11 @@ async function handleResponse(res) {
   }
 
   if (res.ok) {
+    // Return parsed JSON (or raw text) directly
     return typeof data === "object" ? data : { data };
   }
 
-  // Ensure errors are thrown as objects with message
+  // Normalize error object so callers can read `.message`
   if (typeof data === "object") {
     throw {
       message: data.message || data.error || JSON.stringify(data),
@@ -42,7 +43,9 @@ export async function loginRequest(email, password, role = "buyer") {
 }
 
 export async function meRequest() {
-  const res = await fetch(`${BASE}/api/auth/me`, { credentials: "include" });
+  const res = await fetch(`${BASE}/api/auth/me`, {
+    credentials: "include",
+  });
   return handleResponse(res);
 }
 

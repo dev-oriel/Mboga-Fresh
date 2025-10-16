@@ -9,7 +9,8 @@ const Login = () => {
   const [role, setRole] = useState("buyer");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+
+  const { login, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const info = location.state?.info ?? null;
@@ -28,18 +29,20 @@ const Login = () => {
     setError("");
     setLoading(true);
     try {
-      const res = await login(email, password, role);
-      // server returns actual user.role; respect server's truth
-      const actualRole = res?.user?.role || role;
+      // login() will call the API and refresh /me internally
+      const res = await login(email.trim(), password, role);
+      // Prefer server-canonical role: try res.user, then context user, then chosen role
+      const actualRole = res?.user?.role || user?.role || role;
       const to = roleRedirectMap[actualRole] || "/";
       navigate(to);
     } catch (err) {
-      // err may be object from server or string
-      const msg =
-        (err && (err.message || err?.msg || err?.message?.toString())) ||
-        err?.message ||
-        JSON.stringify(err) ||
-        "Login failed";
+      // normalize error to a readable string
+      let msg = "Login failed";
+      if (!err) msg = "Login failed";
+      else if (typeof err === "string") msg = err;
+      else if (err.message) msg = err.message;
+      else if (err?.raw) msg = JSON.stringify(err.raw);
+      else msg = JSON.stringify(err);
       setError(msg);
     } finally {
       setLoading(false);
@@ -76,6 +79,7 @@ const Login = () => {
               value={role}
               onChange={(e) => setRole(e.target.value)}
               className="w-full border p-2 rounded"
+              disabled={loading}
             >
               <option value="buyer">Buyer</option>
               <option value="vendor">Vendor</option>
