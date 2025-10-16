@@ -499,3 +499,7 @@ export const orders = [
     action: "Accept Order",
   },
 ];
+
+// Real data
+export const DEFAULT_AVATAR =
+  "https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=512&h=512&fit=crop&auto=format";

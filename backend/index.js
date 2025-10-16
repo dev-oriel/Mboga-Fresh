@@ -1,4 +1,3 @@
-// backend/index.js
 import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
@@ -8,42 +7,42 @@ import path from "path";
 import { connectDB } from "./db/connectDB.js";
 import authRoutes from "./routes/auth.route.js";
 import productsRoute from "./routes/products.route.js";
+import profileRoutes from "./routes/profile.routes.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// middlewares
+// Middlewares
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-const client = process.env.CLIENT_URL || "http://localhost:5173"; // set your frontend origin
+const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
 app.use(
   cors({
-    origin: client, // explicitly the front-end origin
-    credentials: true, // allow cookies/auth if needed
+    origin: CLIENT_URL,
+    credentials: true,
   })
 );
 
-// serve uploads (images)
+// Serve static uploads
 const uploadsPath = path.join(process.cwd(), "backend", "uploads");
 app.use("/uploads", express.static(uploadsPath));
 
-// routes
-app.get("/", (req, res) => {
-  res.send("Hello world kenya");
-});
+// Routes
+app.get("/", (req, res) => res.send("Hello world kenya"));
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productsRoute);
+app.use("/api/profile", profileRoutes);
 
-// connect DB then start server
+// Connect DB and start server
 connectDB()
   .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
+    app.listen(PORT, () =>
+      console.log(`Server running on http://localhost:${PORT}`)
+    );
   })
   .catch((err) => {
     console.error("Failed to start server:", err);

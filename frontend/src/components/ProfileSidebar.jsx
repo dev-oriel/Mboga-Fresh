@@ -3,6 +3,8 @@ import React, { useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
+import { DEFAULT_AVATAR } from "../constants";
+
 const ProfileSidebar = () => {
   const { user, logout } = useAuth();
   const profileImageDefault =

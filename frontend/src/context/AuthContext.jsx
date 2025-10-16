@@ -18,12 +18,8 @@ export const AuthProvider = ({ children }) => {
 
   // helper to normalize `me` responses into a user object or null
   const _normalizeMe = (res) => {
-    // many backends return { success: true, user: {...} }
-    // or return user directly. tolerate both shapes.
     const payload = res?.user ?? res?.data ?? res;
-    // if payload contains wrapper like { success: false, message: '...' } treat as unauth
     if (payload && payload.success === false) return null;
-    // payload might be a user object (has email/_id/name)
     if (
       payload &&
       (payload.email ||
@@ -37,6 +33,7 @@ export const AuthProvider = ({ children }) => {
     return null;
   };
 
+  // canonical refresh function (fetch /me)
   const refresh = useCallback(async () => {
     setLoadingAuth(true);
     try {
@@ -46,9 +43,7 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       return u;
     } catch (err) {
-      // on error, clear user (not authenticated)
       setUser(null);
-      // preserve error for debugging if needed
       setError(err?.message || String(err));
       return null;
     } finally {
@@ -67,19 +62,17 @@ export const AuthProvider = ({ children }) => {
     };
   }, [refresh]);
 
-  // login: call loginRequest then call /me to get canonical user profile
+  // login: call loginRequest then refresh canonical profile
   const login = async (email, password, role = "buyer") => {
     setAuthBusy(true);
     try {
       const res = await loginRequest(email, password, role);
-      // If loginRequest returned success wrapper, but to be safe call /me for canonical profile
-      const canonical = await refresh();
+      // refresh canonical user state
+      await refresh();
       setAuthBusy(false);
-      // return shape similar to old behaviour (so callers expecting res?.success still work)
       return res;
     } catch (err) {
       setAuthBusy(false);
-      // ensure thrown error has `.message`
       if (!err || (typeof err === "object" && !err.message)) {
         throw { message: String(err) };
       }
@@ -92,8 +85,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await logoutRequest();
     } catch (err) {
-      // ignore network errors but log if necessary
-      // console.warn("logout error", err);
+      // ignore network errors
     } finally {
       setUser(null);
       setAuthBusy(false);
@@ -107,7 +99,9 @@ export const AuthProvider = ({ children }) => {
         setUser,
         login,
         logout,
-        refresh,
+        refresh, // canonical name
+        // Backwards compatibility: some components call refreshUser()
+        refreshUser: refresh,
         loadingAuth,
         authBusy,
         authError: error,

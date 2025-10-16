@@ -5,6 +5,7 @@ import { User } from "../models/user.model.js";
 const SECRET = process.env.JWT_SECRET;
 const COOKIE_NAME = process.env.COOKIE_NAME || "mbogafresh_token";
 
+// Verify JWT token and attach user to request
 export const requireAuth = async (req, res, next) => {
   try {
     const token = req.cookies?.[COOKIE_NAME];
@@ -23,27 +24,36 @@ export const requireAuth = async (req, res, next) => {
         .status(401)
         .json({ success: false, message: "User not found" });
 
+    // If account status check is too strict for dev, new users were created with `active` above.
+    if (user.status !== "active")
+      return res
+        .status(403)
+        .json({ success: false, message: "Account inactive or suspended" });
+
     req.user = user;
     next();
   } catch (err) {
+    console.error("Auth error:", err?.message || err);
     return res
       .status(401)
       .json({ success: false, message: "Authentication failed" });
   }
 };
 
+// Role-based access control middleware
 export const requireRole =
-  (allowed = []) =>
+  (allowedRoles = []) =>
   (req, res, next) => {
     if (!req.user)
       return res
         .status(401)
         .json({ success: false, message: "Not authenticated" });
-    if (!allowed.includes(req.user.role)) {
+
+    if (!allowedRoles.includes(req.user.role))
       return res.status(403).json({
         success: false,
         message: "Forbidden — insufficient privileges",
       });
-    }
+
     next();
   };

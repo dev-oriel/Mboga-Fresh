@@ -8,16 +8,26 @@ dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
-const COOKIE_NAME = "token";
+// Use the environment cookie name (keeps things consistent)
+const COOKIE_NAME = process.env.COOKIE_NAME || "mbogafresh_token";
+
+/**
+ * Cookie options:
+ * - In production we want secure cookies (https)
+ * - In development we keep secure:false so localhost HTTP still receives cookies.
+ * - sameSite: 'lax' is compatible for many dev scenarios. If you use cross-site XHR and cookies
+ *   are not being sent, consider using a Vite proxy (recommended) or adjust to sameSite:'none'
+ *   with secure:true when running over HTTPS.
+ */
 const COOKIE_OPTIONS = (req) => ({
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production", 
+  secure: process.env.NODE_ENV === "production", // only true in prod
   sameSite: "lax",
   maxAge: parseDurationToMs(JWT_EXPIRES_IN),
   path: "/",
 });
 
-// small helper to convert '7d' etc -> ms (supports 'd' days, 'h' hours, default ms number)
+// small helper to convert '7d' etc -> ms (supports 'd' days, 'h' hours, 'm' minutes)
 function parseDurationToMs(value) {
   if (!value) return undefined;
   if (typeof value === "number") return value;
@@ -42,13 +52,16 @@ export const signup = async (req, res) => {
     if (userAlreadyExists) {
       return res
         .status(400)
-        .json({ success: false, message: "user already exist" });
+        .json({ success: false, message: "User already exists" });
     }
 
     const hashedPassword = await bcryptjs.hash(password, 10);
     const VerificationToken = Math.floor(
       100000 + Math.random() * 900000
     ).toString();
+
+    // For development convenience we mark new users active so "requireAuth" won't block them.
+    // In production you may want 'pending' and an email verification step.
     const user = new User({
       email,
       phone,
@@ -57,13 +70,14 @@ export const signup = async (req, res) => {
       name,
       VerificationToken,
       VerificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      status: process.env.NODE_ENV === "production" ? "pending" : "active",
     });
 
     await user.save();
 
     res.status(201).json({
       success: true,
-      message: "User Created successfully",
+      message: "User created successfully",
       user: {
         ...user._doc,
         password: undefined,
@@ -90,7 +104,6 @@ export const login = async (req, res) => {
         .json({ success: false, message: "Invalid credentials" });
     }
 
-    // Prevent role spoofing: requested role must match stored role
     if (user.role !== role) {
       return res.status(403).json({
         success: false,
@@ -98,7 +111,6 @@ export const login = async (req, res) => {
       });
     }
 
-    // password compare
     const valid = await bcryptjs.compare(password, user.password);
     if (!valid) {
       return res
@@ -110,7 +122,7 @@ export const login = async (req, res) => {
     const payload = { id: user._id, role: user.role };
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
-    // set cookie
+    // set cookie using the consistent COOKIE_NAME and options
     res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS(req));
 
     // don't send password back
@@ -124,7 +136,7 @@ export const login = async (req, res) => {
 
 export const me = async (req, res) => {
   try {
-    const token = req.cookies?.token;
+    const token = req.cookies?.[COOKIE_NAME];
     if (!token)
       return res
         .status(401)
@@ -134,8 +146,8 @@ export const me = async (req, res) => {
     try {
       payload = jwt.verify(token, JWT_SECRET);
     } catch (err) {
-      // invalid token -> clear cookie
-      res.clearCookie(COOKIE_NAME);
+      // invalid token -> clear cookie using COOKIE_NAME
+      res.clearCookie(COOKIE_NAME, { path: "/" });
       return res.status(401).json({ success: false, message: "Invalid token" });
     }
 
@@ -154,7 +166,7 @@ export const me = async (req, res) => {
 };
 
 export const logout = async (req, res) => {
-  // clear cookie
-  res.clearCookie(COOKIE_NAME, { path: "/" });
+  const COOKIE_NAME_LOCAL = process.env.COOKIE_NAME || COOKIE_NAME;
+  res.clearCookie(COOKIE_NAME_LOCAL, { path: "/" });
   res.json({ success: true, message: "Logged out" });
 };
