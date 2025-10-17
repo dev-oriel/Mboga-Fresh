@@ -8,7 +8,7 @@ const ProfileSidebar = () => {
   const { user, logout, refresh } = useAuth();
   const profileImageDefault =
     (typeof DEFAULT_AVATAR === "string" && DEFAULT_AVATAR) ||
-    "https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=512&h=512&fit=crop&auto=format";
+    "https://api.dicebear.com/6.x/identicon/png?seed=MbogaFresh&size=512";
 
   // Local preview state only — authoritative avatar comes from user.avatar
   const [profileImagePreview, setProfileImagePreview] = useState(

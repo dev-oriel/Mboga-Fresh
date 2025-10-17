@@ -9,26 +9,37 @@ const COOKIE_NAME = process.env.COOKIE_NAME || "mbogafresh_token";
 export const requireAuth = async (req, res, next) => {
   try {
     const token = req.cookies?.[COOKIE_NAME];
-    if (!token)
+    if (!token) {
       return res
         .status(401)
         .json({ success: false, message: "Not authenticated" });
+    }
 
     const payload = jwt.verify(token, SECRET);
-    if (!payload?.id)
+    if (!payload?.id) {
       return res.status(401).json({ success: false, message: "Invalid token" });
+    }
 
     const user = await User.findById(payload.id).select("-password");
-    if (!user)
+    if (!user) {
       return res
         .status(401)
         .json({ success: false, message: "User not found" });
+    }
 
-    // If account status check is too strict for dev, new users were created with `active` above.
-    if (user.status !== "active")
+    // Development-friendly: allow 'pending' while developing, but still block 'suspended'.
+    // In production require 'active' for stricter controls.
+    if (user.status === "suspended") {
       return res
         .status(403)
         .json({ success: false, message: "Account inactive or suspended" });
+    }
+
+    if (process.env.NODE_ENV === "production" && user.status !== "active") {
+      return res
+        .status(403)
+        .json({ success: false, message: "Account inactive or suspended" });
+    }
 
     req.user = user;
     next();

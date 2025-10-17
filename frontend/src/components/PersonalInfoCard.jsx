@@ -9,7 +9,6 @@ const PersonalInfoCard = () => {
     name: "",
     email: "",
     phone: "",
-    address: "",
   });
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -22,12 +21,6 @@ const PersonalInfoCard = () => {
         name: user.name ?? user.fullName ?? "",
         email: user.email ?? "",
         phone: user.phone ?? user.phoneNumber ?? "",
-        // We store primary address in user's addresses array on backend; here keep the existing single-field fallback
-        address:
-          user.address ??
-          (Array.isArray(user.addresses) &&
-            user.addresses.find((a) => a.isPrimary)?.details) ??
-          "",
       });
     }
   }, [user]);
@@ -60,14 +53,12 @@ const PersonalInfoCard = () => {
       setSaving(true);
 
       // Send update to backend. Your backend's profile route currently updates name/avatar;
-      // we send a full payload (name, email, phone, address). If backend does not support
+      // we send a full payload (name, email, phone). If backend does not support
       // some fields yet, it will ignore them — but we then refresh the canonical user.
       const payload = {
         name: form.name,
         email: form.email,
         phone: form.phone,
-        // keep address field for convenience - your backend uses addresses array route for saved addresses
-        address: form.address,
       };
 
       const res = await axios.put(
@@ -187,25 +178,7 @@ const PersonalInfoCard = () => {
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="address"
-              className="block text-sm font-medium text-gray-600"
-            >
-              Primary Address
-            </label>
-            <input
-              id="address"
-              name="address"
-              type="text"
-              value={form.address}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-lg border border-gray-200 shadow-sm focus:border-emerald-600 focus:ring focus:ring-emerald-100 sm:text-sm p-2"
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Note: saved addresses are also stored via Saved Addresses section.
-            </p>
-          </div>
+          <div></div>
         </div>
 
         {showPasswordForm && (
