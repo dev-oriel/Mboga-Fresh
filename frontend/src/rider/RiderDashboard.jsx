@@ -16,7 +16,7 @@ const RiderDashboard = () => {
         <div className="mx-auto max-w-7xl flex-col gap-8">
           <div className="flex flex-col gap-2 mb-4">
             <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
-              Karibu, Juma!
+              Karibu, Juma!!
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
               Here's a summary of your activity.
