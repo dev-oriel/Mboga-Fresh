@@ -1,25 +1,39 @@
+// frontend/src/api/products.js
 const BASE = import.meta.env.VITE_API_BASE || "";
 
 async function handleResponse(res) {
-  if (res.ok) return res.json();
+  if (res.ok) {
+    // attempt to parse JSON, but keep backward compatibility
+    const text = await res.text();
+    try {
+      return text ? JSON.parse(text) : {};
+    } catch {
+      return text;
+    }
+  }
   const text = await res.text();
   throw new Error(text || "API error");
 }
 
 export async function fetchProducts() {
-  const res = await fetch(`${BASE}/api/products`);
+  const res = await fetch(`${BASE}/api/products`, {
+    credentials: "include",
+  });
   return handleResponse(res);
 }
 
 export async function fetchProduct(id) {
-  const res = await fetch(`${BASE}/api/products/${encodeURIComponent(id)}`);
+  const res = await fetch(`${BASE}/api/products/${encodeURIComponent(id)}`, {
+    credentials: "include",
+  });
   return handleResponse(res);
 }
 
 export async function createProduct(formData) {
   const res = await fetch(`${BASE}/api/products`, {
     method: "POST",
-    body: formData,
+    credentials: "include",
+    body: formData, // DO NOT set Content-Type when sending FormData
   });
   return handleResponse(res);
 }
@@ -27,6 +41,7 @@ export async function createProduct(formData) {
 export async function updateProduct(id, formData) {
   const res = await fetch(`${BASE}/api/products/${encodeURIComponent(id)}`, {
     method: "PUT",
+    credentials: "include",
     body: formData,
   });
   return handleResponse(res);
@@ -35,6 +50,7 @@ export async function updateProduct(id, formData) {
 export async function deleteProduct(id) {
   const res = await fetch(`${BASE}/api/products/${encodeURIComponent(id)}`, {
     method: "DELETE",
+    credentials: "include",
   });
   return handleResponse(res);
 }

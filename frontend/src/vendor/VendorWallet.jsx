@@ -3,8 +3,10 @@ import React, { useState } from "react";
 import Header from "../components/vendorComponents/Header";
 import Footer from "../components/vendorComponents/Footer";
 import { useVendorData } from "../context/VendorDataContext";
+import { useAuth } from "../context/AuthContext";
 
 function VendorWallet() {
+  const { user } = useAuth();
   const [mpesa, setMpesa] = useState("254712345678");
   const [amount, setAmount] = useState("");
   const { balances, transactions, handleWithdraw } = useVendorData();
@@ -40,7 +42,7 @@ function VendorWallet() {
     <div className="min-h-screen bg-gray-50 text-gray-800">
       <Header
         avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDeL7radWSj-FEteEjqLpufXII3-tc_o7GMvLvB07AaD_bYBkfAcIOnNbOXkTdMOHRgJQwLZE-Z_iw72Bd8bpHzfXP_m0pIvteSw7FKZ1qV9GD1KfgyDVG90bCO7OGe6JyYIkm9DBo2ArC60uEqSfDvnnYWeo6IqVEjWxsVX6dUoxjm9ozyVlriiMdVLc_jU9ZxS01QcxNa8hn-ePNbB6IcXSwExf2U61R-epab8nsOkbq95E7z6b-fH4zOt0j2MPt20nrqtPM1NHI"
-        userName="Mama Kibet"
+        userName={user?.name || "Vendor"}
       />
 
       <main className="max-w-7xl mx-auto px-6 py-8">

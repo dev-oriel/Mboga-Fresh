@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Header from "../components/vendorComponents/Header";
 import { useVendorData } from "../context/VendorDataContext";
+import { useAuth } from "../context/AuthContext";
 
 // Icon mapping
 const iconComponents = {
@@ -33,7 +34,7 @@ const VendorDashboard = () => {
     deleteReadNotifications,
   } = useVendorData();
 
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -47,7 +48,7 @@ const VendorDashboard = () => {
         navigate("/login");
         return;
       }
-      setUser(parsedUser);
+      user(parsedUser);
     } else {
       console.log("Running in demo mode - no authenticated user");
     }
@@ -99,7 +100,7 @@ const VendorDashboard = () => {
     <div className="min-h-screen bg-gray-50">
       <Header
         avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDeL7radWSj-FEteEjqLpufXII3-tc_o7GMvLvB07AaD_bYBkfAcIOnNbOXkTdMOHRgJQwLZE-Z_iw72Bd8bpHzfXP_m0pIvteSw7FKZ1qV9GD1KfgyDVG90bCO7OGe6JyYIkm9DBo2ArC60uEqSfDvnnYWeo6IqVEjWxsVX6dUoxjm9ozyVlriiMdVLc_jU9ZxS01QcxNa8hn-ePNbB6IcXSwExf2U61R-epab8nsOkbq95E7z6b-fH4zOt0j2MPt20nrqtPM1NHI"
-        userName="Mama Kibet"
+        userName={user?.name || "Vendor"}
       />
 
       <main className="p-6">

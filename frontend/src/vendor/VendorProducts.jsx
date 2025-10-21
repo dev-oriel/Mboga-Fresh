@@ -1,3 +1,4 @@
+// frontend/src/vendor/VendorProductManagement.jsx
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Edit2, Trash2, Plus, X } from "lucide-react";
 import Header from "../components/vendorComponents/Header";
@@ -9,6 +10,7 @@ import {
   updateProduct,
   deleteProduct,
 } from "../api/products";
+import { useAuth } from "../context/AuthContext";
 
 /**
  * VendorProductManagement
@@ -24,6 +26,7 @@ const DEFAULT_PLACEHOLDER =
   "https://images.unsplash.com/photo-1518976024611-0a4e3d1c9f05?auto=format&fit=crop&w=1200&q=60"; // nice fallback
 
 export default function VendorProductManagement() {
+  const { user } = useAuth(); 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -201,7 +204,14 @@ export default function VendorProductManagement() {
     fd.append("status", form.status);
     fd.append("description", form.description || "");
 
+    // append image if selected
     if (form.file) fd.append("image", form.file);
+
+    // IMPORTANT: include vendorId when available (fallback)
+    // req.user on the server is still preferred; this is a denormalized explicit value.
+    if (user && (user._id || user.id)) {
+      fd.append("vendorId", String(user._id || user.id));
+    }
 
     try {
       if (editingId) {
@@ -238,7 +248,7 @@ export default function VendorProductManagement() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <Header
         avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDeL7radWSj-FEteEjqLpufXII3-tc_o7GMvLvB07AaD_bYBkfAcIOnNbOXkTdMOHRgJQwLZE-Z_iw72Bd8bpHzfXP_m0pIvteSw7FKZ1qV9GD1KfgyDVG90bCO7OGe6JyYIkm9DBo2ArC60uEqSfDvnnYWeo6IqVEjWxsVX6dUoxjm9ozyVlriiMdVLc_jU9ZxS01QcxNa8hn-ePNbB6IcXSwExf2U61R-epab8nsOkbq95E7z6b-fH4zOt0j2MPt20nrqtPM1NHI"
-        userName="Mama Kibet"
+        userName={user?.name || "Vendor"}
       />
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
@@ -246,7 +256,7 @@ export default function VendorProductManagement() {
           <div>
             <h2 className="text-3xl font-bold">My Products</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Manage your products here, Upload good images amd provide good
+              Manage your products here, Upload good images and provide good
               description.
             </p>
           </div>

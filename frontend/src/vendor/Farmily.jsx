@@ -8,6 +8,7 @@ import ProductCard from "../components/vendorComponents/ProductCard";
 import VendorCart from "../components/vendorComponents/VendorCart";
 import VendorOrders from "../components/vendorComponents/VendorOrders";
 import { fetchBulkProducts } from "../api/bulkProducts";
+import { useAuth } from "../context/AuthContext";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 
@@ -28,6 +29,7 @@ const resolveImage = (imagePath) => {
 };
 
 const Farmily = () => {
+  const { user } = useAuth();
   const { search } = useLocation();
   const params = new URLSearchParams(search);
   const category = params.get("category"); // e.g. "vegetables"
@@ -97,7 +99,7 @@ const Farmily = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <Header
         avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDeL7radWSj-FEteEjqLpufXII3-tc_o7GMvLvB07AaD_bYBkfAcIOnNbOXkTdMOHRgJQwLZE-Z_iw72Bd8bpHzfXP_m0pIvteSw7FKZ1qV9GD1KfgyDVG90bCO7OGe6JyYIkm9DBo2ArC60uEqSfDvnnYWeo6IqVEjWxsVX6dUoxjm9ozyVlriiMdVLc_jU9ZxS01QcxNa8hn-ePNbB6IcXSwExf2U61R-epab8nsOkbq95E7z6b-fH4zOt0j2MPt20nrqtPM1NHI"
-        userName="Mama Kibet"
+        userName={user?.name || "Vendor"}
       />
 
       <div className="flex">
