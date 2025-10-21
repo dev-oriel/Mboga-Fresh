@@ -18,8 +18,7 @@ const Login = () => {
   const roleRedirectMap = {
     buyer: "/",
     vendor: "/vendordashboard",
-    farmer: "/farmily",
-    supplier: "/farmily",
+    farmer: "/supplierdashboard",
     rider: "/riderdashboard",
     admin: "/admin",
   };

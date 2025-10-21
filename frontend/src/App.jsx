@@ -53,7 +53,7 @@ import SupplierProfile from "./farmer/SupplierProfile.jsx";
 import SupplierWallet from "./farmer/SupplierWallet.jsx";
 
 function App() {
-  return ( 
+  return (
     <CartProvider>
       <VendorDataProvider>
         <div>
@@ -90,22 +90,29 @@ function App() {
             <Route path="/farmily" element={<Farmily />} />
             <Route path="/vendorwallet" element={<VendorWallet />} />
 
-          {/* Rider routes */}
-          <Route path="/riderdashboard" element={<RiderDashboard />} />
-          <Route path="/riderdeliveryqueue" element={<RiderDeliveryQueue />} />
-          <Route path="/riderhelp" element={<RiderHelpPage />} />
-          <Route path="/riderprofile" element={<RiderProfile />} />
-          <Route path="/riderearnings" element={<RiderEarningsAndHistory />} />
-          <Route path="/riderdelivery/:orderid" element={<RiderDeliveryDetail/>}/>
+            {/* Rider routes */}
+            <Route path="/riderdashboard" element={<RiderDashboard />} />
+            <Route
+              path="/riderdeliveryqueue"
+              element={<RiderDeliveryQueue />}
+            />
+            <Route path="/riderhelp" element={<RiderHelpPage />} />
+            <Route path="/riderprofile" element={<RiderProfile />} />
+            <Route
+              path="/riderearnings"
+              element={<RiderEarningsAndHistory />}
+            />
+            <Route
+              path="/riderdelivery/:orderid"
+              element={<RiderDeliveryDetail />}
+            />
 
-          {/* Farmer routes */}
-          <Route path="/supplierdashboard" element={<SupplierDashboard />} />
-          <Route path="/SupplierDashboard" element={<SupplierDashboard />} />
-          <Route path="/supplierproducts" element={<Products />} />
-          <Route path="/supplierorders" element={<FarmerOrderManagement />} />
-          <Route path="/supplierwallet" element={<SupplierWallet />} />
-          <Route path="/supplierprofile" element={<SupplierProfile />} />
-            
+            {/* Farmer routes */}
+            <Route path="/supplierdashboard" element={<SupplierDashboard />} />
+            <Route path="/supplierproducts" element={<Products />} />
+            <Route path="/supplierorders" element={<FarmerOrderManagement />} />
+            <Route path="/supplierwallet" element={<SupplierWallet />} />
+            <Route path="/supplierprofile" element={<SupplierProfile />} />
           </Routes>
         </div>
       </VendorDataProvider>

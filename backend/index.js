@@ -8,6 +8,7 @@ import { connectDB } from "./db/connectDB.js";
 import authRoutes from "./routes/auth.route.js";
 import productsRoute from "./routes/products.route.js";
 import profileRoutes from "./routes/profile.routes.js";
+import bulkProductsRoute from "./routes/bulkProducts.route.js";
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ app.get("/", (req, res) => res.send("Hello world kenya"));
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productsRoute);
 app.use("/api/profile", profileRoutes);
+app.use("/api/bulk-products", bulkProductsRoute);
 
 // Connect DB and start server
 connectDB()

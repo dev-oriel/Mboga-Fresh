@@ -1,33 +1,27 @@
+// frontend/src/farmer/Products.jsx
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Edit2, Trash2, Plus, X } from "lucide-react";
 import Header from "../components/FarmerComponents/Header";
 import Footer from "../components/FarmerComponents/Footer";
 import { vendorCategories } from "../constants";
 import {
-  fetchProducts,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-} from "../api/products";
+  fetchBulkProducts,
+  createBulkProduct,
+  updateBulkProduct,
+  deleteBulkProduct,
+} from "../api/bulkProducts";
+import { useAuth } from "../context/AuthContext";
 
-/**
- * VendorProductManagement
- * - prettier uploader (drag & drop + file input)
- * - preview & size checks
- * - robust image URL resolution (uses VITE_API_BASE when available)
- * - polished form placeholders and validation feedback
- */
-
-const API_BASE = import.meta.env.VITE_API_BASE || ""; // set frontend/.env VITE_API_BASE=http://localhost:5000 or use proxy for /uploads
+const API_BASE = import.meta.env.VITE_API_BASE || "";
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_PLACEHOLDER =
-  "https://images.unsplash.com/photo-1518976024611-0a4e3d1c9f05?auto=format&fit=crop&w=1200&q=60"; // nice fallback
+  "https://images.unsplash.com/photo-1518976024611-0a4e3d1c9f05?auto=format&fit=crop&w=1200&q=60";
 
 export default function Products() {
+  const { user, loadingAuth } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // modal/form state
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formErrors, setFormErrors] = useState({});
@@ -41,30 +35,32 @@ export default function Products() {
     category: vendorCategories?.[0]?.label ?? "",
     priceLabel: "",
     price: 0,
-    stock: "",
+    quantity: "",
     status: "In Stock",
     description: "",
   });
 
-  // load products
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchProducts();
+      if (!user) {
+        setProducts([]);
+        return;
+      }
+      const data = await fetchBulkProducts({ ownerId: user._id, limit: 100 });
       setProducts(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("Failed to load products:", err);
+      console.error("Failed to load bulk products:", err);
       setProducts([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  // helpers
   function resetForm() {
     setForm({
       file: null,
@@ -73,7 +69,7 @@ export default function Products() {
       category: vendorCategories?.[0]?.label ?? "",
       priceLabel: "",
       price: 0,
-      stock: "",
+      quantity: "",
       status: "In Stock",
       description: "",
     });
@@ -98,7 +94,7 @@ export default function Products() {
       priceLabel:
         product.priceLabel || (product.price ? `KSh ${product.price}` : ""),
       price: product.price || 0,
-      stock: product.stock || "",
+      quantity: product.quantity || product.stock || "",
       status: product.status || "In Stock",
       description: product.description || "",
     });
@@ -108,18 +104,19 @@ export default function Products() {
   }
 
   async function handleDelete(id) {
-    const ok = window.confirm("Delete this product? This cannot be undone.");
+    const ok = window.confirm(
+      "Delete this bulk product? This cannot be undone."
+    );
     if (!ok) return;
     try {
-      await deleteProduct(id);
+      await deleteBulkProduct(id);
       setProducts((p) => p.filter((x) => (x._id || x.id) !== id));
     } catch (err) {
       console.error(err);
-      alert("Failed to delete product");
+      alert("Failed to delete bulk product");
     }
   }
 
-  // image helpers
   function fileToPreview(file) {
     return new Promise((resolve, reject) => {
       if (!file) return resolve("");
@@ -147,13 +144,11 @@ export default function Products() {
     }
   }
 
-  // drag & drop
   function handleDrop(e) {
     e.preventDefault();
     e.stopPropagation();
     const file = e.dataTransfer?.files?.[0];
     if (!file) return;
-    // reuse same checks
     if (file.size > MAX_IMAGE_BYTES) {
       setFormErrors((s) => ({ ...s, image: "Image must be under 5MB." }));
       return;
@@ -182,8 +177,8 @@ export default function Products() {
     if (!form.name || String(form.name).trim().length < 2)
       errors.name = "Product name required (min 2 chars)";
     if (!form.category) errors.category = "Select a category";
-    if (!form.price || Number(form.price) <= 0)
-      errors.price = "Enter a valid price (> 0)";
+    if (!form.price || Number(form.price) < 0)
+      errors.price = "Enter a valid price (>= 0)";
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   }
@@ -191,44 +186,44 @@ export default function Products() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!validateForm()) return;
+    if (!user) {
+      alert("You must be logged in to add bulk products.");
+      return;
+    }
 
     const fd = new FormData();
     fd.append("name", form.name.trim());
     fd.append("category", form.category);
     fd.append("priceLabel", form.priceLabel);
     fd.append("price", String(form.price));
-    fd.append("stock", form.stock);
+    fd.append("quantity", form.quantity || "");
     fd.append("status", form.status);
     fd.append("description", form.description || "");
-
     if (form.file) fd.append("image", form.file);
 
     try {
       if (editingId) {
-        await updateProduct(editingId, fd);
+        await updateBulkProduct(editingId, fd);
       } else {
-        await createProduct(fd);
+        await createBulkProduct(fd);
       }
       await load();
       setOpen(false);
       resetForm();
     } catch (err) {
-      console.error(err);
-      alert("Failed to save product. See console for details.");
+      console.error("save bulk product error:", err);
+      alert("Failed to save bulk product. See console for details.");
     }
   }
 
-  // image URL resolver:
   function resolveImageUrl(imagePath) {
     if (!imagePath) return DEFAULT_PLACEHOLDER;
     if (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
       return imagePath;
-    // server returns something like "/uploads/xxxx.jpg"
     if (API_BASE)
       return `${API_BASE.replace(/\/$/, "")}${
         imagePath.startsWith("/") ? imagePath : `/${imagePath}`
       }`;
-    // fallback: try /uploads on current origin — this works if you proxied /uploads in vite.config
     return `${window.location.origin}${
       imagePath.startsWith("/") ? imagePath : `/${imagePath}`
     }`;
@@ -237,17 +232,16 @@ export default function Products() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <Header
-        avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDeL7radWSj-FEteEjqLpufXII3-tc_o7GMvLvB07AaD_bYBkfAcIOnNbOXkTdMOHRgJQwLZE-Z_iw72Bd8bpHzfXP_m0pIvteSw7FKZ1qV9GD1KfgyDVG90bCO7OGe6JyYIkm9DBo2ArC60uEqSfDvnnYWeo6IqVEjWxsVX6dUoxjm9ozyVlriiMdVLc_jU9ZxS01QcxNa8hn-ePNbB6IcXSwExf2U61R-epab8nsOkbq95E7z6b-fH4zOt0j2MPt20nrqtPM1NHI"
-        userName="Daniel Mutuku"
+        avatarUrl={user?.avatar || ""}
+        userName={user?.name || "Supplier"}
       />
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-3xl font-bold">My Products</h2>
+            <h2 className="text-3xl font-bold">My Bulk Products</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Manage your products here, Upload good images amd provide good
-              description.
+              These are your bulk/supplier listings (not retail vendor
+              products).
             </p>
           </div>
 
@@ -277,7 +271,7 @@ export default function Products() {
                   Price/Unit
                 </th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
-                  Stock
+                  Quantity
                 </th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
                   Status
@@ -300,7 +294,7 @@ export default function Products() {
               {!loading && products.length === 0 && (
                 <tr>
                   <td colSpan={7} className="p-8 text-center">
-                    No products yet.
+                    No bulk products yet.
                   </td>
                 </tr>
               )}
@@ -325,13 +319,12 @@ export default function Products() {
                             )}
                             alt={product.name || "product"}
                             className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = DEFAULT_PLACEHOLDER;
-                            }}
+                            onError={(e) =>
+                              (e.currentTarget.src = DEFAULT_PLACEHOLDER)
+                            }
                           />
                         </div>
                       </td>
-
                       <td className="py-4 px-6 text-sm text-gray-900">
                         {product.name}
                       </td>
@@ -342,7 +335,7 @@ export default function Products() {
                         {product.priceLabel}
                       </td>
                       <td className="py-4 px-6 text-sm text-gray-900">
-                        {product.stock}
+                        {product.quantity}
                       </td>
                       <td className="py-4 px-6">
                         <span
@@ -355,7 +348,6 @@ export default function Products() {
                           {product.status}
                         </span>
                       </td>
-
                       <td className="py-4 px-6">
                         <div className="flex items-center space-x-3">
                           <button
@@ -381,7 +373,7 @@ export default function Products() {
           </table>
         </div>
       </div>
-      {/* Modal (Add/Edit) */}
+
       {open && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 md:items-center">
           <div
@@ -392,14 +384,13 @@ export default function Products() {
             }}
             aria-hidden
           />
-
           <form
             onSubmit={handleSubmit}
             className="relative z-10 w-full max-w-3xl bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6"
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold">
-                {editingId ? "Edit Product" : "Add Product"}
+                {editingId ? "Edit Bulk Product" : "Add Bulk Product"}
               </h3>
               <div className="flex items-center gap-2">
                 <button
@@ -416,12 +407,10 @@ export default function Products() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* left: image upload / drag/drop */}
               <div className="md:col-span-1">
                 <label className="block text-sm font-medium mb-2">
                   Product image
                 </label>
-
                 <div
                   onDrop={handleDrop}
                   onDragOver={preventDefault}
@@ -449,7 +438,6 @@ export default function Products() {
                     </div>
                   )}
                 </div>
-
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -475,7 +463,6 @@ export default function Products() {
                 )}
               </div>
 
-              {/* right: fields */}
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">
@@ -543,14 +530,14 @@ export default function Products() {
 
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    Stock / Unit qty
+                    Quantity
                   </label>
                   <input
-                    value={form.stock}
+                    value={form.quantity}
                     onChange={(e) =>
-                      setForm((s) => ({ ...s, stock: e.target.value }))
+                      setForm((s) => ({ ...s, quantity: e.target.value }))
                     }
-                    placeholder="E.g. 50 kg"
+                    placeholder="E.g. 100 kg"
                     className="w-full rounded-md border px-3 py-2"
                   />
                 </div>
