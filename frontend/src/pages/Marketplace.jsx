@@ -99,7 +99,12 @@ const Marketplace = () => {
         title: product.title || product.name || "",
         price: product.price ?? product.priceLabel ?? "",
         img: product.img || product.image || product.imagePath,
-        vendor: product.vendor,
+        vendor:
+          product.vendor ||
+          product.vendorName ||
+          product.vendorBusiness ||
+          product.vendorId ||
+          "",
       },
       1
     );
@@ -113,7 +118,10 @@ const Marketplace = () => {
       list = list.filter((p) => {
         const title = (p.title || p.name || "").toString().toLowerCase();
         const desc = (p.description || "").toString().toLowerCase();
-        const vendorName = (p.vendor || "").toString().toLowerCase();
+        const vendorName = (p.vendor || p.vendorName || "")
+          .toString()
+          .toLowerCase();
+
         const tags = Array.isArray(p.tags)
           ? p.tags.join(" ").toLowerCase()
           : "";
@@ -146,8 +154,8 @@ const Marketplace = () => {
       list = list.filter((p) => {
         if (p.vendorId && normalize(p.vendorId) === normalize(wantId))
           return true;
+        if (p.vendorName && normalize(p.vendorName) === wantName) return true;
         if (p.vendor && normalize(p.vendor) === wantName) return true;
-        return false;
       });
     }
 

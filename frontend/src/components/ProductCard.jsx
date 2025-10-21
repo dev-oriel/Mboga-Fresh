@@ -16,21 +16,14 @@ function resolveImageSrc(img) {
   return `${API_BASE || window.location.origin}/${img}`;
 }
 
-/**
- * Robust parse to extract currency, numeric amount and trailing unit
- * Accepts "KSh 120", "KES 150.00/kg", "150/kg", numbers, etc.
- */
 function parsePrice(price) {
   if (price == null)
     return { currency: "KES", amount: "", unit: "", display: "" };
   const raw = String(price).trim();
-  // trailing unit like "/kg"
   const unitMatch = raw.match(/(\/\S.*)$/);
   const unit = unitMatch ? unitMatch[0].trim() : "";
-  // numeric amount
   const numMatch = raw.replace(/,/g, "").match(/(\d+(\.\d+)?)/);
   const amount = numMatch ? numMatch[0] : "";
-  // leading currency (non-digit chars before the number)
   const currencyMatch = raw.match(/^[^\d\.\s\/]+/);
   const currency = currencyMatch
     ? currencyMatch[0].trim().replace(/\.$/, "")
@@ -40,10 +33,17 @@ function parsePrice(price) {
 }
 
 const ProductCard = (props) => {
-  // accept both legacy and backend shapes
   const id = props.id || props._id;
   const title = props.title || props.name || "";
-  const vendor = props.vendor || props.vendorName || props.vendorId || "";
+  // Prefer explicit denormalized vendorName (from backend), then vendorBusiness, then vendor (legacy), then vendorId as last fallback.
+  const rawVendor =
+    props.vendorName ??
+    props.vendorBusiness ??
+    props.vendor ??
+    (props.vendorId ? String(props.vendorId) : "");
+
+  const vendorDisplay = String(rawVendor || "").trim() || "Unknown vendor";
+
   const img = props.img || props.image || props.imagePath || props.imgPath;
   const priceRaw = props.priceLabel || props.price || props.priceStr || "";
   const special = !!props.special;
@@ -69,7 +69,7 @@ const ProductCard = (props) => {
         priceLabel: priceRaw || display,
         price: amount || 0,
         img: resolvedImg,
-        vendor,
+        vendor: vendorDisplay,
       },
       1
     );
@@ -132,21 +132,19 @@ const ProductCard = (props) => {
           </p>
         </Link>
 
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          From {vendor}
+        <p
+          className="text-sm text-gray-500 dark:text-gray-400 mt-1"
+          title={vendorDisplay}
+        >
+          From {vendorDisplay}
         </p>
 
         <div className="mt-4 flex items-end justify-between">
           <div className="flex items-baseline gap-2">
-            {/* Currency subtle */}
             <span className="text-sm text-gray-500">{currency}</span>
-
-            {/* Amount — sleek, not overly bold green */}
             <span className="text-xl font-extrabold text-emerald-600">
               {amount || display || ""}
             </span>
-
-            {/* unit */}
             {unit && <span className="text-sm text-gray-500 ml-1">{unit}</span>}
           </div>
 
