@@ -30,9 +30,8 @@ const Header = ({
 
   // Handler: go to vendor profile page
   const handleOpenProfile = () => {
-    // If you need to pass state or params (vendor id), do it here:
-    // navigate('/vendorprofile', { state: { vendorId: 'mama-rose' } });
-    navigate("/vendorprofile");
+ 
+    navigate("/supplierprofile");
     setMobileOpen(false);
   };
 
