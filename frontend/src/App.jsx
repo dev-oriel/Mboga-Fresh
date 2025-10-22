@@ -52,6 +52,10 @@ import FarmerOrderManagement from "./farmer/OrderManagement.jsx";
 import SupplierProfile from "./farmer/SupplierProfile.jsx";
 import SupplierWallet from "./farmer/SupplierWallet.jsx";
 
+// Admin pages
+import AdminDashboard from "./admin/AdminDashboard.jsx";
+import AdminSettings from "./admin/AdminSettings.jsx";
+
 function App() {
   return (
     <CartProvider>
@@ -113,6 +117,11 @@ function App() {
             <Route path="/supplierorders" element={<FarmerOrderManagement />} />
             <Route path="/supplierwallet" element={<SupplierWallet />} />
             <Route path="/supplierprofile" element={<SupplierProfile />} />
+
+             {/* Admin routes */}
+             <Route path="/admindashboard" element={<AdminDashboard />} />
+            <Route path="/adminsettings" element={<AdminSettings />} />
+    
           </Routes>
         </div>
       </VendorDataProvider>
