@@ -56,6 +56,7 @@ import SupplierWallet from "./farmer/SupplierWallet.jsx";
 import AdminDashboard from "./admin/AdminDashboard.jsx";
 import AdminSettings from "./admin/AdminSettings.jsx";
 import EscrowPayments from "./admin/EscrowPayments.jsx";
+import UserManagement from "./admin/UserManagement.jsx";
 import AdminDisputeResolution from "./admin/AdminDisputeResolution.jsx";
 
 function App() {
@@ -123,8 +124,11 @@ function App() {
             {/* Admin routes */}
             <Route path="/admindashboard" element={<AdminDashboard />} />
             <Route path="/adminsettings" element={<AdminSettings />} />
+            <Route path="/usermanagement" element={<UserManagement />} />
             <Route path="/adminescrow" element={<EscrowPayments />} />
             <Route path="/admindisputeresolution" element={<AdminDisputeResolution />} />
+
+            
           </Routes>
         </div>
       </VendorDataProvider>
