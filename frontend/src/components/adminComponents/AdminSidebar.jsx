@@ -16,7 +16,7 @@ const AdminSidebar = () => {
   const links = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/admindashboard" },
     { name: "User Management", icon: Users, path: "/adminsettings" },
-    { name: "Escrow & Payments", icon: FileText, path: "/adminpayments" },
+    { name: "Escrow & Payments", icon: FileText, path: "/adminescrow" },
     { name: "Dispute Resolution", icon: Scale, path: "/admindisputeresolution" },
     { name: "Delivery & Logistics", icon: Truck, path: "/admindelivery" },
     { name: "Reports & Analytics", icon: BarChart3, path: "/adminreports" },

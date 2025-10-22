@@ -27,7 +27,7 @@ const AdminDashboard = () => {
               },
               {
                 title: "Escrow Balance",
-                value: "Ksh 500,000",
+                value: "Ksh 31,850.00",
                 change: "+2% this month",
                 color: "text-green-600",
               },
