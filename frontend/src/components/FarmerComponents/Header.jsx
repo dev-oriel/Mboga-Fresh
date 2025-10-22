@@ -40,7 +40,11 @@ const Header = ({
       <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
           {/* left: logo */}
-          <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate("/")}
+            className="flex items-center gap-4 hover:opacity-80 transition-opacity"
+            aria-label="Go to home"
+          >
             <svg
               className="text-emerald-600 w-8 h-8"
               fill="none"
@@ -57,7 +61,7 @@ const Header = ({
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
               Mboga Fresh
             </h2>
-          </div>
+          </button>
 
           {/* center: desktop nav */}
           <nav className="hidden md:flex items-center gap-3">

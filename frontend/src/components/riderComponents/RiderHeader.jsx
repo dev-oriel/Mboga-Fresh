@@ -20,7 +20,11 @@ const RiderHeader = ({ userAvatarUrl = "" }) => {
 
   return (
     <header className="flex items-center justify-between whitespace-nowrap border-b border-green-200 px-6 py-4 bg-white dark:bg-gray-900">
-      <div className="flex items-center gap-4 text-green-600">
+      <button 
+        onClick={() => navigate("/")}
+        className="flex items-center gap-4 text-green-600 hover:opacity-80 transition-opacity"
+        aria-label="Go to home"
+      >
         <div className="w-10 h-10">
           <svg
             className="w-full h-full"
@@ -37,7 +41,7 @@ const RiderHeader = ({ userAvatarUrl = "" }) => {
         <h2 className="text-2xl font-bold tracking-tighter text-gray-900 dark:text-gray-100">
           Mboga Fresh
         </h2>
-      </div>
+      </button>
 
       <nav className="hidden md:flex items-center gap-3">
         {navItems.map((item) => (
