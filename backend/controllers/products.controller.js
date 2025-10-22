@@ -8,11 +8,8 @@ import mongoose from "mongoose";
 
 const removeFile = (filePath) => {
   if (!filePath) return;
-  // filePath expected like "/uploads/filename.ext"
   const full = path.join(process.cwd(), filePath.replace(/^\//, ""));
-  fs.unlink(full, (err) => {
-    // ignore errors
-  });
+  fs.unlink(full, (err) => {});
 };
 
 function escapeRegex(str = "") {
@@ -22,15 +19,10 @@ function escapeRegex(str = "") {
 /**
  * Enrich products with vendor display name (prefer VendorProfile.businessName,
  * then User.name, then denormalized vendorName/vendor fields).
- * Handles vendorId that might be:
- *  - a User ObjectId (VendorProfile.user)
- *  - a VendorProfile ObjectId (VendorProfile._id)
- *  - a string slug/businessName
  */
 async function enrichVendorDisplay(products = []) {
   if (!Array.isArray(products) || products.length === 0) return products;
 
-  // collect candidates
   const objectIdCandidates = new Set();
   const stringCandidates = new Set();
 
@@ -42,13 +34,11 @@ async function enrichVendorDisplay(products = []) {
     else stringCandidates.add(s.toLowerCase());
   }
 
-  // maps
-  const vendorProfileByUser = new Map(); // userId -> VendorProfile
-  const vendorProfileById = new Map(); // vendorProfileId -> VendorProfile
-  const vendorProfileByLowerBusiness = new Map(); // lower(businessName) -> VendorProfile
-  const userById = new Map(); // userId -> User
+  const vendorProfileByUser = new Map();
+  const vendorProfileById = new Map();
+  const vendorProfileByLowerBusiness = new Map();
+  const userById = new Map();
 
-  // fetch vendor profiles by user or by _id if any
   if (objectIdCandidates.size > 0) {
     const ids = Array.from(objectIdCandidates);
     const profiles = await VendorProfile.find({
@@ -66,15 +56,12 @@ async function enrichVendorDisplay(products = []) {
         );
     }
 
-    // fetch users for fallback display name when vendorId maps to a user id
     const users = await User.find({ _id: { $in: ids } })
       .select("name")
       .lean();
     for (const u of users) userById.set(String(u._id), u);
   }
 
-  // For non-object string vendorId values (slugs or businessName strings),
-  // attempt to find vendor profiles matching businessName case-insensitively.
   if (stringCandidates.size > 0) {
     const arr = Array.from(stringCandidates);
     const or = arr.map((v) => ({
@@ -94,16 +81,9 @@ async function enrichVendorDisplay(products = []) {
     }
   }
 
-  // Final mapping
   return products.map((p) => {
     const copy = { ...p };
     try {
-      // priority:
-      // 1) existing denormalized copy.vendorName
-      // 2) VendorProfile.businessName (match by vendorProfile._id or vendorProfile.user)
-      // 3) VendorProfile matched by businessName if vendorId was a string (non-ObjectId)
-      // 4) User.name fallback
-      // 5) copy.vendor or raw vendorId string
       if (copy.vendorName && String(copy.vendorName).trim()) {
         copy.vendorName = String(copy.vendorName).trim();
         return copy;
@@ -112,7 +92,6 @@ async function enrichVendorDisplay(products = []) {
       const vidRaw = copy.vendorId ? String(copy.vendorId) : "";
 
       if (vidRaw && mongoose.Types.ObjectId.isValid(vidRaw)) {
-        // objectId path: try vendorProfileById, vendorProfileByUser, then User
         const vpById = vendorProfileById.get(vidRaw);
         if (vpById && vpById.businessName) {
           copy.vendorName = vpById.businessName;
@@ -129,7 +108,6 @@ async function enrichVendorDisplay(products = []) {
           return copy;
         }
       } else if (vidRaw) {
-        // string path: try match by businessName case-insensitive
         const vp = vendorProfileByLowerBusiness.get(vidRaw.toLowerCase());
         if (vp && vp.businessName) {
           copy.vendorName = vp.businessName;
@@ -137,7 +115,6 @@ async function enrichVendorDisplay(products = []) {
         }
       }
 
-      // fallback to any vendor field or vendorId string
       copy.vendorName = (
         copy.vendorName ||
         copy.vendor ||
@@ -154,26 +131,82 @@ async function enrichVendorDisplay(products = []) {
   });
 }
 
+/**
+ * Build Mongo filter safely to avoid invalid ObjectId casts.
+ */
+function buildFilterSafe({ q, category, vendorId } = {}) {
+  const clauses = [];
+
+  if (category) clauses.push({ category });
+
+  if (q) {
+    const re = new RegExp(String(q), "i");
+    clauses.push({
+      $or: [{ name: re }, { category: re }, { description: re }],
+    });
+  }
+
+  if (
+    vendorId !== undefined &&
+    vendorId !== null &&
+    String(vendorId).trim() !== ""
+  ) {
+    const raw = String(vendorId).trim();
+
+    if (mongoose.Types.ObjectId.isValid(raw)) {
+      // IMPORTANT: use `new mongoose.Types.ObjectId(raw)` (must be called with `new`)
+      clauses.push({
+        $or: [
+          { vendorId: raw },
+          { vendorId: new mongoose.Types.ObjectId(raw) },
+        ],
+      });
+    } else {
+      clauses.push({
+        $or: [
+          { vendorId: raw },
+          { vendorId: new RegExp(`^${escapeRegex(raw)}$`, "i") },
+        ],
+      });
+    }
+  }
+
+  if (clauses.length === 0) return {};
+  if (clauses.length === 1) return clauses[0];
+  return { $and: clauses };
+}
+
 export const list = async (req, res) => {
   try {
-    const { q, limit = 100, skip = 0, category } = req.query;
-    const filter = {};
-    if (category) filter.category = category;
-    if (q) {
-      const re = new RegExp(q, "i");
-      filter.$or = [{ name: re }, { category: re }, { description: re }];
-    }
+    const { q, limit = 100, skip = 0, category, vendorId } = req.query;
 
-    const products = await Product.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(Number(skip))
-      .limit(Math.min(1000, Number(limit)))
-      .lean();
+    const filter = buildFilterSafe({ q, category, vendorId });
+
+    console.debug("products.list filter:", JSON.stringify(filter));
+
+    let products;
+    try {
+      products = await Product.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(Number(skip))
+        .limit(Math.min(1000, Number(limit)))
+        .lean();
+    } catch (dbErr) {
+      console.error(
+        "DB query failed in products.list. Filter:",
+        JSON.stringify(filter),
+        dbErr && dbErr.stack ? dbErr.stack : dbErr
+      );
+      return res.status(500).json({
+        message: "Failed to fetch products",
+        details: String(dbErr?.message || dbErr),
+      });
+    }
 
     const enriched = await enrichVendorDisplay(products);
     res.json(enriched);
   } catch (err) {
-    console.error("products list error:", err);
+    console.error("products list error:", err && err.stack ? err.stack : err);
     res.status(500).json({ message: "Failed to fetch products" });
   }
 };
@@ -186,7 +219,7 @@ export const getOne = async (req, res) => {
     const [enriched] = await enrichVendorDisplay([p]);
     res.json(enriched);
   } catch (err) {
-    console.error("products getOne error:", err);
+    console.error("products getOne error:", err && err.stack ? err.stack : err);
     res.status(500).json({ message: "Failed to fetch product" });
   }
 };
@@ -219,14 +252,12 @@ export const createOne = async (req, res) => {
       imagePath,
     };
 
-    // Try to denormalize vendorName using VendorProfile (prefer businessName), fallback to req.user.name
     try {
       const resolvedVendorId = doc.vendorId;
       if (
         resolvedVendorId &&
         mongoose.Types.ObjectId.isValid(String(resolvedVendorId))
       ) {
-        // try VendorProfile by user or by _id
         let vp = await VendorProfile.findOne({ user: resolvedVendorId })
           .select("businessName")
           .lean();
@@ -236,7 +267,6 @@ export const createOne = async (req, res) => {
             .lean();
         if (vp && vp.businessName) doc.vendorName = vp.businessName;
       } else if (doc.vendorId) {
-        // vendorId is a string - try to match businessName case-insensitive
         const vp = await VendorProfile.findOne({
           businessName: new RegExp(
             `^${escapeRegex(String(doc.vendorId))}$`,
@@ -247,23 +277,21 @@ export const createOne = async (req, res) => {
           .lean();
         if (vp && vp.businessName) doc.vendorName = vp.businessName;
       }
-
-      if (!doc.vendorName && req.user && req.user.name) {
+      if (!doc.vendorName && req.user && req.user.name)
         doc.vendorName = req.user.name;
-      }
     } catch (e) {
-      // ignore enrichment errors
       if (!doc.vendorName && req.user && req.user.name)
         doc.vendorName = req.user.name;
     }
 
     const product = await Product.create(doc);
-
-    // return enriched version (ensures vendorName is present if possible)
     const [enriched] = await enrichVendorDisplay([product.toObject()]);
     res.status(201).json(enriched);
   } catch (err) {
-    console.error("products createOne error:", err);
+    console.error(
+      "products createOne error:",
+      err && err.stack ? err.stack : err
+    );
     res.status(500).json({ message: "Failed to create product" });
   }
 };
@@ -298,14 +326,12 @@ export const updateOne = async (req, res) => {
     if (description !== undefined) product.description = description;
     if (vendorId !== undefined) product.vendorId = vendorId;
 
-    // Try to keep denormalized vendorName in sync
     try {
       const resolvedVendorId = vendorId || product.vendorId;
       if (
         resolvedVendorId &&
         mongoose.Types.ObjectId.isValid(String(resolvedVendorId))
       ) {
-        // try VendorProfile by user or by _id
         let vp = await VendorProfile.findOne({ user: resolvedVendorId })
           .select("businessName")
           .lean();
@@ -325,7 +351,6 @@ export const updateOne = async (req, res) => {
           .lean();
         if (vp && vp.businessName) product.vendorName = vp.businessName;
       }
-
       if (
         (!product.vendorName || product.vendorName.trim() === "") &&
         req.user &&
@@ -334,7 +359,6 @@ export const updateOne = async (req, res) => {
         product.vendorName = req.user.name;
       }
     } catch (e) {
-      // ignore
       if (
         (!product.vendorName || product.vendorName.trim() === "") &&
         req.user &&
@@ -345,11 +369,13 @@ export const updateOne = async (req, res) => {
     }
 
     await product.save();
-
     const [enriched] = await enrichVendorDisplay([product.toObject()]);
     res.json(enriched);
   } catch (err) {
-    console.error("products updateOne error:", err);
+    console.error(
+      "products updateOne error:",
+      err && err.stack ? err.stack : err
+    );
     res.status(500).json({ message: "Failed to update product" });
   }
 };
@@ -361,7 +387,10 @@ export const removeOne = async (req, res) => {
     if (product.imagePath) removeFile(product.imagePath);
     res.json({ message: "Deleted" });
   } catch (err) {
-    console.error("products removeOne error:", err);
+    console.error(
+      "products removeOne error:",
+      err && err.stack ? err.stack : err
+    );
     res.status(500).json({ message: "Failed to delete product" });
   }
 };

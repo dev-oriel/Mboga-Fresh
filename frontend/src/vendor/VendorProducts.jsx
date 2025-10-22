@@ -12,21 +12,14 @@ import {
 } from "../api/products";
 import { useAuth } from "../context/AuthContext";
 
-/**
- * VendorProductManagement
- * - prettier uploader (drag & drop + file input)
- * - preview & size checks
- * - robust image URL resolution (uses VITE_API_BASE when available)
- * - polished form placeholders and validation feedback
- */
-
-const API_BASE = import.meta.env.VITE_API_BASE || ""; // set frontend/.env VITE_API_BASE=http://localhost:5000 or use proxy for /uploads
+/* same constants as before */
+const API_BASE = import.meta.env.VITE_API_BASE || "";
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_PLACEHOLDER =
-  "https://images.unsplash.com/photo-1518976024611-0a4e3d1c9f05?auto=format&fit=crop&w=1200&q=60"; // nice fallback
+  "https://images.unsplash.com/photo-1518976024611-0a4e3d1c9f05?auto=format&fit=crop&w=1200&q=60";
 
 export default function VendorProductManagement() {
-  const { user } = useAuth(); 
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,25 +42,35 @@ export default function VendorProductManagement() {
     description: "",
   });
 
-  // load products
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await fetchProducts();
-      setProducts(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Failed to load products:", err);
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // load products for current user only
+  const load = useCallback(
+    async (opts = {}) => {
+      setLoading(true);
+      try {
+        // if user is not logged in, show empty list (safer)
+        if (!user || !(user._id || user.id)) {
+          setProducts([]);
+          return;
+        }
+
+        // pass vendorId so backend filters to that vendor's products
+        const params = { vendorId: String(user._id || user.id), ...opts };
+        const data = await fetchProducts(params);
+        setProducts(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Failed to load products:", err);
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
 
   useEffect(() => {
     load();
   }, [load]);
 
-  // helpers
   function resetForm() {
     setForm({
       file: null,
@@ -122,7 +125,6 @@ export default function VendorProductManagement() {
     }
   }
 
-  // image helpers
   function fileToPreview(file) {
     return new Promise((resolve, reject) => {
       if (!file) return resolve("");
@@ -150,13 +152,11 @@ export default function VendorProductManagement() {
     }
   }
 
-  // drag & drop
   function handleDrop(e) {
     e.preventDefault();
     e.stopPropagation();
     const file = e.dataTransfer?.files?.[0];
     if (!file) return;
-    // reuse same checks
     if (file.size > MAX_IMAGE_BYTES) {
       setFormErrors((s) => ({ ...s, image: "Image must be under 5MB." }));
       return;
@@ -204,11 +204,9 @@ export default function VendorProductManagement() {
     fd.append("status", form.status);
     fd.append("description", form.description || "");
 
-    // append image if selected
     if (form.file) fd.append("image", form.file);
 
-    // IMPORTANT: include vendorId when available (fallback)
-    // req.user on the server is still preferred; this is a denormalized explicit value.
+    // also append vendorId explicitly as fallback if we have user
     if (user && (user._id || user.id)) {
       fd.append("vendorId", String(user._id || user.id));
     }
@@ -228,17 +226,14 @@ export default function VendorProductManagement() {
     }
   }
 
-  // image URL resolver:
   function resolveImageUrl(imagePath) {
     if (!imagePath) return DEFAULT_PLACEHOLDER;
     if (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
       return imagePath;
-    // server returns something like "/uploads/xxxx.jpg"
     if (API_BASE)
       return `${API_BASE.replace(/\/$/, "")}${
         imagePath.startsWith("/") ? imagePath : `/${imagePath}`
       }`;
-    // fallback: try /uploads on current origin — this works if you proxied /uploads in vite.config
     return `${window.location.origin}${
       imagePath.startsWith("/") ? imagePath : `/${imagePath}`
     }`;
@@ -250,7 +245,6 @@ export default function VendorProductManagement() {
         avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDeL7radWSj-FEteEjqLpufXII3-tc_o7GMvLvB07AaD_bYBkfAcIOnNbOXkTdMOHRgJQwLZE-Z_iw72Bd8bpHzfXP_m0pIvteSw7FKZ1qV9GD1KfgyDVG90bCO7OGe6JyYIkm9DBo2ArC60uEqSfDvnnYWeo6IqVEjWxsVX6dUoxjm9ozyVlriiMdVLc_jU9ZxS01QcxNa8hn-ePNbB6IcXSwExf2U61R-epab8nsOkbq95E7z6b-fH4zOt0j2MPt20nrqtPM1NHI"
         userName={user?.name || "Vendor"}
       />
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -391,7 +385,7 @@ export default function VendorProductManagement() {
           </table>
         </div>
       </div>
-      {/* Modal (Add/Edit) */}
+
       {open && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 md:items-center">
           <div
@@ -407,6 +401,9 @@ export default function VendorProductManagement() {
             onSubmit={handleSubmit}
             className="relative z-10 w-full max-w-3xl bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6"
           >
+            {/* form content (unchanged from above) */}
+            {/* ... copy the same modal content from earlier; omitted here for brevity in paste */}
+            {/* but when you paste into your project use the whole modal code from above */}
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold">
                 {editingId ? "Edit Product" : "Add Product"}
@@ -426,7 +423,6 @@ export default function VendorProductManagement() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* left: image upload / drag/drop */}
               <div className="md:col-span-1">
                 <label className="block text-sm font-medium mb-2">
                   Product image
@@ -485,7 +481,6 @@ export default function VendorProductManagement() {
                 )}
               </div>
 
-              {/* right: fields */}
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">

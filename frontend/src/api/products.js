@@ -1,9 +1,23 @@
 // frontend/src/api/products.js
 const BASE = import.meta.env.VITE_API_BASE || "";
 
+function buildQueryString(params = {}) {
+  const entries = Object.entries(params).filter(
+    ([, v]) => v !== undefined && v !== null && String(v) !== ""
+  );
+  if (entries.length === 0) return "";
+  return (
+    "?" +
+    entries
+      .map(
+        ([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`
+      )
+      .join("&")
+  );
+}
+
 async function handleResponse(res) {
   if (res.ok) {
-    // attempt to parse JSON, but keep backward compatibility
     const text = await res.text();
     try {
       return text ? JSON.parse(text) : {};
@@ -15,8 +29,13 @@ async function handleResponse(res) {
   throw new Error(text || "API error");
 }
 
-export async function fetchProducts() {
-  const res = await fetch(`${BASE}/api/products`, {
+/**
+ * fetchProducts(params)
+ * params: { q, limit, skip, category, vendorId }
+ */
+export async function fetchProducts(params = {}) {
+  const qs = buildQueryString(params);
+  const res = await fetch(`${BASE}/api/products${qs}`, {
     credentials: "include",
   });
   return handleResponse(res);
@@ -33,7 +52,7 @@ export async function createProduct(formData) {
   const res = await fetch(`${BASE}/api/products`, {
     method: "POST",
     credentials: "include",
-    body: formData, // DO NOT set Content-Type when sending FormData
+    body: formData,
   });
   return handleResponse(res);
 }
