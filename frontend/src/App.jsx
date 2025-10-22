@@ -119,11 +119,10 @@ function App() {
             <Route path="/supplierwallet" element={<SupplierWallet />} />
             <Route path="/supplierprofile" element={<SupplierProfile />} />
 
-             {/* Admin routes */}
-             <Route path="/admindashboard" element={<AdminDashboard />} />
+            {/* Admin routes */}
+            <Route path="/admindashboard" element={<AdminDashboard />} />
             <Route path="/adminsettings" element={<AdminSettings />} />
             <Route path="/admindisputeresolution" element={<AdminDisputeResolution />} />
-    
           </Routes>
         </div>
       </VendorDataProvider>
