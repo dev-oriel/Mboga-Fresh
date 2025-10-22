@@ -8,8 +8,10 @@ import { DEFAULT_AVATAR } from "../constants";
 const Header = ({ avatarUrl } = {}) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [signupDropdownOpen, setSignupDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const signupDropdownRef = useRef(null);
 
   // cart context
   const { count, items } = useCart?.() ?? { count: 0, items: [] };
@@ -25,6 +27,19 @@ const Header = ({ avatarUrl } = {}) => {
     }
     prevCountRef.current = count;
   }, [count]);
+
+  // Close signup dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (signupDropdownRef.current && !signupDropdownRef.current.contains(event.target)) {
+        setSignupDropdownOpen(false);
+      }
+    };
+    if (signupDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [signupDropdownOpen]);
 
   // build navigation based on role
   const role = user?.role ?? "guest";
@@ -218,12 +233,70 @@ const Header = ({ avatarUrl } = {}) => {
                   >
                     Sign in
                   </button>
-                  <button
-                    onClick={() => navigate("/signup/buyer")}
-                    className="hidden lg:inline-block px-3 py-2 rounded-md border border-emerald-600 text-emerald-600 font-medium ml-2"
-                  >
-                    Sign up
-                  </button>
+                  
+                  {/* Signup Dropdown */}
+                  <div className="hidden lg:block relative ml-2" ref={signupDropdownRef}>
+                    <button
+                      onClick={() => setSignupDropdownOpen(!signupDropdownOpen)}
+                      className="px-3 py-2 rounded-md border border-emerald-600 text-emerald-600 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center gap-1"
+                    >
+                      Sign up
+                      <svg
+                        className={`w-4 h-4 transition-transform ${signupDropdownOpen ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    
+                    {signupDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50">
+                        <button
+                          onClick={() => {
+                            navigate("/signup/buyer");
+                            setSignupDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-emerald-600 text-xl">shopping_cart</span>
+                          <span className="text-sm font-medium">Buyer</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigate("/signup/vendor");
+                            setSignupDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-emerald-600 text-xl">store</span>
+                          <span className="text-sm font-medium">Vendor</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigate("/signup/farmer");
+                            setSignupDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-emerald-600 text-xl">agriculture</span>
+                          <span className="text-sm font-medium">Farmer</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigate("/signup/rider");
+                            setSignupDropdownOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-gray-700 dark:text-gray-300 flex items-center gap-2 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-emerald-600 text-xl">two_wheeler</span>
+                          <span className="text-sm font-medium">Rider</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
                   <div className="lg:hidden">
                     <button
                       onClick={() => setMobileOpen((s) => !s)}
