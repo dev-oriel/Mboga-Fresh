@@ -90,13 +90,16 @@ export const signup = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
-    if (!email || !password || !role) {
+    // We explicitly exclude 'role' from destructuring, as we will find the user regardless of role.
+    const { email, password } = req.body;
+
+    if (!email || !password) {
       return res
         .status(400)
-        .json({ success: false, message: "Missing fields" });
+        .json({ success: false, message: "Email and password are required" }); // MODIFIED MESSAGE
     }
 
+    // 1. Find user by email (regardless of role)
     const user = await User.findOne({ email }).lean();
     if (!user) {
       return res
@@ -104,13 +107,7 @@ export const login = async (req, res) => {
         .json({ success: false, message: "Invalid credentials" });
     }
 
-    if (user.role !== role) {
-      return res.status(403).json({
-        success: false,
-        message: `Invalid role. This account is registered as '${user.role}'.`,
-      });
-    }
-
+    // 2. Validate password
     const valid = await bcryptjs.compare(password, user.password);
     if (!valid) {
       return res
@@ -118,11 +115,14 @@ export const login = async (req, res) => {
         .json({ success: false, message: "Invalid credentials" });
     }
 
-    // create token
+    // 3. REMOVED: Previous code had a block to check if the provided role matched the user's role.
+    // We are now REMOVING this role-specific check to allow any user to log in.
+
+    // 4. Create token with the user's *actual* role from the database
     const payload = { id: user._id, role: user.role };
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
-    // set cookie using the consistent COOKIE_NAME and options
+    // set cookie
     res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS(req));
 
     // don't send password back
@@ -169,4 +169,57 @@ export const logout = async (req, res) => {
   const COOKIE_NAME_LOCAL = process.env.COOKIE_NAME || COOKIE_NAME;
   res.clearCookie(COOKIE_NAME_LOCAL, { path: "/" });
   res.json({ success: true, message: "Logged out" });
+};
+
+export const createAdminAccount = async (req, res) => {
+  const { email, password, name = "Admin", phone = "0000000000" } = req.body;
+
+  try {
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email and password are required" });
+    }
+
+    // Security Check 1: Do not allow creation if an admin already exists
+    const existingAdmin = await User.findOne({ role: "admin" });
+    if (existingAdmin) {
+      return res
+        .status(403)
+        .json({ success: false, message: "An admin account already exists." });
+    }
+
+    // Security Check 2: Do not allow creation if user already exists
+    const userAlreadyExists = await User.findOne({ email });
+    if (userAlreadyExists) {
+      return res.status(400).json({
+        success: false,
+        message: "A user account with this email already exists.",
+      });
+    }
+
+    const hashedPassword = await bcryptjs.hash(password, 10);
+
+    const admin = new User({
+      email,
+      phone,
+      role: "admin",
+      password: hashedPassword,
+      name,
+      status: "active",
+      isVerified: true,
+    });
+
+    await admin.save();
+
+    res.status(201).json({
+      success: true,
+      message: `Admin account '${admin.email}' created successfully.`,
+    });
+  } catch (error) {
+    console.error("Admin account creation failed:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to create admin account." });
+  }
 };

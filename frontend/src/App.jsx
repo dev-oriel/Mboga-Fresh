@@ -1,5 +1,3 @@
-// frontend/src/App.jsx - FINAL MODIFIED VERSION FOR PUBLIC BROWSING
-
 import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
@@ -12,7 +10,7 @@ import RiderSignup from "./signup/RiderSignup";
 import FarmerSignUp from "./signup/Farmersignup";
 import BuyerSignup from "./signup/BuyerSignup";
 
-// Common pages
+// Common pages (Public/Buyer Flow)
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
 import Marketplace from "./pages/Marketplace.jsx";
@@ -26,7 +24,7 @@ import CategoryPage from "./pages/CategoryPage";
 import VendorPage from "./pages/VendorPage";
 import BuyerProfile from "./pages/BuyerProfile.jsx";
 
-// footer
+// Footer Info pages
 import Contact from "./pages/Contact.jsx";
 import Faq from "./pages/Faq.jsx";
 import Terms from "./pages/Terms.jsx";
@@ -62,7 +60,8 @@ import AdminSettings from "./admin/AdminSettings.jsx";
 import EscrowPayments from "./admin/EscrowPayments.jsx";
 import UserManagement from "./admin/UserManagement.jsx";
 import AdminDisputeResolution from "./admin/AdminDisputeResolution.jsx";
-import ReportsAnalytics from "./admin/ReportsAnalytics.jsx";
+// Note: You imported ReportsAnalytics but didn't assign a component, leaving it commented out.
+// import ReportsAnalytics from "./admin/ReportsAnalytics.jsx";
 
 function App() {
   return (
@@ -70,7 +69,12 @@ function App() {
       <VendorDataProvider>
         <div>
           <Routes>
-            {/* --- Public Browsing Routes (Guest Access: Allows unauthenticated. Redirects Staff) --- */}
+            {/* ==============================================================
+              1. PUBLIC BROWSING & AUTH ROUTES
+              - Allows: Unauthenticated users (guests) and logged-in buyers.
+              - Action: Redirects logged-in staff (Vendor/Farmer/Rider/Admin) to their dashboard.
+              ==============================================================
+            */}
             <Route
               element={
                 <PrivateRoute
@@ -93,7 +97,7 @@ function App() {
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/help" element={<Help />} />
 
-              {/* Login & Signup Routes (Need to be accessible, also redirecting logged-in staff) */}
+              {/* Login & Signup Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/signup/vendor" element={<VendorSignup />} />
               <Route path="/signup/farmer" element={<FarmerSignUp />} />
@@ -101,7 +105,12 @@ function App() {
               <Route path="/signup/buyer" element={<BuyerSignup />} />
             </Route>
 
-            {/* --- Protected Routes: Buyer (REQUIRES login, then ONLY accessible by Buyer/Admin) --- */}
+            {/* ==============================================================
+              2. PROTECTED ROUTES (REQUIRES LOGIN)
+              ==============================================================
+            */}
+
+            {/* Buyer (ONLY accessible by Buyer/Admin) */}
             <Route element={<PrivateRoute allowedRoles={["buyer", "admin"]} />}>
               <Route path="/orders" element={<Orders />} />
               <Route path="/cart" element={<ShoppingCart />} />
@@ -110,7 +119,7 @@ function App() {
               <Route path="/order-placed" element={<OrderPlaced />} />
             </Route>
 
-            {/* --- Protected Routes: Vendor (ONLY accessible by Vendor/Admin) --- */}
+            {/* Vendor (ONLY accessible by Vendor/Admin) */}
             <Route
               element={<PrivateRoute allowedRoles={["vendor", "admin"]} />}
             >
@@ -122,28 +131,8 @@ function App() {
               <Route path="/vendorprofile" element={<Vendorprofile />} />
             </Route>
 
-            {/* --- Protected Routes: Farmer (Supplier) (ONLY accessible by Farmer/Admin) --- */}
+            {/* Farmer (Supplier) (ONLY accessible by Farmer/Admin) */}
             <Route
-              path="/riderdelivery/:orderid"
-              element={<RiderDeliveryDetail />}
-            />
-
-            {/* Farmer routes */}
-            <Route path="/supplierdashboard" element={<SupplierDashboard />} />
-            <Route path="/supplierproducts" element={<Products />} />
-            <Route path="/supplierorders" element={<FarmerOrderManagement />} />
-            <Route path="/supplierwallet" element={<SupplierWallet />} />
-            <Route path="/supplierprofile" element={<SupplierProfile />} />
-
-            {/* Admin routes */}
-            <Route path="/admindashboard" element={<AdminDashboard />} />
-            <Route path="/adminsettings" element={<AdminSettings />} />
-            <Route path="/usermanagement" element={<UserManagement />} />
-            <Route path="/adminescrow" element={<EscrowPayments />} />
-            <Route path="/admindisputeresolution" element={<AdminDisputeResolution />} />
-            <Route path="/adminreports" element={<ReportsAnalytics />} />
-
-            
               element={<PrivateRoute allowedRoles={["farmer", "admin"]} />}
             >
               <Route
@@ -159,7 +148,7 @@ function App() {
               <Route path="/supplierprofile" element={<SupplierProfile />} />
             </Route>
 
-            {/* --- Protected Routes: Rider (ONLY accessible by Rider/Admin) --- */}
+            {/* Rider (ONLY accessible by Rider/Admin) */}
             <Route element={<PrivateRoute allowedRoles={["rider", "admin"]} />}>
               <Route path="/riderdashboard" element={<RiderDashboard />} />
               <Route
@@ -182,7 +171,7 @@ function App() {
               />
             </Route>
 
-            {/* --- Protected Routes: Admin (ONLY accessible by Admin) --- */}
+            {/* Admin (ONLY accessible by Admin) */}
             <Route element={<PrivateRoute allowedRoles={["admin"]} />}>
               <Route path="/admindashboard" element={<AdminDashboard />} />
               <Route path="/adminsettings" element={<AdminSettings />} />
@@ -192,9 +181,11 @@ function App() {
                 path="/admindisputeresolution"
                 element={<AdminDisputeResolution />}
               />
+              {/* Assuming you want to include this new import once component is ready: */}
+              {/* <Route path="/adminreports" element={<ReportsAnalytics />} /> */}
             </Route>
 
-            {/* Final Fallback */}
+            {/* Final Fallback: Redirects all unknown paths to the public homepage */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
