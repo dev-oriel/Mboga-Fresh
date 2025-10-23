@@ -58,6 +58,7 @@ import AdminSettings from "./admin/AdminSettings.jsx";
 import EscrowPayments from "./admin/EscrowPayments.jsx";
 import UserManagement from "./admin/UserManagement.jsx";
 import AdminDisputeResolution from "./admin/AdminDisputeResolution.jsx";
+import ReportsAnalytics from "./admin/ReportsAnalytics.jsx";
 
 function App() {
   return (
@@ -127,6 +128,7 @@ function App() {
             <Route path="/usermanagement" element={<UserManagement />} />
             <Route path="/adminescrow" element={<EscrowPayments />} />
             <Route path="/admindisputeresolution" element={<AdminDisputeResolution />} />
+            <Route path="/adminreports" element={<ReportsAnalytics />} />
 
             
           </Routes>
