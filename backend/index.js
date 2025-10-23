@@ -10,6 +10,7 @@ import productsRoute from "./routes/products.route.js";
 import profileRoutes from "./routes/profile.routes.js";
 import bulkProductsRoute from "./routes/bulkProducts.route.js";
 import userRoutes from "./routes/user.route.js";
+import orderRouter from "./routes/order.route.js";
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productsRoute);
 app.use("/api/profile", profileRoutes);
 app.use("/api/bulk-products", bulkProductsRoute);
+app.use("/api/orders", orderRouter);
 app.use("/api/admin", userRoutes);
 
 // Connect DB and start server

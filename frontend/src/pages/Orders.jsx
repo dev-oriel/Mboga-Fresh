@@ -1,96 +1,110 @@
-// frontend/src/pages/Orders.jsx
-import React from "react";
+// frontend/src/pages/Orders.jsx - MODIFIED FOR DATABASE FETCH
+
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
-
 import Footer from "../components/FooterSection.jsx";
+import { fetchBuyerOrders } from "../api/orders"; // <-- NEW IMPORT
+import { useAuth } from "../context/AuthContext";
 
-const ORDERS = [
-  {
-    id: "123456",
-    status: "Delivered",
-    statusBadge: {
-      label: "Delivered",
-      bg: "bg-[#DCFCE7]", // green-100 like
-      text: "text-[#166534]", // green-800 like
-      icon: "check_circle",
-    },
-    date: "2024-07-15",
-    title: "Basket of fresh fruits & vegetables",
-    note: "Your basket of fresh fruits and vegetables has been successfully delivered.",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuDuva8nZOSC9MEllnNvwqdONZx96jhGNsyCDx5RwK037w3Q_VSLwen2y8v3ASowKlEXdOTvmgmfMWzD6x4RaXH1ken8-TUQC9RSgSBXQ1WnNaX2z-xn0_Thx2pAOPHkqIUWuyjZsgsuFRUigHVNlddXkHiHhz2pwOZePYO8rkqxFeoyLUTBOA_qQEjDTq09Lyk8QKXxhq78UUqiKKlryS867k5Mr4HFFYXvc2x8MHygyEnZLlbjn_ifc7mkzWZUFs_UVyzk2Rcyll0",
-  },
-  {
-    id: "789012",
-    status: "In Transit",
-    statusBadge: {
-      label: "In Transit",
-      bg: "bg-[#DBEAFE]", // blue-100 like
-      text: "text-[#1E3A8A]", // blue-800 like
-      icon: "sync",
-      spin: true,
-    },
-    date: "2024-07-17",
-    title: "Premium vegetables selection",
-    note: "Your selection of premium vegetables is on its way to you.",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuDd4R6vd2mvOXHTKLg6FakPCrP2UKvejg4t5NO-iv_I4xPbcsoIbh6P4eG91Q6WWxYEHYt-DJPhYSKg_W0Umx4tcqfJmn8y1teSzbPNyi9LSTVx2ACjGohkt2HNllZwqaStvXLNQqWtEDH5HylVA1BEsqyovR8l4mV8Y7recSke-m4lvZsbmmknRlZCUbBbRbdHM62GHD3xoIvx1A1r68ltV1_1XDfwz8nO29tOyLWLS6RTwSoWlK-VvfUeX4D5alnw7raR1PgLp38",
-  },
-  {
-    id: "345678",
-    status: "Delivered",
-    statusBadge: {
-      label: "Delivered",
-      bg: "bg-[#DCFCE7]",
-      text: "text-[#166534]",
-      icon: "check_circle",
-    },
-    date: "2024-07-10",
-    title: "Organic tomatoes & herbs",
-    note: "A fresh batch of organic tomatoes and herbs, delivered.",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCSCn59GFCO8wL0XgyOSWgCxLkSJqUI8_VX04KGfwnFUPTkyySFaAD5AzzWT_U5eTmAniriwonW3o95MtIAN6XilXtiHQlWYWEdrfEYqeMtQkX7Kjk-_jkgm2iJcP0F1sWdaY1WJPz7CE-MpLeo0c8lWG48xT64DmOThuSyfizj-0oXN1ZoTnyYPpqB7ckPv7QuhegOmtl0jDDRUJIUyhkVIGYUetJrWNWk36gQYXnoZPcWtnKbPOICoL_Riu0-s-ACl7FVUy-r81M",
-  },
-];
+// Helper to get status colors
+const getStatusBadgeProps = (status) => {
+  switch (status) {
+    case "Delivered":
+      return {
+        label: "Delivered",
+        bg: "bg-emerald-100",
+        text: "text-emerald-700",
+        icon: "check_circle",
+      };
+    case "Shipped":
+      return {
+        label: "Shipped",
+        bg: "bg-blue-100",
+        text: "text-blue-700",
+        icon: "local_shipping",
+      };
+    case "Confirmed":
+      return {
+        label: "Confirmed",
+        bg: "bg-yellow-100",
+        text: "text-yellow-700",
+        icon: "pending",
+      };
+    case "Processing":
+      return {
+        label: "Processing",
+        bg: "bg-gray-100",
+        text: "text-gray-700",
+        icon: "schedule",
+      };
+    default:
+      return {
+        label: status,
+        bg: "bg-gray-100",
+        text: "text-gray-700",
+        icon: "info",
+      };
+  }
+};
 
 const Orders = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!user) return; // Wait for user authentication
+
+    const loadOrders = async () => {
+      try {
+        const data = await fetchBuyerOrders();
+        setOrders(data);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching orders:", err);
+        setError("Failed to load orders. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOrders();
+  }, [user]);
 
   const handleViewDetails = (orderId) => {
-    // Navigate to an order detail route (create this route if missing)
+    // Navigate to an order detail route (e.g., to fetch full details by ID)
     navigate(`/order/${orderId}`);
   };
 
-  const handleReorder = (orderId) => {
-    // Example: navigate to a reorder flow or product page; here we pass order id as query param
-    navigate(`/marketplace?reorder=${orderId}`);
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Header />
+        <main className="flex-grow container mx-auto p-8 text-center">
+          <p className="text-lg text-gray-600">Loading your order history...</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f6f8f6] dark:bg-[#1a1a1a] text-[#111827] dark:text-[#E5E7EB]">
-      {/* Header component uses its own navigation; pass a dynamic cart count if you track it */}
       <Header />
 
       <main className="flex-grow">
-        {/* Hero */}
+        {/* Hero Section */}
         <section className="relative bg-[#111827]/6 dark:bg-[#000000]/20 py-20">
-          <div className="absolute inset-0 pointer-events-none">
-            <img
-              alt="Fresh produce background"
-              className="w-full h-full object-cover opacity-20"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuva8nZOSC9MEllnNvwqdONZx96jhGNsyCDx5RwK037w3Q_VSLwen2y8v3ASowKlEXdOTvmgmfMWzD6x4RaXH1ken8-TUQC9RSgSBXQ1WnNaX2z-xn0_Thx2pAOPHkqIUWuyjZsgsuFRUigHVNlddXkHiHhz2pwOZePYO8rkqxFeoyLUTBOA_qQEjDTq09Lyk8QKXxhq78UUqiKKlryS867k5Mr4HFFYXvc2x8MHygyEnZLlbjn_ifc7mkzWZUFs_UVyzk2Rcyll0"
-              loading="lazy"
-            />
-          </div>
-
+          {/* ... (background image/overlay content remains the same) ... */}
           <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-[#111827] dark:text-white mb-4">
               Your Orders
             </h1>
             <p className="text-lg text-[#374151] dark:text-[#D1D5DB] max-w-2xl mx-auto">
-              Track your fresh produce from the farm to your doorstep. Here you
-              can see your past and current orders.
+              Track your fresh produce from the farm to your doorstep.
             </p>
           </div>
         </section>
@@ -98,99 +112,90 @@ const Orders = () => {
         {/* Orders list */}
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 -mt-16">
           <div className="max-w-5xl mx-auto space-y-8">
-            {ORDERS.map((o) => (
-              <article
-                key={o.id}
-                className="bg-white dark:bg-[#242424] rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 overflow-hidden"
-                aria-labelledby={`order-${o.id}-title`}
-              >
-                <div className="p-6 md:p-8 flex flex-col md:flex-row items-center gap-8">
-                  {/* Image */}
-                  <div
-                    className="w-full md:w-48 h-48 md:h-auto md:self-stretch rounded-lg bg-cover bg-center flex-shrink-0"
-                    style={{ backgroundImage: `url('${o.image}')` }}
-                    role="img"
-                    aria-label={o.title}
-                  />
+            {error && <div className="text-red-600 text-center">{error}</div>}
 
-                  {/* Content */}
-                  <div className="flex-grow space-y-4 text-center md:text-left">
-                    <div className="flex items-center justify-center md:justify-start gap-3">
-                      <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${o.statusBadge.bg} ${o.statusBadge.text}`}
+            {orders.length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-xl shadow-lg">
+                <p className="text-xl font-medium text-gray-700">
+                  You have no past orders yet.
+                </p>
+                <button
+                  onClick={() => navigate("/marketplace")}
+                  className="mt-4 bg-emerald-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-700"
+                >
+                  Start Shopping
+                </button>
+              </div>
+            ) : (
+              orders.map((o) => {
+                const badge = getStatusBadgeProps(o.orderStatus);
+                return (
+                  <article
+                    key={o._id}
+                    className="bg-white dark:bg-[#242424] rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 overflow-hidden"
+                    aria-labelledby={`order-${o._id}-title`}
+                  >
+                    <div className="p-6 md:p-8 flex flex-col md:flex-row items-center gap-8">
+                      {/* Image - Placeholder logic using first item's name */}
+                      <div
+                        className="w-full md:w-48 h-48 md:h-auto md:self-stretch rounded-lg bg-gray-200 bg-center flex-shrink-0 flex items-center justify-center text-gray-500 font-bold"
+                        role="img"
+                        aria-label={o.items[0]?.name}
                       >
-                        <span
-                          className={`material-symbols-outlined text-base mr-1.5 ${
-                            o.statusBadge.spin ? "animate-spin" : ""
-                          }`}
-                          style={
-                            o.statusBadge.spin
-                              ? { animationDuration: "3s" }
-                              : undefined
-                          }
+                        {o.items[0]?.name.substring(0, 15)}...
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-grow space-y-4 text-center md:text-left">
+                        <div className="flex items-center justify-center md:justify-start gap-3">
+                          <span
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${badge.bg} ${badge.text}`}
+                          >
+                            <span
+                              className={`material-symbols-outlined text-base mr-1.5`}
+                            >
+                              {badge.icon}
+                            </span>
+                            {badge.label}
+                          </span>
+
+                          <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF]">
+                            {new Date(o.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+
+                        <h3
+                          id={`order-${o._id}-title`}
+                          className="text-xl font-bold text-[#111827] dark:text-white"
                         >
-                          {o.statusBadge.icon}
-                        </span>
-                        {o.statusBadge.label}
-                      </span>
+                          Order #{o._id.substring(18)}
+                        </h3>
 
-                      <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF]">
-                        {new Date(o.date).toLocaleDateString(undefined, {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </p>
+                        <p className="text-[#4B5563] dark:text-[#9CA3AF] text-sm">
+                          Total: KSh {o.totalAmount.toLocaleString()} (
+                          {o.items.length} items)
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start pt-2">
+                          <button
+                            onClick={() => handleViewDetails(o._id)}
+                            className="bg-[#E5E7EB] dark:bg-[#2f2f2f] hover:bg-[#d1d5db] dark:hover:bg-[#3a3a3a] text-[#111827] dark:text-[#E5E7EB] font-bold py-2 px-6 rounded-lg text-sm transition-colors"
+                            aria-label={`View details for order ${o._id}`}
+                          >
+                            View Details
+                          </button>
+
+                          {/* Reorder Button Placeholder */}
+                          <button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors flex items-center justify-center gap-2">
+                            Reorder
+                          </button>
+                        </div>
+                      </div>
                     </div>
-
-                    <h3
-                      id={`order-${o.id}-title`}
-                      className="text-xl font-bold text-[#111827] dark:text-white"
-                    >
-                      Order #{o.id}
-                    </h3>
-
-                    <p className="text-[#4B5563] dark:text-[#9CA3AF]">
-                      {o.note}
-                    </p>
-
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start pt-2">
-                      {/* Primary action (Reorder or Track) */}
-                      <button
-                        onClick={() =>
-                          o.status === "In Transit"
-                            ? handleTrack(navigate)
-                            : handleReorder(o.id, navigate)
-                        }
-                        className="bg-[#42cf17] hover:bg-[#36b90f] text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
-                        aria-label={
-                          o.status === "In Transit"
-                            ? `Track order ${o.id}`
-                            : `Reorder ${o.id}`
-                        }
-                      >
-                        <span className="material-symbols-outlined text-base">
-                          {o.status === "In Transit"
-                            ? "pin_drop"
-                            : "restart_alt"}
-                        </span>
-                        {o.status === "In Transit"
-                          ? "Track Delivery"
-                          : "Reorder"}
-                      </button>
-
-                      <button
-                        onClick={() => handleViewDetails(o.id)}
-                        className="bg-[#E5E7EB] dark:bg-[#2f2f2f] hover:bg-[#d1d5db] dark:hover:bg-[#3a3a3a] text-[#111827] dark:text-[#E5E7EB] font-bold py-2 px-6 rounded-lg text-sm transition-colors"
-                        aria-label={`View details for order ${o.id}`}
-                      >
-                        View Details
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </article>
-            ))}
+                  </article>
+                );
+              })
+            )}
           </div>
         </section>
       </main>
@@ -198,32 +203,5 @@ const Orders = () => {
     </div>
   );
 };
-
-/**
- * helper navigation handlers (kept outside component body to keep render clean)
- * note: they accept navigate as param so we can call from inline handlers.
- */
-function handleViewDetails(id, navigate) {
-  // If you have a route like /order/:id, navigate there.
-  // The earlier code in the component calls this with a bound navigate param.
-  // But our inline calls pass navigate directly (see below).
-  if (!navigate) {
-    // fallback no-op (shouldn't happen)
-    return;
-  }
-  navigate(`/order/${id}`);
-}
-
-function handleReorder(id, navigate) {
-  if (!navigate) return;
-  // Navigate to marketplace with reorder param so marketplace can prefill cart
-  navigate(`/marketplace?reorder=${encodeURIComponent(id)}`);
-}
-
-function handleTrack(navigate) {
-  if (!navigate) return;
-  // Navigate to tracking page — implement this route if you need it
-  navigate("/tracking");
-}
 
 export default Orders;

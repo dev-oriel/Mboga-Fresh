@@ -1,27 +1,83 @@
-// frontend/src/pages/Checkout.jsx
-import React from "react";
+import React, { useState } from "react";
 import Header from "../components/Header";
 import CheckoutProgress from "../components/CheckoutProgress";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
+import { placeOrderRequest } from "../api/orders"; // <-- NEW IMPORT
+import { useAuth } from "../context/AuthContext";
 
 const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [formError, setFormError] = useState(null);
 
-  const handleConfirm = () => {
-    // In a real app you'd call payment API, then on success:
-    const orderNumber = `MBG-${new Date()
-      .toISOString()
-      .slice(2, 10)
-      .replace(/-/g, "")}-${Math.floor(Math.random() * 900000) + 100000}`;
-    const itemsSummary = items.map((it) => ({ ...it }));
-    // Clear cart and navigate to confirmation (pass summary)
-    clearCart();
-    navigate("/order-placed", {
-      state: { orderNumber, eta: "30 minutes", itemsSummary },
-    });
+  // Default/Mock Address State (Replace with real form state later)
+  const [address, setAddress] = useState({
+    street: "Mama Ngina Street",
+    city: "Nairobi",
+    postalCode: "00100",
+    country: "Kenya",
+    phone: "0712345678",
+  });
+
+  // Helper to extract clean data from the cart items
+  const getOrderItems = () =>
+    items.map((item) => ({
+      product: item.id, // Assuming item.id is the MongoDB Product ID
+      quantity: item.qty,
+      // The price validation and total calculation happen on the backend
+    }));
+
+  const handleConfirm = async () => {
+    if (!user) {
+      setFormError("You must be logged in to complete your order.");
+      return;
+    }
+
+    if (items.length === 0) {
+      setFormError("Your cart is empty.");
+      return;
+    }
+
+    setIsProcessing(true);
+    setFormError(null);
+
+    // 1. Prepare Payload
+    const payload = {
+      items: getOrderItems(),
+      shippingAddress: address,
+    };
+
+    try {
+      // 2. Send order to backend API
+      const result = await placeOrderRequest(payload);
+
+      // 3. On Success: Clear cart and navigate
+      clearCart();
+
+      // Pass order details to the confirmation page
+      navigate("/order-placed", {
+        state: {
+          orderNumber: result.orderId,
+          eta: "2-4 hours",
+          itemsSummary: items,
+        },
+      });
+    } catch (err) {
+      console.error("Order Placement Error:", err);
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        "An unexpected error occurred during order processing.";
+      setFormError(msg);
+    } finally {
+      setIsProcessing(false);
+    }
   };
+
+  // ... (rest of the Checkout component remains the same, but the handleConfirm function is updated) ...
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
@@ -29,6 +85,11 @@ const Checkout = () => {
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
         <CheckoutProgress step={2} />
+        {formError && (
+          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mt-4 rounded-lg shadow-sm">
+            {formError}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 mt-8">
           <div className="lg:col-span-2">
@@ -49,7 +110,8 @@ const Checkout = () => {
                     </label>
                     <input
                       className="form-input w-full mt-1 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-emerald-400 focus:ring-emerald-400 rounded-lg p-2"
-                      defaultValue="Mama Ngina Street"
+                      defaultValue={address.street}
+                      // In a real application, you would use state and change handlers here
                     />
                   </div>
                   <div>
@@ -64,7 +126,7 @@ const Checkout = () => {
                     </label>
                     <input
                       className="form-input w-full mt-1 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-emerald-400 focus:ring-emerald-400 rounded-lg p-2"
-                      defaultValue="Nairobi"
+                      defaultValue={address.city}
                     />
                   </div>
                   <div>
@@ -73,7 +135,7 @@ const Checkout = () => {
                     </label>
                     <input
                       className="form-input w-full mt-1 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-emerald-400 focus:ring-emerald-400 rounded-lg p-2"
-                      defaultValue="0712 345 678"
+                      defaultValue={address.phone}
                     />
                   </div>
                 </div>
@@ -94,7 +156,9 @@ const Checkout = () => {
                         <div className="w-6 h-6 rounded-full border-2 border-emerald-600 flex items-center justify-center">
                           <div className="w-3 h-3 bg-emerald-600 rounded-full" />
                         </div>
-                        <span className="font-bold">M-Pesa</span>
+                        <span className="font-bold">
+                          M-Pesa (Simulated Payment)
+                        </span>
                       </div>
                       <img
                         alt="M-Pesa Logo"
@@ -120,8 +184,9 @@ const Checkout = () => {
                         <button
                           className="bg-emerald-600 text-white font-bold py-2 px-6 rounded-lg hover:opacity-90 transition-opacity"
                           onClick={handleConfirm}
+                          disabled={isProcessing}
                         >
-                          Pay
+                          {isProcessing ? "Processing..." : "Pay"}
                         </button>
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
@@ -196,9 +261,10 @@ const Checkout = () => {
 
               <button
                 onClick={handleConfirm}
+                disabled={isProcessing}
                 className="w-full mt-6 bg-emerald-600 text-white font-bold py-3 rounded-lg hover:opacity-90 transition-opacity"
               >
-                Confirm and Pay
+                {isProcessing ? "Confirming..." : "Confirm and Pay"}
               </button>
             </div>
           </aside>
