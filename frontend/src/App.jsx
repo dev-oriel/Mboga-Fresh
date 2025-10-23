@@ -62,6 +62,7 @@ import AdminSettings from "./admin/AdminSettings.jsx";
 import EscrowPayments from "./admin/EscrowPayments.jsx";
 import UserManagement from "./admin/UserManagement.jsx";
 import AdminDisputeResolution from "./admin/AdminDisputeResolution.jsx";
+import ReportsAnalytics from "./admin/ReportsAnalytics.jsx";
 
 function App() {
   return (
@@ -123,6 +124,26 @@ function App() {
 
             {/* --- Protected Routes: Farmer (Supplier) (ONLY accessible by Farmer/Admin) --- */}
             <Route
+              path="/riderdelivery/:orderid"
+              element={<RiderDeliveryDetail />}
+            />
+
+            {/* Farmer routes */}
+            <Route path="/supplierdashboard" element={<SupplierDashboard />} />
+            <Route path="/supplierproducts" element={<Products />} />
+            <Route path="/supplierorders" element={<FarmerOrderManagement />} />
+            <Route path="/supplierwallet" element={<SupplierWallet />} />
+            <Route path="/supplierprofile" element={<SupplierProfile />} />
+
+            {/* Admin routes */}
+            <Route path="/admindashboard" element={<AdminDashboard />} />
+            <Route path="/adminsettings" element={<AdminSettings />} />
+            <Route path="/usermanagement" element={<UserManagement />} />
+            <Route path="/adminescrow" element={<EscrowPayments />} />
+            <Route path="/admindisputeresolution" element={<AdminDisputeResolution />} />
+            <Route path="/adminreports" element={<ReportsAnalytics />} />
+
+            
               element={<PrivateRoute allowedRoles={["farmer", "admin"]} />}
             >
               <Route
