@@ -43,7 +43,7 @@ const SupplierDashboard = () => {
     const userData = localStorage.getItem("user");
     if (userData) {
       const parsedUser = JSON.parse(userData);
-      if (parsedUser.role !== "vendor") {
+      if (parsedUser.role !== "farmer") {
         navigate("/login");
         return;
       }
