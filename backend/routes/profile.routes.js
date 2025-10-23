@@ -1,7 +1,7 @@
 // backend/routes/profile.routes.js
 import express from "express";
 import { User } from "../models/user.model.js";
-import VendorProfile from "../models/vendorProfile.model.js"; // <-- NEW IMPORT
+import VendorProfile from "../models/vendorProfile.model.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
@@ -9,7 +9,8 @@ const router = express.Router();
 // Get user profile (no password)
 router.get("/", requireAuth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password");
+    // FIX: Include the 'addresses' field in the select statement
+    const user = await User.findById(req.user.id).select("-password addresses");
     return res.json(user);
   } catch (err) {
     console.error("Profile GET error:", err);
@@ -53,7 +54,8 @@ router.put("/", requireAuth, async (req, res) => {
       }
 
       await user.save();
-      user = await User.findById(req.user.id).select("-password");
+      // Re-fetch user with addresses included in the select (already done above, kept for safety)
+      user = await User.findById(req.user.id).select("-password addresses");
     }
 
     return res.json(user);
@@ -97,15 +99,13 @@ router.put("/payment-methods", requireAuth, async (req, res) => {
   }
 });
 
-// NEW ROUTE: Update Vendor Store Information
+// Update Vendor Store Information
 router.put("/store", requireAuth, async (req, res) => {
   if (req.user.role !== "vendor") {
-    return res
-      .status(403)
-      .json({
-        success: false,
-        message: "Forbidden. Only vendors can update store information.",
-      });
+    return res.status(403).json({
+      success: false,
+      message: "Forbidden. Only vendors can update store information.",
+    });
   }
 
   const { shopName, location, contact, description } = req.body;
@@ -114,13 +114,11 @@ router.put("/store", requireAuth, async (req, res) => {
     const updates = {};
     if (shopName !== undefined) updates.businessName = shopName;
     if (location !== undefined) updates.location = location;
-    // Note: VendorProfile model only currently supports 'businessName' and 'location'.
-    // In a full system, we would need to ensure the VendorProfile model has a 'description' field.
 
     let profile = await VendorProfile.findOneAndUpdate(
       { user: req.user.id },
       { $set: updates },
-      { new: true, upsert: true } // Upsert: create if it doesn't exist
+      { new: true, upsert: true }
     ).lean();
 
     // Optionally update user's phone if provided/changed

@@ -1,43 +1,76 @@
-import React, { useState } from "react";
+// frontend/src/pages/Checkout.jsx - COMPLETE AND CORRECTED
+
+import React, { useState, useEffect, useMemo } from "react";
 import Header from "../components/Header";
 import CheckoutProgress from "../components/CheckoutProgress";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
-import { placeOrderRequest } from "../api/orders"; // <-- NEW IMPORT
+import { placeOrderRequest } from "../api/orders";
 import { useAuth } from "../context/AuthContext";
+import axios from "axios";
 
 const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
   const [formError, setFormError] = useState(null);
 
-  // Default/Mock Address State (Replace with real form state later)
-  const [address, setAddress] = useState({
-    street: "Mama Ngina Street",
-    city: "Nairobi",
-    postalCode: "00100",
-    country: "Kenya",
-    phone: "0712345678",
+  // Internal state for the checkout form fields
+  const [addressForm, setAddressForm] = useState({
+    street: "",
+    city: "",
+    postalCode: "",
+    country: "Kenya", // Default country
+    phone: "",
   });
 
-  // Helper to extract clean data from the cart items
-  const getOrderItems = () =>
-    items.map((item) => ({
-      product: item.id, // Assuming item.id is the MongoDB Product ID
-      quantity: item.qty,
-      // The price validation and total calculation happen on the backend
-    }));
+  // Determine the user's primary address using useMemo
+  const primaryAddress = useMemo(() => {
+    if (!user || !Array.isArray(user.addresses)) return null;
+    const p = user.addresses.find((a) => a.isPrimary);
+    if (p && p.details) {
+      // Attempt to parse street, city, postal code from a single string (simple splitting)
+      const parts = p.details.split(",").map((s) => s.trim());
+      return {
+        street: parts[0] || p.details,
+        city: parts[1] || "Nairobi",
+        postalCode: parts[2] || "00100",
+        country: "Kenya",
+        phone: user.phone || "",
+      };
+    }
+    return null;
+  }, [user]);
+
+  // Effect to initialize form with primary address or user phone
+  useEffect(() => {
+    if (primaryAddress) {
+      setAddressForm(primaryAddress);
+    } else if (user) {
+      setAddressForm((prev) => ({
+        ...prev,
+        phone: user.phone || "07XXXXXXXX",
+      }));
+    }
+  }, [user, primaryAddress]);
+
+  const handleAddressChange = (e) => {
+    const { name, value } = e.target;
+    setAddressForm((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleConfirm = async () => {
     if (!user) {
       setFormError("You must be logged in to complete your order.");
       return;
     }
-
     if (items.length === 0) {
       setFormError("Your cart is empty.");
+      return;
+    }
+    if (!addressForm.street || !addressForm.city || !addressForm.phone) {
+      setFormError("Please fill in Street Address, City, and Phone Number.");
       return;
     }
 
@@ -46,18 +79,48 @@ const Checkout = () => {
 
     // 1. Prepare Payload
     const payload = {
-      items: getOrderItems(),
-      shippingAddress: address,
+      items: items.map((item) => ({
+        product: item.id,
+        quantity: item.qty,
+      })),
+      shippingAddress: {
+        street: addressForm.street,
+        city: addressForm.city,
+        postalCode: addressForm.postalCode || "00000",
+        country: addressForm.country,
+      },
     };
 
     try {
-      // 2. Send order to backend API
+      // 2. Persist New Address if it's the first time (no primaryAddress exists)
+      if (!primaryAddress && user) {
+        const newPrimaryAddressPayload = {
+          addresses: [
+            {
+              label: "Primary Address",
+              details: `${addressForm.street}, ${addressForm.city}, ${
+                addressForm.postalCode || "00000"
+              }`,
+              isPrimary: true,
+            },
+          ],
+        };
+        await axios.put(
+          `${
+            import.meta.env.VITE_API_BASE || "http://localhost:5000"
+          }/api/profile/addresses`,
+          newPrimaryAddressPayload,
+          { withCredentials: true }
+        );
+        await refresh();
+      }
+
+      // 3. Send Order to backend API
       const result = await placeOrderRequest(payload);
 
-      // 3. On Success: Clear cart and navigate
+      // 4. On Success: Clear cart and navigate
       clearCart();
 
-      // Pass order details to the confirmation page
       navigate("/order-placed", {
         state: {
           orderNumber: result.orderId,
@@ -76,8 +139,6 @@ const Checkout = () => {
       setIsProcessing(false);
     }
   };
-
-  // ... (rest of the Checkout component remains the same, but the handleConfirm function is updated) ...
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
@@ -102,6 +163,11 @@ const Checkout = () => {
                     local_shipping
                   </span>{" "}
                   Delivery Address
+                  {primaryAddress && (
+                    <span className="text-xs font-normal text-gray-500 ml-3">
+                      (Primary: {primaryAddress.street}, {primaryAddress.city})
+                    </span>
+                  )}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -110,15 +176,10 @@ const Checkout = () => {
                     </label>
                     <input
                       className="form-input w-full mt-1 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-emerald-400 focus:ring-emerald-400 rounded-lg p-2"
-                      defaultValue={address.street}
-                      // In a real application, you would use state and change handlers here
+                      name="street"
+                      value={addressForm.street}
+                      onChange={handleAddressChange}
                     />
-                  </div>
-                  <div>
-                    <label className="font-medium text-sm text-gray-600 dark:text-gray-300">
-                      Apartment, suite, etc. (optional)
-                    </label>
-                    <input className="form-input w-full mt-1 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-emerald-400 focus:ring-emerald-400 rounded-lg p-2" />
                   </div>
                   <div>
                     <label className="font-medium text-sm text-gray-600 dark:text-gray-300">
@@ -126,7 +187,20 @@ const Checkout = () => {
                     </label>
                     <input
                       className="form-input w-full mt-1 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-emerald-400 focus:ring-emerald-400 rounded-lg p-2"
-                      defaultValue={address.city}
+                      name="city"
+                      value={addressForm.city}
+                      onChange={handleAddressChange}
+                    />
+                  </div>
+                  <div>
+                    <label className="font-medium text-sm text-gray-600 dark:text-gray-300">
+                      Postal Code
+                    </label>
+                    <input
+                      className="form-input w-full mt-1 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-emerald-400 focus:ring-emerald-400 rounded-lg p-2"
+                      name="postalCode"
+                      value={addressForm.postalCode}
+                      onChange={handleAddressChange}
                     />
                   </div>
                   <div>
@@ -135,7 +209,9 @@ const Checkout = () => {
                     </label>
                     <input
                       className="form-input w-full mt-1 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-emerald-400 focus:ring-emerald-400 rounded-lg p-2"
-                      defaultValue={address.phone}
+                      name="phone"
+                      value={addressForm.phone}
+                      onChange={handleAddressChange}
                     />
                   </div>
                 </div>
@@ -179,6 +255,7 @@ const Checkout = () => {
                           <input
                             className="form-input w-full pl-14 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-emerald-400 focus:ring-emerald-400 rounded-lg p-2"
                             placeholder="712 345 678"
+                            // Note: We use the phone from the addressForm state for the button handler
                           />
                         </div>
                         <button
