@@ -1,7 +1,10 @@
+// frontend/src/App.jsx - FINAL MODIFIED VERSION FOR PUBLIC BROWSING
+
 import React from "react";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 import { VendorDataProvider } from "./context/VendorDataContext";
+import PrivateRoute from "./components/PrivateRoute";
 
 // Signup pages
 import VendorSignup from "./signup/VendorSignup";
@@ -44,6 +47,7 @@ import RiderHelpPage from "./rider/RiderHelpPage.jsx";
 import RiderProfile from "./rider/RiderProfileSettings.jsx";
 import RiderEarningsAndHistory from "./rider/RiderEarningsAndHistory.jsx";
 import RiderDeliveryDetail from "./rider/RiderDeliveryDetail.jsx";
+import RiderDeliveryRoute from "./rider/RiderDeliveryRoute.jsx";
 
 // Farmer pages
 import SupplierDashboard from "./farmer/SupplierDashboard.jsx";
@@ -66,50 +70,59 @@ function App() {
       <VendorDataProvider>
         <div>
           <Routes>
-            {/* General routes */}
-            <Route path="/" element={<Home />} />
-            <Route path="/signup/vendor" element={<VendorSignup />} />
-            <Route path="/signup/farmer" element={<FarmerSignUp />} />
-            <Route path="/signup/rider" element={<RiderSignup />} />
-            <Route path="/signup/buyer" element={<BuyerSignup />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/help" element={<Help />} />
-            <Route path="/product/:id" element={<ProductDetails />} />
-            <Route path="/cart" element={<ShoppingCart />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/profile" element={<BuyerProfile />} />
-            <Route path="/order-placed" element={<OrderPlaced />} />
-            <Route path="/category/:id" element={<CategoryPage />} />
-            <Route path="/vendor/:id" element={<VendorPage />} />
-            <Route path="/vendorprofile" element={<Vendorprofile />} />
-
-            {/* footer routes */}
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/faq" element={<Faq />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-
-            {/* Vendor routes */}
-            <Route path="/vendordashboard" element={<VendorDashboard />} />
-            <Route path="/ordermanagement" element={<OrderManagement />} />
-            <Route path="/vendorproducts" element={<VendorProducts />} />
-            <Route path="/farmily" element={<Farmily />} />
-            <Route path="/vendorwallet" element={<VendorWallet />} />
-
-            {/* Rider routes */}
-            <Route path="/riderdashboard" element={<RiderDashboard />} />
+            {/* --- Public Browsing Routes (Guest Access: Allows unauthenticated. Redirects Staff) --- */}
             <Route
-              path="/riderdeliveryqueue"
-              element={<RiderDeliveryQueue />}
-            />
-            <Route path="/riderhelp" element={<RiderHelpPage />} />
-            <Route path="/riderprofile" element={<RiderProfile />} />
+              element={
+                <PrivateRoute
+                  allowedRoles={["buyer", "guest"]}
+                  allowUnauthenticated={true}
+                  redirectIfAuthenticated={true}
+                />
+              }
+            >
+              <Route path="/" element={<Home />} />
+              <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/product/:id" element={<ProductDetails />} />
+              <Route path="/category/:id" element={<CategoryPage />} />
+              <Route path="/vendor/:id" element={<VendorPage />} />
+
+              {/* Public Info Routes */}
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/faq" element={<Faq />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/help" element={<Help />} />
+
+              {/* Login & Signup Routes (Need to be accessible, also redirecting logged-in staff) */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup/vendor" element={<VendorSignup />} />
+              <Route path="/signup/farmer" element={<FarmerSignUp />} />
+              <Route path="/signup/rider" element={<RiderSignup />} />
+              <Route path="/signup/buyer" element={<BuyerSignup />} />
+            </Route>
+
+            {/* --- Protected Routes: Buyer (REQUIRES login, then ONLY accessible by Buyer/Admin) --- */}
+            <Route element={<PrivateRoute allowedRoles={["buyer", "admin"]} />}>
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/cart" element={<ShoppingCart />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/profile" element={<BuyerProfile />} />
+              <Route path="/order-placed" element={<OrderPlaced />} />
+            </Route>
+
+            {/* --- Protected Routes: Vendor (ONLY accessible by Vendor/Admin) --- */}
             <Route
-              path="/riderearnings"
-              element={<RiderEarningsAndHistory />}
-            />
+              element={<PrivateRoute allowedRoles={["vendor", "admin"]} />}
+            >
+              <Route path="/vendordashboard" element={<VendorDashboard />} />
+              <Route path="/ordermanagement" element={<OrderManagement />} />
+              <Route path="/vendorproducts" element={<VendorProducts />} />
+              <Route path="/farmily" element={<Farmily />} />
+              <Route path="/vendorwallet" element={<VendorWallet />} />
+              <Route path="/vendorprofile" element={<Vendorprofile />} />
+            </Route>
+
+            {/* --- Protected Routes: Farmer (Supplier) (ONLY accessible by Farmer/Admin) --- */}
             <Route
               path="/riderdelivery/:orderid"
               element={<RiderDeliveryDetail />}
@@ -131,6 +144,58 @@ function App() {
             <Route path="/adminreports" element={<ReportsAnalytics />} />
 
             
+              element={<PrivateRoute allowedRoles={["farmer", "admin"]} />}
+            >
+              <Route
+                path="/supplierdashboard"
+                element={<SupplierDashboard />}
+              />
+              <Route path="/supplierproducts" element={<Products />} />
+              <Route
+                path="/supplierorders"
+                element={<FarmerOrderManagement />}
+              />
+              <Route path="/supplierwallet" element={<SupplierWallet />} />
+              <Route path="/supplierprofile" element={<SupplierProfile />} />
+            </Route>
+
+            {/* --- Protected Routes: Rider (ONLY accessible by Rider/Admin) --- */}
+            <Route element={<PrivateRoute allowedRoles={["rider", "admin"]} />}>
+              <Route path="/riderdashboard" element={<RiderDashboard />} />
+              <Route
+                path="/riderdeliveryqueue"
+                element={<RiderDeliveryQueue />}
+              />
+              <Route path="/riderhelp" element={<RiderHelpPage />} />
+              <Route path="/riderprofile" element={<RiderProfile />} />
+              <Route
+                path="/riderearnings"
+                element={<RiderEarningsAndHistory />}
+              />
+              <Route
+                path="/riderdelivery/:orderid"
+                element={<RiderDeliveryDetail />}
+              />
+              <Route
+                path="/riderdeliveryroute"
+                element={<RiderDeliveryRoute />}
+              />
+            </Route>
+
+            {/* --- Protected Routes: Admin (ONLY accessible by Admin) --- */}
+            <Route element={<PrivateRoute allowedRoles={["admin"]} />}>
+              <Route path="/admindashboard" element={<AdminDashboard />} />
+              <Route path="/adminsettings" element={<AdminSettings />} />
+              <Route path="/usermanagement" element={<UserManagement />} />
+              <Route path="/adminescrow" element={<EscrowPayments />} />
+              <Route
+                path="/admindisputeresolution"
+                element={<AdminDisputeResolution />}
+              />
+            </Route>
+
+            {/* Final Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </VendorDataProvider>
