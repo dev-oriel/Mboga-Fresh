@@ -60,7 +60,10 @@ import AdminSettings from "./admin/AdminSettings.jsx";
 import EscrowPayments from "./admin/EscrowPayments.jsx";
 import UserManagement from "./admin/UserManagement.jsx";
 import AdminDisputeResolution from "./admin/AdminDisputeResolution.jsx";
+import ReportsAnalytics from "./admin/ReportsAnalytics.jsx";
 import ProductManagement from "./admin/ProductManagement.jsx";
+
+// Note: You imported ReportsAnalytics but didn't assign a component, leaving it commented out.
 // import ReportsAnalytics from "./admin/ReportsAnalytics.jsx";
 
 function App() {
@@ -178,10 +181,8 @@ function App() {
               <Route path="/usermanagement" element={<UserManagement />} />
               <Route path="/adminproducts" element={<ProductManagement />} />
               <Route path="/adminescrow" element={<EscrowPayments />} />
-              <Route
-                path="/admindisputeresolution"
-                element={<AdminDisputeResolution />}
-              />
+              <Route path="/admindisputeresolution" element={<AdminDisputeResolution />}/>
+              <Route path="/reportsanalytics" element={<ReportsAnalytics />} />
               {/* Assuming you want to include this new import once component is ready: */}
               {/* <Route path="/adminreports" element={<ReportsAnalytics />} /> */}
             </Route>
