@@ -25,7 +25,7 @@ const AdminSidebar = () => {
       path: "/admindisputeresolution",
     },
     { name: "Delivery & Logistics", icon: Truck, path: "/admindelivery" },
-    { name: "Reports & Analytics", icon: BarChart3, path: "/reportsanalytics`" },
+    { name: "Reports & Analytics", icon: BarChart3, path: "/reportsanalytics" },
   ];
   return (
     <aside className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
