@@ -500,6 +500,31 @@ export const orders = [
   },
 ];
 
-// Real data
-export const DEFAULT_AVATAR =
-  "https://api.dicebear.com/6.x/identicon/png?seed=MbogaFresh&size=512";
+// frontend/src/constants/index.js - MODIFIED AVATAR MAP FOR THEMATIC MONOCHROME SYMBOLS
+
+// NOTE: Using a reliable CDN library (Icons8) to provide clean, universally understood symbols.
+export const DEFAULT_AVATAR_MAP = {
+  // Buyer: Shopping Cart / Basket
+  buyer:
+    "https://img.icons8.com/material-outlined/96/00A85E/shopping-basket.png",
+
+  // Vendor (Mama Mboga): Market Stall / Shop Icon
+  vendor: "https://img.icons8.com/material-outlined/96/00A85E/shop.png",
+
+  // Farmer (Supplier): Plant / Seedling icon
+  farmer: "https://img.icons8.com/material-outlined/96/00A85E/potted-plant.png",
+
+  // Rider: Motorbike / Delivery Scooter icon
+  rider: "https://img.icons8.com/material-outlined/96/00A85E/motorcycle.png",
+
+  // Admin: User/Headset icon (professional neutral)
+  admin:
+    "https://img.icons8.com/material-outlined/96/00A85E/admin-settings-male.png",
+
+  // Generic fallback
+  unknown: "https://img.icons8.com/material-outlined/96/00A85E/user.png",
+};
+
+export const DEFAULT_AVATAR = DEFAULT_AVATAR_MAP.unknown;
+
+// ... (rest of the file remains the same) ...

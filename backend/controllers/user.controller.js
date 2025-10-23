@@ -104,3 +104,55 @@ export const listUsers = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch user list" });
   }
 };
+export const getUserStats = async (req, res) => {
+  try {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
+    const sixtyDaysAgo = new Date(now.setDate(now.getDate() - 60));
+
+    // 1. Total Counts (All Time)
+    const totalUsers = await User.countDocuments();
+
+    // 2. Counts by Role (for the pie chart or role breakdown)
+    const roleCounts = await User.aggregate([
+      { $group: { _id: "$role", count: { $sum: 1 } } },
+    ]);
+
+    // 3. Growth Calculation (Users created in the last 30 days vs previous 30 days)
+
+    // Count users created in the LAST 30 DAYS
+    const currentPeriodCount = await User.countDocuments({
+      createdAt: { $gte: thirtyDaysAgo },
+    });
+
+    // Count users created in the PREVIOUS 30 DAYS (30 to 60 days ago)
+    const previousPeriodCount = await User.countDocuments({
+      createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo },
+    });
+
+    let percentageChange = 0;
+    if (previousPeriodCount > 0) {
+      percentageChange =
+        ((currentPeriodCount - previousPeriodCount) / previousPeriodCount) *
+        100;
+    } else if (currentPeriodCount > 0) {
+      // If previous period was zero but current is > 0, treat as 100% growth
+      percentageChange = 100;
+    }
+
+    const stats = {
+      totalUsers: totalUsers,
+      roleCounts: roleCounts.map((item) => ({
+        role: item._id,
+        count: item.count,
+      })),
+      percentageChange: parseFloat(percentageChange.toFixed(2)),
+      currentPeriodCount: currentPeriodCount,
+    };
+
+    res.json(stats);
+  } catch (error) {
+    console.error("User Stats Error:", error);
+    res.status(500).json({ message: "Failed to fetch user statistics." });
+  }
+};
