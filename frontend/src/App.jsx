@@ -60,7 +60,7 @@ import AdminSettings from "./admin/AdminSettings.jsx";
 import EscrowPayments from "./admin/EscrowPayments.jsx";
 import UserManagement from "./admin/UserManagement.jsx";
 import AdminDisputeResolution from "./admin/AdminDisputeResolution.jsx";
-// Note: You imported ReportsAnalytics but didn't assign a component, leaving it commented out.
+import ProductManagement from "./admin/ProductManagement.jsx";
 // import ReportsAnalytics from "./admin/ReportsAnalytics.jsx";
 
 function App() {
@@ -176,6 +176,7 @@ function App() {
               <Route path="/admindashboard" element={<AdminDashboard />} />
               <Route path="/adminsettings" element={<AdminSettings />} />
               <Route path="/usermanagement" element={<UserManagement />} />
+              <Route path="/adminproducts" element={<ProductManagement />} />
               <Route path="/adminescrow" element={<EscrowPayments />} />
               <Route
                 path="/admindisputeresolution"

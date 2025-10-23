@@ -8,6 +8,7 @@ import {
   Scale,
   Truck,
   BarChart3,
+  Package,
 } from "lucide-react";
 
 const AdminSidebar = () => {
@@ -16,17 +17,25 @@ const AdminSidebar = () => {
   const links = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/admindashboard" },
     { name: "User Management", icon: Users, path: "/usermanagement" },
+    { name: "Product Management", icon: Package, path: "/adminproducts" }, // <-- NEW LINK
     { name: "Escrow & Payments", icon: FileText, path: "/adminescrow" },
-    { name: "Dispute Resolution", icon: Scale, path: "/admindisputeresolution" },
+    {
+      name: "Dispute Resolution",
+      icon: Scale,
+      path: "/admindisputeresolution",
+    },
     { name: "Delivery & Logistics", icon: Truck, path: "/admindelivery" },
     { name: "Reports & Analytics", icon: BarChart3, path: "/adminreports" },
   ];
-
   return (
     <aside className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
       {/* Logo Section */}
       <div className="flex items-center px-6 py-4 border-b border-gray-100">
-        <img src={logo} alt="Mboga Fresh Logo" className="w-8 h-8 object-contain" />
+        <img
+          src={logo}
+          alt="Mboga Fresh Logo"
+          className="w-8 h-8 object-contain"
+        />
         <span className="ml-2 text-lg font-semibold text-gray-800">
           Mboga Fresh
         </span>

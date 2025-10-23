@@ -88,7 +88,7 @@ function UsersTable({
         <thead className="bg-emerald-50/50">
           <tr>
             <th className="px-6 py-4 text-left text-xs font-semibold text-stone-700 uppercase tracking-wider">
-              Name (Jina)
+              Name
             </th>
             <th className="px-6 py-4 text-left text-xs font-semibold text-stone-700 uppercase tracking-wider">
               Role
