@@ -1,6 +1,7 @@
 // backend/routes/profile.routes.js
 import express from "express";
 import { User } from "../models/user.model.js";
+import VendorProfile from "../models/vendorProfile.model.js"; // <-- NEW IMPORT
 import { requireAuth } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
@@ -93,6 +94,50 @@ router.put("/payment-methods", requireAuth, async (req, res) => {
     return res
       .status(400)
       .json({ success: false, message: "Failed to update payment methods" });
+  }
+});
+
+// NEW ROUTE: Update Vendor Store Information
+router.put("/store", requireAuth, async (req, res) => {
+  if (req.user.role !== "vendor") {
+    return res
+      .status(403)
+      .json({
+        success: false,
+        message: "Forbidden. Only vendors can update store information.",
+      });
+  }
+
+  const { shopName, location, contact, description } = req.body;
+
+  try {
+    const updates = {};
+    if (shopName !== undefined) updates.businessName = shopName;
+    if (location !== undefined) updates.location = location;
+    // Note: VendorProfile model only currently supports 'businessName' and 'location'.
+    // In a full system, we would need to ensure the VendorProfile model has a 'description' field.
+
+    let profile = await VendorProfile.findOneAndUpdate(
+      { user: req.user.id },
+      { $set: updates },
+      { new: true, upsert: true } // Upsert: create if it doesn't exist
+    ).lean();
+
+    // Optionally update user's phone if provided/changed
+    if (contact !== undefined && contact !== req.user.phone) {
+      await User.findByIdAndUpdate(req.user.id, { phone: contact });
+    }
+
+    return res.json({
+      success: true,
+      message: "Store profile updated.",
+      profile: profile,
+    });
+  } catch (err) {
+    console.error("Store update error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to update store information." });
   }
 });
 

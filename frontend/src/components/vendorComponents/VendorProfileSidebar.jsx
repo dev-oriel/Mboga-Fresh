@@ -1,25 +1,36 @@
-import React, { useRef, useState, useEffect } from "react";
+// frontend/src/components/vendorComponents/VendorProfileSidebar.jsx
+
+import React, { useRef, useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { DEFAULT_AVATAR } from "../../constants";
+// Import the avatar map to ensure consistent default image rendering
+import { DEFAULT_AVATAR_MAP } from "../../constants";
 
 const VendorProfileSidebar = () => {
   const { user, logout, refresh } = useAuth();
-  const profileImageDefault =
-    (typeof DEFAULT_AVATAR === "string" && DEFAULT_AVATAR) ||
-    "https://api.dicebear.com/6.x/identicon/png?seed=MbogaFresh&size=512";
-
-  const [profileImagePreview, setProfileImagePreview] = useState(
-    user?.avatar || profileImageDefault
-  );
-  const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+  const [saving, setSaving] = useState(false);
 
+  // FIX 1: Centralize the determination of the canonical avatar URL using useMemo.
+  // This is the source of truth, watching only 'user' and the map constants for sync.
+  const canonicalAvatarUrl = useMemo(() => {
+    return (
+      user?.avatar ||
+      DEFAULT_AVATAR_MAP[user?.role] ||
+      DEFAULT_AVATAR_MAP.unknown
+    );
+  }, [user?.avatar, user?.role]);
+
+  // FIX 2: profileImagePreview state is now initialized with the canonical URL
+  const [profileImagePreview, setProfileImagePreview] =
+    useState(canonicalAvatarUrl);
+
+  // FIX 3: useEffect watches the canonical URL derived from useMemo to sync the UI.
   useEffect(() => {
-    setProfileImagePreview(user?.avatar || profileImageDefault);
-  }, [user?.avatar, profileImageDefault]);
+    setProfileImagePreview(canonicalAvatarUrl);
+  }, [canonicalAvatarUrl]);
 
   const handleEditClick = () => {
     fileInputRef.current?.click();
@@ -31,23 +42,26 @@ const VendorProfileSidebar = () => {
     const reader = new FileReader();
     reader.onloadend = async () => {
       const dataUrl = reader.result;
-      setProfileImagePreview(dataUrl);
+      setProfileImagePreview(dataUrl); // Optimistic UI update
       try {
         setSaving(true);
+        // Persist the new avatar (PUT /api/profile handles this for all users)
         await axios.put(
           "http://localhost:5000/api/profile",
           { avatar: dataUrl },
           { withCredentials: true }
         );
         if (typeof refresh === "function") {
-          await refresh();
+          await refresh(); // Re-fetch user to update AuthContext and propagate change
         }
       } catch (err) {
         console.error(
           "Failed to upload avatar:",
           err?.response?.data || err.message || err
         );
-        setProfileImagePreview(user?.avatar || profileImageDefault);
+        // Revert on failure
+        // We use user.avatar here to revert to the last successfully saved image
+        setProfileImagePreview(user?.avatar || canonicalAvatarUrl);
         alert("Failed to save avatar. Try again.");
       } finally {
         setSaving(false);
@@ -106,13 +120,16 @@ const VendorProfileSidebar = () => {
           <span className="material-symbols-outlined">storefront</span>
           <span>Store Information</span>
         </a>
-        {/* <a
-          className="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-gray-100 font-medium rounded-lg"
-          href="#ratings"
-        >
-          <span className="material-symbols-outlined">star</span>
-          <span>Ratings & Reviews</span>
-        </a> */}
+        {/* Placeholder for Ratings & Reviews if implemented later */}
+        {/*
+                <a
+                    className="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-gray-100 font-medium rounded-lg"
+                    href="#ratings"
+                >
+                    <span className="material-symbols-outlined">star</span>
+                    <span>Ratings & Reviews</span>
+                </a>
+                */}
         <a
           className="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-gray-100 font-medium rounded-lg"
           href="#order-history"

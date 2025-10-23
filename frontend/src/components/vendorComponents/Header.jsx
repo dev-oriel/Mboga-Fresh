@@ -1,12 +1,9 @@
 // frontend/src/components/vendorComponents/Header.jsx
+
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-
-/**
- * Header
- * - navItems: [{ label, to, icon (optional material symbol name) }]
- * - userName, avatarUrl: self-explanatory
- */
+import { DEFAULT_AVATAR_MAP } from "../../constants";
+import { useAuth } from "../../context/AuthContext";
 
 const Header = ({
   navItems = [
@@ -16,11 +13,23 @@ const Header = ({
     { label: "Payments", to: "/vendorwallet", icon: "paid" },
     { label: "Farm-ily Market", to: "/farmily", icon: "agriculture" },
   ],
-  userName = "Daniel Mutuku",
-  avatarUrl,
+  userName = "Vendor",
 }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // FIX: Determine canonical avatar URL with fallback logic
+  const finalAvatarUrl =
+    user?.avatar ||
+    DEFAULT_AVATAR_MAP[user?.role] ||
+    DEFAULT_AVATAR_MAP.unknown;
+
+  // Handler: go to vendor profile page
+  const handleOpenProfile = () => {
+    navigate("/vendorprofile");
+    setMobileOpen(false);
+  };
 
   const linkClass = (isActive) =>
     `text-sm font-medium flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
@@ -28,14 +37,6 @@ const Header = ({
         ? "text-emerald-700 bg-emerald-100 dark:bg-emerald-700/20 dark:text-emerald-300"
         : "text-gray-700 hover:text-emerald-600 dark:text-gray-200 dark:hover:text-emerald-300"
     }`;
-
-  // Handler: go to vendor profile page
-  const handleOpenProfile = () => {
-    // If you need to pass state or params (vendor id), do it here:
-    // navigate('/vendorprofile', { state: { vendorId: 'mama-rose' } });
-    navigate("/vendorprofile");
-    setMobileOpen(false);
-  };
 
   return (
     <header className="sticky top-0 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-emerald-200/70 dark:border-emerald-700/60">
@@ -130,82 +131,77 @@ const Header = ({
               </button>
 
               <div className="flex items-center gap-2">
-                {/* Avatar button: accessible and navigates to /vendorprofile */}
                 <button
                   type="button"
                   onClick={handleOpenProfile}
                   className="w-10 h-10 rounded-full bg-center bg-cover focus:ring-2 focus:ring-emerald-300 dark:focus:ring-emerald-600"
                   style={{
-                    backgroundImage: `url("${
-                      avatarUrl || "https://via.placeholder.com/150"
-                    }")`,
+                    backgroundImage: `url("${finalAvatarUrl}")`,
                   }}
                   aria-label="Open vendor profile"
                 />
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {userName}
+                  {user?.name || userName}
                 </span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* mobile nav */}
-        {mobileOpen && (
-          <nav className="md:hidden mt-2 pb-4 border-t border-emerald-200/50 dark:border-emerald-700/40">
-            <ul className="flex flex-col gap-1 py-2">
-              {navItems.map((item) => (
-                <li key={item.to}>
-                  <NavLink
-                    to={item.to}
-                    end={item.to === "/"}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2 px-3 py-2 rounded-md transition ${
-                        isActive
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-700/20 dark:text-emerald-300"
-                          : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/60"
-                      }`
-                    }
-                    onClick={() => setMobileOpen(false)}
+          {/* mobile nav */}
+          {mobileOpen && (
+            <nav className="md:hidden mt-2 pb-4 border-t border-emerald-200/50 dark:border-emerald-700/40">
+              <ul className="flex flex-col gap-1 py-2">
+                {navItems.map((item) => (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end={item.to === "/"}
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 px-3 py-2 rounded-md transition ${
+                          isActive
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-700/20 dark:text-emerald-300"
+                            : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/60"
+                        }`
+                      }
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      {item.icon && (
+                        <span
+                          className="material-symbols-outlined text-base"
+                          aria-hidden
+                        >
+                          {item.icon}
+                        </span>
+                      )}
+                      <span>{item.label}</span>
+                    </NavLink>
+                  </li>
+                ))}
+
+                {/* mobile avatar row: also clickable to profile */}
+                <li className="mt-2 px-3">
+                  <button
+                    type="button"
+                    onClick={handleOpenProfile}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                    aria-label="Open vendor profile"
                   >
-                    {item.icon && (
-                      <span
-                        className="material-symbols-outlined text-base"
-                        aria-hidden
-                      >
-                        {item.icon}
-                      </span>
-                    )}
-                    <span>{item.label}</span>
-                  </NavLink>
+                    <div
+                      className="w-9 h-9 rounded-full bg-center bg-cover"
+                      style={{
+                        backgroundImage: `url("${finalAvatarUrl}")`,
+                      }}
+                      aria-hidden
+                    />
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {user?.name || userName}
+                    </span>
+                  </button>
                 </li>
-              ))}
-
-              {/* mobile avatar row: also clickable to profile */}
-              <li className="mt-2 px-3">
-                <button
-                  type="button"
-                  onClick={handleOpenProfile}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                  aria-label="Open vendor profile"
-                >
-                  <div
-                    className="w-9 h-9 rounded-full bg-center bg-cover"
-                    style={{
-                      backgroundImage: `url("${
-                        avatarUrl || "https://via.placeholder.com/150"
-                      }")`,
-                    }}
-                    aria-hidden
-                  />
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {userName}
-                  </span>
-                </button>
-              </li>
-            </ul>
-          </nav>
-        )}
+              </ul>
+            </nav>
+          )}
+        </div>
       </div>
     </header>
   );

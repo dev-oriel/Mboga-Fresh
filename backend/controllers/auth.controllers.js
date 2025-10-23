@@ -26,6 +26,22 @@ const COOKIE_OPTIONS = (req) => ({
   maxAge: parseDurationToMs(JWT_EXPIRES_IN),
   path: "/",
 });
+function getRoleAvatarUrl(role) {
+  const roleKey = (role || "unknown").toLowerCase();
+  const map = {
+    // These MUST match the new frontend constants map exactly
+    buyer:
+      "https://img.icons8.com/material-outlined/96/00A85E/shopping-basket.png",
+    vendor: "https://img.icons8.com/material-outlined/96/00A85E/shop.png",
+    farmer:
+      "https://img.icons8.com/material-outlined/96/00A85E/potted-plant.png",
+    rider: "https://img.icons8.com/material-outlined/96/00A85E/motorcycle.png",
+    admin:
+      "https://img.icons8.com/material-outlined/96/00A85E/admin-settings-male.png",
+    unknown: "https://img.icons8.com/material-outlined/96/00A85E/user.png",
+  };
+  return map[roleKey] || map.unknown;
+}
 
 // small helper to convert '7d' etc -> ms (supports 'd' days, 'h' hours, 'm' minutes)
 function parseDurationToMs(value) {
