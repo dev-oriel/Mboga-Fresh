@@ -1,4 +1,4 @@
-// backend/models/notification.model.js
+
 
 import mongoose from "mongoose";
 

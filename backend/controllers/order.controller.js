@@ -1,5 +1,3 @@
-// backend/controllers/order.controller.js - FINAL VERSION WITH DB NOTIFICATIONS
-
 import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
 import Notification from "../models/notification.model.js";
@@ -324,7 +322,3 @@ export const acceptDeliveryTask = async (req, res) => {
     res.status(500).json({ message: "Failed to accept delivery task." });
   }
 };
-
-// ---------------------------------------------------------------------
-// FINAL CONSOLIDATED EXPORTS
-// ---------------------------------------------------------------------

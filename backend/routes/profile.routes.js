@@ -1,4 +1,3 @@
-// backend/routes/profile.routes.js
 import express from "express";
 import { User } from "../models/user.model.js";
 import VendorProfile from "../models/vendorProfile.model.js";

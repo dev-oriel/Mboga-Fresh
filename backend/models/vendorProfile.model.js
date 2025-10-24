@@ -1,4 +1,3 @@
-// backend/models/vendorProfile.model.js
 import mongoose from "mongoose";
 
 const vendorProfileSchema = new mongoose.Schema(

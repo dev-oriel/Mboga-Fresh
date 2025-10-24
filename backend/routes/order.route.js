@@ -1,5 +1,3 @@
-// backend/routes/order.route.js - MODIFIED (Final Routes)
-
 import express from "express";
 import { requireAuth } from "../middleware/auth.middleware.js";
 import {

@@ -1,4 +1,3 @@
-// backend/controllers/auth.controllers.js
 import bcryptjs from "bcryptjs";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
@@ -8,17 +7,8 @@ dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
-// Use the environment cookie name (keeps things consistent)
 const COOKIE_NAME = process.env.COOKIE_NAME || "mbogafresh_token";
 
-/**
- * Cookie options:
- * - In production we want secure cookies (https)
- * - In development we keep secure:false so localhost HTTP still receives cookies.
- * - sameSite: 'lax' is compatible for many dev scenarios. If you use cross-site XHR and cookies
- *   are not being sent, consider using a Vite proxy (recommended) or adjust to sameSite:'none'
- *   with secure:true when running over HTTPS.
- */
 const COOKIE_OPTIONS = (req) => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production", // only true in prod
@@ -29,7 +19,6 @@ const COOKIE_OPTIONS = (req) => ({
 function getRoleAvatarUrl(role) {
   const roleKey = (role || "unknown").toLowerCase();
   const map = {
-    // These MUST match the new frontend constants map exactly
     buyer:
       "https://img.icons8.com/material-outlined/96/00A85E/shopping-basket.png",
     vendor: "https://img.icons8.com/material-outlined/96/00A85E/shop.png",
@@ -43,7 +32,6 @@ function getRoleAvatarUrl(role) {
   return map[roleKey] || map.unknown;
 }
 
-// small helper to convert '7d' etc -> ms (supports 'd' days, 'h' hours, 'm' minutes)
 function parseDurationToMs(value) {
   if (!value) return undefined;
   if (typeof value === "number") return value;

@@ -1,4 +1,3 @@
-// backend/models/bulkProduct.model.js
 import mongoose from "mongoose";
 
 const BulkProductSchema = new mongoose.Schema(
@@ -30,7 +29,7 @@ const BulkProductSchema = new mongoose.Schema(
       default: "farmer",
     },
 
-    // optional linkage to vendor or marketplace flow if needed
+    // linkage to vendor or marketplace flow
     vendorAssignedId: { type: String, default: "" },
     metadata: { type: Object, default: {} },
   },

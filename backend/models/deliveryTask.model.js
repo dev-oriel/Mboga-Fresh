@@ -1,5 +1,3 @@
-// backend/models/deliveryTask.model.js
-
 import mongoose from "mongoose";
 
 const DeliveryTaskSchema = new mongoose.Schema(
@@ -18,7 +16,7 @@ const DeliveryTaskSchema = new mongoose.Schema(
     rider: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      default: null, // Null until a rider accepts the task
+      default: null,
     },
     status: {
       type: String,
@@ -33,7 +31,7 @@ const DeliveryTaskSchema = new mongoose.Schema(
     },
     pickupCode: {
       type: String,
-      required: true, // Unique code generated at the vendor side
+      required: true,
     },
     deliveryAddress: {
       type: Object, // Stores a copy of the final delivery location

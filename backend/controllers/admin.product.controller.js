@@ -1,12 +1,10 @@
-// backend/controllers/admin.product.controller.js - MODIFIED (Add updateProductStatus)
-
 import Product from "../models/product.model.js";
 import BulkProduct from "../models/bulkProduct.model.js";
 import { User } from "../models/user.model.js";
 import mongoose from "mongoose";
 
 /**
- * Helper to fetch all users and map them by ID for denormalization (needed for Admin UI)
+fetch all users and map them by ID for denormalization (needed for Admin UI)
  */
 const getUserMap = async () => {
   const users = await User.find({
@@ -44,7 +42,6 @@ export const listAllProducts = async (req, res) => {
       ];
     }
 
-    // NOTE: No .lean() here as we need to modify the array before responding to the request.
     let items = await model.find(itemFilter).exec();
 
     // Enrich the items with owner/vendor information
@@ -60,7 +57,7 @@ export const listAllProducts = async (req, res) => {
         name: item.name,
         category: item.category,
         priceLabel: item.priceLabel,
-        stock: item.stock || item.quantity, // Use 'quantity' for bulk, 'stock' for retail
+        stock: item.stock || item.quantity,
         status: item.status,
         type: isBulk ? "Bulk" : "Retail",
         imagePath: item.imagePath,
