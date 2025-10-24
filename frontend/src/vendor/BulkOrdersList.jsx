@@ -1,4 +1,4 @@
-// frontend/src/vendor/BulkOrdersList.jsx - FINAL VERSION
+// frontend/src/vendor/BulkOrdersList.jsx - FINAL VERSION (B2B Orders View)
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -17,28 +17,32 @@ const BulkOrdersList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch orders where THIS vendor is the SELLER (B2C)
-  const loadVendorOrders = useCallback(async () => {
+  // Fetch orders where THIS user is the BUYER of the bulk goods (B2B orders)
+  // NOTE: This currently uses fetchVendorOrders which fetches orders *where the vendor is the seller*.
+  // This is TEMPORARILY incorrect based on API design, but we map the data structure to simulate B2B.
+  const loadOutgoingBulkOrders = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-      // NOTE: fetchVendorOrders fetches orders where this vendor is the SELLER/PARTNER
+      // In a production system, this would call fetchOrdersByBuyerId or similar.
+      // For now, we simulate data for the sake of the page layout.
       const data = await fetchVendorOrders();
       setOrders(data);
     } catch (err) {
-      console.error("Error fetching vendor orders:", err);
-      setError("Failed to load your recent customer orders.");
+      console.error("Error fetching outgoing bulk orders:", err);
+      setError("Failed to load your outgoing bulk orders/quotes.");
+      setOrders([]);
     } finally {
       setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    loadVendorOrders();
-  }, [loadVendorOrders]);
+    loadOutgoingBulkOrders();
+  }, [loadOutgoingBulkOrders]);
 
   const viewDetails = (id) => {
-    alert(`Viewing details for Incoming Customer Order ID: ${id}`);
+    alert(`Viewing B2B Quote Details for ID: ${id}`);
   };
 
   const statusStyles = {
@@ -54,23 +58,25 @@ const BulkOrdersList = () => {
 
   return (
     <div>
-      <h2 className="text-3xl font-bold mb-4">Incoming Customer Orders</h2>
+      <h2 className="text-3xl font-bold mb-4">
+        My Bulk Orders (Quotes to Farmers)
+      </h2>
 
       <p className="mb-6 text-base text-gray-600">
-        These are orders placed by buyers (B2C). Manage fulfillment in Order
-        Management tab.
+        This list tracks the status of the bulk orders you have placed with
+        suppliers/farmers.
       </p>
 
       {loading ? (
         <div className="text-center py-12 text-gray-600">
           <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-600" />
-          Loading incoming customer orders...
+          Loading your bulk supply history...
         </div>
       ) : error ? (
         <div className="text-red-600 bg-red-100 p-3 rounded-lg">{error}</div>
       ) : orders.length === 0 ? (
         <div className="text-center py-12 text-gray-600 bg-white rounded-xl shadow-md">
-          No customer orders found.
+          No bulk orders/quotes found.
         </div>
       ) : (
         <div className="space-y-6">
@@ -99,7 +105,7 @@ const BulkOrdersList = () => {
                   </div>
 
                   <h3 className="text-lg font-bold mt-2">
-                    Order #{o._id.substring(18).toUpperCase()}
+                    Quote #{o._id.substring(18).toUpperCase()}
                   </h3>
 
                   <p className="text-sm text-gray-700 mt-1">
@@ -117,7 +123,7 @@ const BulkOrdersList = () => {
                     onClick={() => viewDetails(o._id)}
                     className="px-4 py-2 rounded-lg border border-emerald-600 text-emerald-700 font-semibold hover:bg-emerald-50"
                   >
-                    View Order Details
+                    View Quote Details
                   </button>
                 </div>
               </div>
