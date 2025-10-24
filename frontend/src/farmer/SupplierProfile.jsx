@@ -3,7 +3,10 @@ import React, { useEffect, useState } from "react";
 import Header from "../components/FarmerComponents/Header";
 import Footer from "../components/FarmerComponents/Footer";
 
+import { useAuth } from "../context/AuthContext";
+
 export default function SupplierProfile() {
+   const { user, loadingAuth } = useAuth();
   const [activeSection, setActiveSection] = useState("store");
 
   const initialStore = {
@@ -132,8 +135,8 @@ export default function SupplierProfile() {
     <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 text-zinc-900 dark:text-gray-100">
       {/* Top nav */}
       <Header
-        avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDeL7radWSj-FEteEjqLpufXII3-tc_o7GMvLvB07AaD_bYBkfAcIOnNbOXkTdMOHRgJQwLZE-Z_iw72Bd8bpHzfXP_m0pIvteSw7FKZ1qV9GD1KfgyDVG90bCO7OGe6JyYIkm9DBo2ArC60uEqSfDvnnYWeo6IqVEjWxsVX6dUoxjm9ozyVlriiMdVLc_jU9ZxS01QcxNa8hn-ePNbB6IcXSwExf2U61R-epab8nsOkbq95E7z6b-fH4zOt0j2MPt20nrqtPM1NHI"
-        userName="Daniel Mutuku"
+        avatarUrl={user?.avatar || ""}
+        userName={user?.name || "Supplier"}
       />
 
       {/* Main */}

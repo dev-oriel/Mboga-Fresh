@@ -4,7 +4,10 @@ import Header from "../components/FarmerComponents/Header";
 import Footer from "../components/FarmerComponents/Footer";
 import { useVendorData } from "../context/VendorDataContext";
 
+import { useAuth } from "../context/AuthContext";
+
 function SupplierWallet() {
+  const { user, loadingAuth } = useAuth();
   const [mpesa, setMpesa] = useState("254712345678");
   const [amount, setAmount] = useState("");
   const { balances, transactions, handleWithdraw } = useVendorData();
@@ -39,8 +42,8 @@ function SupplierWallet() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800">
       <Header
-        avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDeL7radWSj-FEteEjqLpufXII3-tc_o7GMvLvB07AaD_bYBkfAcIOnNbOXkTdMOHRgJQwLZE-Z_iw72Bd8bpHzfXP_m0pIvteSw7FKZ1qV9GD1KfgyDVG90bCO7OGe6JyYIkm9DBo2ArC60uEqSfDvnnYWeo6IqVEjWxsVX6dUoxjm9ozyVlriiMdVLc_jU9ZxS01QcxNa8hn-ePNbB6IcXSwExf2U61R-epab8nsOkbq95E7z6b-fH4zOt0j2MPt20nrqtPM1NHI"
-        userName="Daniel Mutuku"
+        avatarUrl={user?.avatar || ""}
+        userName={user?.name || "Supplier"}
       />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
@@ -157,10 +160,14 @@ function SupplierWallet() {
                   </div>
                 </div>
 
-                <button 
+                <button
                   type="submit"
                   className="w-full bg-green-500 hover:bg-green-600 text-white rounded-md py-2 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  disabled={!amount || parseFloat(amount) <= 0 || parseFloat(amount) > balances.available}
+                  disabled={
+                    !amount ||
+                    parseFloat(amount) <= 0 ||
+                    parseFloat(amount) > balances.available
+                  }
                 >
                   Withdraw Now
                 </button>
