@@ -10,13 +10,11 @@ import {
   Plus,
   ClipboardList,
   Trash2,
-  Loader2,
 } from "lucide-react";
 import Header from "../components/vendorComponents/Header";
 import { useVendorData } from "../context/VendorDataContext";
 import { useAuth } from "../context/AuthContext";
-import { fetchVendorNotifications, fetchVendorOrders } from "../api/orders"; // fetchVendorOrders added
-import axios from "axios";
+import { fetchVendorNotifications } from "../api/orders";
 
 // Icon mapping
 const iconComponents = {
@@ -33,92 +31,83 @@ const VendorDashboard = () => {
     notifications,
     handleWithdraw,
     setNotifications,
-    updateDashboardData, // <-- Needed to update live stats
+    updateDashboardData,
     markNotificationAsRead,
     deleteReadNotifications,
   } = useVendorData();
 
   const { user, loadingAuth } = useAuth();
-  const [loading, setLoading] = useState(true); // Set to true to control initial data fetch
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Helper to fetch and map metrics
-  const loadDashboardMetrics = useCallback(async () => {
+  // Load notifications from API
+  const loadNotifications = useCallback(async () => {
     if (!user || loadingAuth) return;
-
-    setLoading(true);
-    setError(null);
     try {
-      const [ordersData, notifsData] = await Promise.all([
-        fetchVendorOrders(), // Fetch all orders for this vendor
-        fetchVendorNotifications(), // Fetch notifications
-      ]);
-
-      // 1. Update Notifications
-      setNotifications(notifsData);
-
-      // 2. Calculate Order Metrics from ordersData
-      const totalOrders = ordersData.length;
-      const pendingOrders = ordersData.filter(
-        (o) => o.orderStatus === "Processing" || o.orderStatus === "QR Scanning"
-      ).length;
-
-      // Mocking Escrow logic as we don't have a specific endpoint yet
-      const totalSalesValue = ordersData.reduce(
-        (sum, o) => sum + o.totalAmount,
-        0
-      );
-
-      updateDashboardData({
-        ordersReceived: totalOrders,
-        pendingDeliveries: pendingOrders,
-        salesInEscrow: totalSalesValue * 0.7, // Mock: 70% in escrow
-        earningsReleased: totalSalesValue * 0.3, // Mock: 30% released
-      });
+      const data = await fetchVendorNotifications();
+      setNotifications(data);
     } catch (err) {
-      console.error("Failed to load dashboard metrics:", err);
-      setError("Failed to load dashboard data. Please check API status.");
-    } finally {
-      setLoading(false);
+      console.error("Failed to fetch live notifications:", err);
+      setError("Failed to load notifications.");
     }
-  }, [user, loadingAuth, setNotifications, updateDashboardData]);
+  }, [user, loadingAuth, setNotifications]);
 
   useEffect(() => {
-    // Initial data load when user context is ready
-    if (user && !loadingAuth) {
-      loadDashboardMetrics();
+    loadNotifications();
+  }, [loadNotifications]);
+
+  // Load dummy dashboard metrics (A proper implementation would have a dedicated API call here)
+  useEffect(() => {
+    if (user && !loadingAuth && dashboardData.ordersReceived === 0) {
+      // Simulate data update just once, when the context is still at initial zero state
+      updateDashboardData({
+        ordersReceived: 28,
+        pendingDeliveries: 5,
+        salesInEscrow: 14500,
+        earningsReleased: 7200,
+      });
     }
-  }, [user, loadingAuth, loadDashboardMetrics]);
+  }, [user, loadingAuth, dashboardData.ordersReceived, updateDashboardData]);
 
-  // Quick Actions
-  const handleAddProduct = () => navigate("/vendorproducts");
-  const handleViewOrders = () => navigate("/ordermanagement");
+  // HANDLERS (Defined directly for use in JSX, resolving Linter warnings)
 
-  // Withdraw funds (unchanged)
-  const handleWithdrawFunds = () => {
+  const handleAddProduct = useCallback(
+    () => navigate("/vendorproducts"),
+    [navigate]
+  );
+  const handleViewOrders = useCallback(
+    () => navigate("/ordermanagement"),
+    [navigate]
+  );
+
+  const handleWithdrawFunds = useCallback(() => {
     const amount = dashboardData.earningsReleased;
     if (amount <= 0) return;
+
     const confirmed = window.confirm(
       `CONFIRM WITHDRAWAL: Do you want to withdraw Ksh ${amount.toLocaleString()}? This is a simulation.`
     );
     if (!confirmed) return;
+
     const success = handleWithdraw(amount, "254712345678");
     if (success) {
       console.log(
         `Simulating successful withdrawal of Ksh ${amount.toLocaleString()}`
       );
     }
-  };
+  }, [dashboardData.earningsReleased, handleWithdraw]);
 
-  // Delete read notifications (unchanged)
+  // Delete read notifications
   const handleDeleteReadNotifications = () => {
     const readCount = notifications.filter((n) => n.isRead).length;
     if (readCount === 0) return;
+
     const confirmed = window.confirm(
       `Are you sure you want to delete ${readCount} read notification(s)?`
     );
     if (!confirmed) return;
+
     deleteReadNotifications();
   };
 
@@ -129,7 +118,7 @@ const VendorDashboard = () => {
       <Header
         avatarUrl={user?.avatar}
         userName={user?.name || "Vendor"}
-        unreadCount={unreadCount} // <-- PASS COUNT TO HEADER
+        unreadCount={unreadCount}
       />
 
       <main className="p-6">
@@ -138,28 +127,27 @@ const VendorDashboard = () => {
           <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
             <span className="text-red-600 mr-2">⚠️</span>
             <span className="text-red-800">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto text-red-600 hover:text-red-800 underline"
+            >
+              Dismiss
+            </button>
           </div>
         )}
 
-        {loading && (
-          <div className="mb-6 flex justify-center text-gray-600">
-            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            Loading dashboard data...
-          </div>
-        )}
-
-        {/* Stats Cards (Now using dynamic dashboardData) */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {[
             {
               title: "Orders Received",
-              value: dashboardData.ordersReceived.toLocaleString(),
+              value: dashboardData.ordersReceived,
               note: "Total orders processed",
             },
             {
               title: "Pending Deliveries",
-              value: dashboardData.pendingDeliveries.toLocaleString(),
-              note: "Awaiting Rider/Confirmation",
+              value: dashboardData.pendingDeliveries,
+              note: "Need attention",
             },
             {
               title: "Sales in Escrow",
@@ -185,8 +173,40 @@ const VendorDashboard = () => {
           ))}
         </div>
 
-        {/* Quick Actions (unchanged) */}
-        {/* ... */}
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-gray-700 mb-4">
+            Quick Actions
+          </h2>
+          <div className="flex flex-wrap gap-4">
+            <button
+              onClick={handleAddProduct}
+              className="flex items-center bg-emerald-600 space-x-2 px-4 py-2 rounded-lg text-white font-medium shadow-sm hover:opacity-90 transition transform hover:scale-105"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Add New Product</span>
+            </button>
+            <button
+              onClick={handleViewOrders}
+              className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition transform hover:scale-105"
+            >
+              <ClipboardList className="w-5 h-5" />
+              <span>View Orders</span>
+            </button>
+            <button
+              onClick={handleWithdrawFunds}
+              disabled={dashboardData.earningsReleased <= 0}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium shadow-sm transition transform hover:scale-105 ${
+                dashboardData.earningsReleased > 0
+                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                  : "bg-gray-200 text-gray-500 cursor-not-allowed"
+              }`}
+            >
+              <DollarSign className="w-5 h-5" />
+              <span>Withdraw Funds</span>
+            </button>
+          </div>
+        </div>
 
         {/* Notifications */}
         <div>
@@ -216,8 +236,7 @@ const VendorDashboard = () => {
               </div>
             ) : (
               notifications.map((notification) => {
-                const IconComponent =
-                  iconComponents[notification.icon || "Package"];
+                const IconComponent = iconComponents[notification.icon];
                 return (
                   <div
                     key={notification.id}

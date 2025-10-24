@@ -43,7 +43,7 @@ const getActionButton = (action) => {
   if (action === "View Details") {
     return "border border-gray-300 text-gray-700 bg-white hover:bg-gray-50";
   } else if (action === "Accept Order") {
-    return "bg-green-500 text-white hover:bg-green-600";
+    return "bg-emerald-500 text-white hover:bg-emerald-600";
   } else if (action === "Show QR Code") {
     return "bg-emerald-500 text-white hover:bg-emerald-600"; // Changed to emerald for QR action
   } else {
@@ -203,7 +203,7 @@ export default function OrderManagement() {
               onClick={() => setActiveTab(tab)}
               className={`pb-4 px-1 relative ${
                 activeTab === tab
-                  ? "text-green-600 font-medium"
+                  ? "text-emerald-600 font-medium"
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
@@ -223,7 +223,7 @@ export default function OrderManagement() {
                 </span>
               </div>
               {activeTab === tab && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600"></div>
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600"></div>
               )}
             </button>
           ))}
