@@ -1,191 +1,287 @@
-import React from "react";
+import React, { useState } from "react";
+import { Search, X, Scale } from "lucide-react";
 import Sidebar from "../components/adminComponents/AdminSidebar";
 import Header from "../components/adminComponents/AdminHeader";
-import { Paperclip, Send, Upload, Truck, CheckCircle, RefreshCcw } from "lucide-react";
 
-const AdminDisputeResolution = () => {
-  const messages = [
-    {
-      sender: "Amina Hassan (Buyer)",
-      text: "I received the order, but the mangoes were not ripe as described. They are hard and inedible.",
-      side: "left",
-      avatar: "https://randomuser.me/api/portraits/women/79.jpg",
-    },
-    {
-      sender: "Juma Mwangi (Seller)",
-      text: "I assure you, the mangoes were ripe when they left my farm. Perhaps they were damaged in transit?",
-      side: "right",
-      avatar: "https://randomuser.me/api/portraits/men/51.jpg",
-    },
-    {
-      sender: "Amina Hassan (Buyer)",
-      text: "There’s no visible damage to the packaging. The mangoes are simply not ripe.",
-      side: "left",
-      avatar: "https://randomuser.me/api/portraits/women/79.jpg",
-    },
-    {
-      sender: "Amina Hassan (Buyer)",
-      text: "I've attached photos as evidence. Please review them.",
-      side: "left",
-      avatar: "https://randomuser.me/api/portraits/women/79.jpg",
-      images: [
-        "https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=400",
-        "https://images.unsplash.com/photo-1574226516831-e1dff420e12e?w=400",
-      ],
-    },
-  ];
+const DisputeModal = ({ dispute, onClose }) => {
+  if (!dispute) return null;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-800">Dispute Details</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
 
-      <div className="flex-1 flex flex-col">
-        <Header />
-
-        <main className="flex-1 p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Chat Section */}
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-            <div className="border-b p-5">
-              <h2 className="text-lg font-semibold text-gray-800">
-                Dispute: Order #123456
-              </h2>
-              <p className="text-green-600 text-sm font-medium">Unripe Mangoes</p>
+        <div className="p-6 space-y-6">
+          {/* Info */}
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h3 className="font-semibold text-red-900 mb-2">Dispute Information</h3>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-red-600 font-medium">Dispute ID</p>
+                <p className="text-red-900">{dispute.id}</p>
+              </div>
+              <div>
+                <p className="text-red-600 font-medium">Amount</p>
+                <p className="text-red-900 font-semibold">
+                  Ksh {dispute.amount.toLocaleString("en-KE", { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div>
+                <p className="text-red-600 font-medium">Buyer</p>
+                <p className="text-red-900">{dispute.buyer}</p>
+              </div>
+              <div>
+                <p className="text-red-600 font-medium">Vendor</p>
+                <p className="text-red-900">{dispute.vendor}</p>
+              </div>
+              <div>
+                <p className="text-red-600 font-medium">Dispute Type</p>
+                <p className="text-red-900">{dispute.type}</p>
+              </div>
+              <div>
+                <p className="text-red-600 font-medium">Date Opened</p>
+                <p className="text-red-900">{dispute.date}</p>
+              </div>
             </div>
+          </div>
 
-            <div className="flex-1 p-6 space-y-4 overflow-y-auto">
-              {messages.map((msg, i) => (
-                <div
-                  key={i}
-                  className={`flex items-start gap-3 ${
-                    msg.side === "right" ? "justify-end" : ""
-                  }`}
-                >
-                  {msg.side === "left" && (
-                    <img
-                      src={msg.avatar}
-                      alt={msg.sender}
-                      className="w-8 h-8 rounded-full"
-                    />
-                  )}
-                  <div
-                    className={`max-w-[70%] p-3 rounded-2xl ${
-                      msg.side === "right"
-                        ? "bg-green-100 text-gray-800"
-                        : "bg-gray-100 text-gray-800"
-                    }`}
-                  >
-                    <p className="text-sm font-semibold mb-1">{msg.sender}</p>
-                    <p className="text-sm">{msg.text}</p>
-                    {msg.images && (
-                      <div className="flex gap-3 mt-3">
-                        {msg.images.map((img, idx) => (
-                          <img
-                            key={idx}
-                            src={img}
-                            alt="evidence"
-                            className="w-32 h-24 object-cover rounded-lg"
-                          />
-                        ))}
-                      </div>
-                    )}
+          {/* Reason */}
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Reason for Dispute</h3>
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <p className="text-gray-700 text-sm">{dispute.reason}</p>
+            </div>
+          </div>
+
+          {/* Evidence */}
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Evidence Submitted</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {dispute.evidence.map((img, i) => (
+                <div key={i} className="bg-gray-100 rounded-lg p-4 text-center">
+                  <div className="w-full h-32 bg-gray-300 rounded mb-2 flex items-center justify-center overflow-hidden">
+                    <img src={img} alt="Evidence" className="object-cover w-full h-full rounded" />
                   </div>
-                  {msg.side === "right" && (
-                    <img
-                      src={msg.avatar}
-                      alt={msg.sender}
-                      className="w-8 h-8 rounded-full"
-                    />
-                  )}
+                  <p className="text-xs text-gray-600">Evidence {i + 1}</p>
                 </div>
               ))}
             </div>
-
-            {/* Message Input */}
-            <div className="border-t p-4 flex items-center gap-3">
-              <input
-                type="text"
-                placeholder="Type your message to all parties..."
-                className="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none"
-              />
-              <button className="bg-green-500 p-2 rounded-full text-white hover:bg-green-600">
-                <Send size={18} />
-              </button>
-            </div>
           </div>
 
-          {/* Right: Dispute Details */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
-            <div>
-              <h3 className="text-gray-800 font-semibold">Dispute Details</h3>
-              <div className="text-sm text-gray-600 mt-3 space-y-1">
-                <p>
-                  <span className="font-medium text-gray-800">Order ID:</span>{" "}
-                  #123456
-                </p>
-                <p>
-                  <span className="font-medium text-gray-800">Buyer:</span>{" "}
-                  Amina Hassan
-                </p>
-                <p>
-                  <span className="font-medium text-gray-800">Seller:</span>{" "}
-                  Juma Mwangi
-                </p>
-                <p>
-                  <span className="font-medium text-gray-800">Date Opened:</span>{" "}
-                  2024-07-26
-                </p>
-                <p>
-                  <span className="font-medium text-gray-800">Status:</span>{" "}
-                  <span className="text-red-500 font-semibold">Open</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Evidence */}
-            <div>
-              <h4 className="text-gray-800 font-semibold mb-2">
-                Evidence Uploaded
-              </h4>
-              <div className="flex items-center gap-3">
-                <img
-                  src="https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=400"
-                  alt="evidence1"
-                  className="w-20 h-16 object-cover rounded-lg"
-                />
-                <img
-                  src="https://images.unsplash.com/photo-1574226516831-e1dff420e12e?w=400"
-                  alt="evidence2"
-                  className="w-20 h-16 object-cover rounded-lg"
-                />
-                <div className="w-12 h-12 border-2 border-dashed rounded-lg flex items-center justify-center text-gray-400 cursor-pointer hover:text-gray-600">
-                  <Upload size={20} />
-                </div>
-              </div>
-            </div>
-
-            {/* Admin Actions */}
-            <div>
-              <h4 className="text-gray-800 font-semibold mb-2">Admin Actions</h4>
-              <div className="space-y-3">
-                <button className="w-full flex items-center justify-center gap-2 bg-red-500 text-white font-medium py-2 rounded-full hover:bg-red-600">
-                  <RefreshCcw size={16} />
-                  Refund Buyer
-                </button>
-                <button className="w-full flex items-center justify-center gap-2 bg-green-500 text-white font-medium py-2 rounded-full hover:bg-green-600">
-                  <Truck size={16} />
-                  Release to Seller
-                </button>
-                <button className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white font-medium py-2 rounded-full hover:bg-emerald-700">
-                  <CheckCircle size={16} />
-                  Mark Resolved
-                </button>
-              </div>
-            </div>
+          {/* Admin Actions */}
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
+            <button className="flex-1 py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+              Resolve in Favor of Buyer
+            </button>
+            <button className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+              Resolve in Favor of Vendor
+            </button>
+            <button
+              onClick={onClose}
+              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+            >
+              Close
+            </button>
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );
 };
 
-export default AdminDisputeResolution;
+const AdminDisputeManagement = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState("All");
+  const [selectedDispute, setSelectedDispute] = useState(null);
+
+  // Dummy data
+  const disputes = [
+    {
+      id: "#DSP-001",
+      buyer: "Aisha Hassan",
+      vendor: "Mama Mboga Grace",
+      type: "Buyer vs Vendor",
+      amount: 1850.0,
+      date: "2025-10-21",
+      status: "Open",
+      reason: "Buyer received wilted vegetables instead of fresh produce.",
+      evidence: [
+        "https://images.unsplash.com/photo-1582284540020-4e68b7c3a388?w=400",
+        "https://images.unsplash.com/photo-1580910051074-3afbf9c3a1de?w=400",
+      ],
+    },
+    {
+      id: "#DSP-002",
+      buyer: "John Otieno",
+      vendor: "Mama Mboga Njeri",
+      type: "Buyer vs Vendor",
+      amount: 3200.0,
+      date: "2025-10-19",
+      status: "Under Review",
+      reason: "Buyer claims short delivery of tomatoes and onions.",
+      evidence: [
+        "https://images.unsplash.com/photo-1576176539993-23c2f6f5f8f9?w=400",
+        "https://images.unsplash.com/photo-1584306670957-1d1c8c0a8a57?w=400",
+      ],
+    },
+    {
+      id: "#DSP-003",
+      buyer: "Grace Wanjiku",
+      vendor: "Mama Mboga Beatrice",
+      type: "Buyer vs Vendor",
+      amount: 4500.0,
+      date: "2025-10-17",
+      status: "Resolved",
+      reason: "Order delayed by 3 days, causing spoilage of perishable goods.",
+      evidence: [
+        "https://images.unsplash.com/photo-1574672280901-62aa92b4d35b?w=400",
+        "https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=400",
+      ],
+    },
+  ];
+
+  const filteredDisputes = disputes.filter((d) => {
+    const matchesSearch =
+      d.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.buyer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.vendor.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filter === "All" || d.status === filter;
+    return matchesSearch && matchesFilter;
+  });
+
+  const getStatusBadge = (status) => {
+    const styles = {
+      Open: "bg-red-100 text-red-700",
+      "Under Review": "bg-yellow-100 text-yellow-700",
+      Resolved: "bg-green-100 text-green-700",
+    };
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status]}`}>
+        {status}
+      </span>
+    );
+  };
+
+  return (
+    <div className="flex min-h-screen bg-[#f7f8f6]">
+      <Sidebar />
+      <div className="flex-1 flex flex-col">
+        <Header />
+
+        <main className="p-6 space-y-6">
+          {/* Summary Card */}
+          <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-2xl shadow-sm border border-red-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm font-medium mb-1">
+                  Active Disputes
+                </p>
+                <h2 className="text-4xl font-bold text-red-600">
+                  {disputes.filter((d) => d.status !== "Resolved").length}
+                </h2>
+              </div>
+              <div className="p-3 bg-white rounded-lg shadow-sm">
+                <Scale className="w-6 h-6 text-red-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative flex-1 w-full md:max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search disputes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-400"
+            >
+              <option>All</option>
+              <option>Open</option>
+              <option>Under Review</option>
+              <option>Resolved</option>
+            </select>
+          </div>
+
+          {/* Disputes Table */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Dispute ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Buyer
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Vendor
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Amount (KSH)
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredDisputes.map((d) => (
+                    <tr key={d.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">{d.id}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{d.buyer}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{d.vendor}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{d.type}</td>
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                        {d.amount.toLocaleString("en-KE", { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{d.date}</td>
+                      <td className="px-6 py-4">{getStatusBadge(d.status)}</td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => setSelectedDispute(d)}
+                          className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-xs font-medium"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {selectedDispute && (
+        <DisputeModal dispute={selectedDispute} onClose={() => setSelectedDispute(null)} />
+      )}
+    </div>
+  );
+};
+
+export default AdminDisputeManagement;
