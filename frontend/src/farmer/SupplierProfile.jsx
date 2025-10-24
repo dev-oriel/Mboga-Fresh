@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 import Header from "../components/FarmerComponents/Header";
-import Footer from "../components/FarmerComponents/Footer"; 
-
+import Footer from "../components/FarmerComponents/Footer";
 
 export default function SupplierProfile() {
   const [activeSection, setActiveSection] = useState("store");

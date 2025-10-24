@@ -1,9 +1,9 @@
-// frontend/src/components/vendorComponents/Header.jsx
-
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { DEFAULT_AVATAR_MAP } from "../../constants";
 import { useAuth } from "../../context/AuthContext";
+import { useVendorData } from "../../context/VendorDataContext"; // Imported for notifications
+import { Bell } from "lucide-react"; // Imported for the notification icon
 
 const Header = ({
   navItems = [
@@ -18,17 +18,22 @@ const Header = ({
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { notifications } = useVendorData();
 
-  // FIX: Determine canonical avatar URL with fallback logic
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
   const finalAvatarUrl =
     user?.avatar ||
     DEFAULT_AVATAR_MAP[user?.role] ||
     DEFAULT_AVATAR_MAP.unknown;
 
-  // Handler: go to vendor profile page
   const handleOpenProfile = () => {
     navigate("/vendorprofile");
     setMobileOpen(false);
+  };
+
+  const handleViewNotifications = () => {
+    navigate("/vendordashboard"); // Navigates to dashboard where notification list is visible
   };
 
   const linkClass = (isActive) =>
@@ -87,6 +92,20 @@ const Header = ({
 
           {/* right: mobile toggle + user */}
           <div className="flex items-center gap-3">
+            {/* 1. NOTIFICATION BELL (Desktop) */}
+            <button
+              onClick={handleViewNotifications}
+              className="relative p-2 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-700/20 transition"
+              aria-label={`View ${unreadCount} new notifications`}
+            >
+              <Bell className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 h-3 w-3 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  {/* Red notification dot */}
+                </span>
+              )}
+            </button>
+
             {/* mobile hamburger */}
             <button
               type="button"
@@ -121,15 +140,6 @@ const Header = ({
 
             {/* desktop user */}
             <div className="hidden md:flex items-center gap-2">
-              <button
-                aria-label="Notifications"
-                className="p-2 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-700/20 transition"
-              >
-                <span className="material-symbols-outlined" aria-hidden>
-                  notifications
-                </span>
-              </button>
-
               <div className="flex items-center gap-2">
                 <button
                   type="button"

@@ -1,4 +1,4 @@
-// backend/routes/order.route.js - COMPLETE
+// backend/routes/order.route.js - MODIFIED (Final Routes)
 
 import express from "express";
 import { requireAuth } from "../middleware/auth.middleware.js";
@@ -6,17 +6,31 @@ import {
   placeOrder,
   getBuyerOrders,
   getOrderDetailsById,
+  getVendorOrders,
+  getVendorNotifications,
+  updateOrderStatusAndNotifyRider,
+  fetchAllAvailableTasks,
+  acceptDeliveryTask,
 } from "../controllers/order.controller.js";
 
 const router = express.Router();
 
-// Route to place a new order (requires authentication)
+// Buyer Routes
 router.post("/", requireAuth, placeOrder);
-
-// Route to get a buyer's entire order history
 router.get("/my-orders", requireAuth, getBuyerOrders);
-
-// Route to get details for a specific order by ID (used for OrderDetails page)
 router.get("/:orderId", requireAuth, getOrderDetailsById);
+
+// Vendor Specific Routes
+router.get("/vendor/my-orders", requireAuth, getVendorOrders);
+router.get("/vendor/notifications", requireAuth, getVendorNotifications);
+router.patch(
+  "/vendor/order/:orderId/accept",
+  requireAuth,
+  updateOrderStatusAndNotifyRider
+);
+
+// NEW RIDER ROUTES (Protected)
+router.get("/rider/tasks/available", requireAuth, fetchAllAvailableTasks); // List all available jobs
+router.patch("/rider/tasks/:taskId/accept", requireAuth, acceptDeliveryTask); // Rider accepts a job
 
 export default router;

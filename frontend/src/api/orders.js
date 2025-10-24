@@ -1,5 +1,3 @@
-// frontend/src/api/orders.js - CORRECTED (Removes axiosInstance dependency)
-
 import axios from "axios"; // <-- Directly import base axios
 
 const API_URL_BASE = `${
@@ -28,12 +26,25 @@ export async function fetchBuyerOrders() {
   return res.data;
 }
 
-/**
- * Fetches details for a single order
- */
+// NEW: Fetch vendor-specific orders
+export async function fetchVendorOrders() {
+  const res = await axios.get(`${API_URL_BASE}/vendor/my-orders`, {
+    withCredentials: true,
+  });
+  return res.data;
+}
+
+// NEW: Fetch vendor notifications
+export async function fetchVendorNotifications() {
+  const res = await axios.get(`${API_URL_BASE}/vendor/notifications`, {
+    withCredentials: true,
+  });
+  return res.data;
+}
+
 export const fetchOrderDetails = async (orderId) => {
   const response = await axios.get(`${API_URL_BASE}/${orderId}`, {
-    withCredentials: true, // CRUCIAL
+    withCredentials: true,
   });
   return response.data;
 };
