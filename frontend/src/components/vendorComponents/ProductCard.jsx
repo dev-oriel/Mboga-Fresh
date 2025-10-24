@@ -1,6 +1,7 @@
 import React from "react";
 
-const ProductCard = ({ product = {} }) => {
+// Assuming this component is used only in Farmily (B2B)
+const ProductCard = ({ product = {}, onAdd }) => {
   const { title, farmer, price, image } = product;
 
   return (
@@ -26,6 +27,7 @@ const ProductCard = ({ product = {} }) => {
         <button
           className="mt-4 w-full bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg hover:opacity-95 transition-colors flex items-center justify-center gap-2"
           aria-label={`Add ${title} to cart`}
+          onClick={onAdd} // <-- Correctly triggers the handler
         >
           <span className="material-symbols-outlined" aria-hidden>
             add_shopping_cart

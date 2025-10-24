@@ -1,4 +1,3 @@
-// backend/controllers/products.controller.js
 import Product from "../models/product.model.js";
 import { User } from "../models/user.model.js";
 import VendorProfile from "../models/vendorProfile.model.js";
@@ -16,10 +15,6 @@ function escapeRegex(str = "") {
   return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/**
- * Enrich products with vendor display name (prefer VendorProfile.businessName,
- * then User.name, then denormalized vendorName/vendor fields).
- */
 async function enrichVendorDisplay(products = []) {
   if (!Array.isArray(products) || products.length === 0) return products;
 
@@ -131,9 +126,6 @@ async function enrichVendorDisplay(products = []) {
   });
 }
 
-/**
- * Build Mongo filter safely to avoid invalid ObjectId casts.
- */
 function buildFilterSafe({ q, category, vendorId } = {}) {
   const clauses = [];
 

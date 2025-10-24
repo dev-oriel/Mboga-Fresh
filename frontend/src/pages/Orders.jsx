@@ -1,196 +1,258 @@
-// frontend/src/pages/Orders.jsx
-import React from "react";
+// frontend/src/pages/Orders.jsx - FINAL VERSION (INLINE IMAGE RESOLUTION)
+
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
-
 import Footer from "../components/FooterSection.jsx";
+import { fetchBuyerOrders } from "../api/orders";
+import { useAuth } from "../context/AuthContext";
+import { Loader2 } from "lucide-react";
 
-const ORDERS = [
-  {
-    id: "123456",
-    status: "Delivered",
-    statusBadge: {
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
+
+// --- Helper Functions (Only utility functions remain) ---
+
+const formatCurrency = (amount) =>
+  `Ksh ${Number(amount).toLocaleString("en-KE", { minimumFractionDigits: 0 })}`;
+
+const getStatusBadgeProps = (status) => {
+  const lowerStatus = status ? status.toLowerCase() : "";
+  if (lowerStatus === "delivered")
+    return {
       label: "Delivered",
-      bg: "bg-[#DCFCE7]", // green-100 like
-      text: "text-[#166534]", // green-800 like
+      bg: "bg-emerald-100",
+      text: "text-emerald-700",
       icon: "check_circle",
-    },
-    date: "2024-07-15",
-    title: "Basket of fresh fruits & vegetables",
-    note: "Your basket of fresh fruits and vegetables has been successfully delivered.",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuDuva8nZOSC9MEllnNvwqdONZx96jhGNsyCDx5RwK037w3Q_VSLwen2y8v3ASowKlEXdOTvmgmfMWzD6x4RaXH1ken8-TUQC9RSgSBXQ1WnNaX2z-xn0_Thx2pAOPHkqIUWuyjZsgsuFRUigHVNlddXkHiHhz2pwOZePYO8rkqxFeoyLUTBOA_qQEjDTq09Lyk8QKXxhq78UUqiKKlryS867k5Mr4HFFYXvc2x8MHygyEnZLlbjn_ifc7mkzWZUFs_UVyzk2Rcyll0",
-  },
-  {
-    id: "789012",
-    status: "In Transit",
-    statusBadge: {
+    };
+  if (lowerStatus === "shipped")
+    return {
       label: "In Transit",
-      bg: "bg-[#DBEAFE]", // blue-100 like
-      text: "text-[#1E3A8A]", // blue-800 like
-      icon: "sync",
-      spin: true,
-    },
-    date: "2024-07-17",
-    title: "Premium vegetables selection",
-    note: "Your selection of premium vegetables is on its way to you.",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuDd4R6vd2mvOXHTKLg6FakPCrP2UKvejg4t5NO-iv_I4xPbcsoIbh6P4eG91Q6WWxYEHYt-DJPhYSKg_W0Umx4tcqfJmn8y1teSzbPNyi9LSTVx2ACjGohkt2HNllZwqaStvXLNQqWtEDH5HylVA1BEsqyovR8l4mV8Y7recSke-m4lvZsbmmknRlZCUbBbRbdHM62GHD3xoIvx1A1r68ltV1_1XDfwz8nO29tOyLWLS6RTwSoWlK-VvfUeX4D5alnw7raR1PgLp38",
-  },
-  {
-    id: "345678",
-    status: "Delivered",
-    statusBadge: {
-      label: "Delivered",
-      bg: "bg-[#DCFCE7]",
-      text: "text-[#166534]",
-      icon: "check_circle",
-    },
-    date: "2024-07-10",
-    title: "Organic tomatoes & herbs",
-    note: "A fresh batch of organic tomatoes and herbs, delivered.",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCSCn59GFCO8wL0XgyOSWgCxLkSJqUI8_VX04KGfwnFUPTkyySFaAD5AzzWT_U5eTmAniriwonW3o95MtIAN6XilXtiHQlWYWEdrfEYqeMtQkX7Kjk-_jkgm2iJcP0F1sWdaY1WJPz7CE-MpLeo0c8lWG48xT64DmOThuSyfizj-0oXN1ZoTnyYPpqB7ckPv7QuhegOmtl0jDDRUJIUyhkVIGYUetJrWNWk36gQYXnoZPcWtnKbPOICoL_Riu0-s-ACl7FVUy-r81M",
-  },
-];
+      bg: "bg-blue-100",
+      text: "text-blue-700",
+      icon: "local_shipping",
+    };
+  if (lowerStatus === "processing" || lowerStatus === "confirmed")
+    return {
+      label: "Processing",
+      bg: "bg-yellow-100",
+      text: "text-yellow-700",
+      icon: "schedule",
+    };
+  if (lowerStatus === "cancelled")
+    return {
+      label: "Cancelled",
+      bg: "bg-red-100",
+      text: "text-red-700",
+      icon: "cancel",
+    };
+  return {
+    label: status || "Pending",
+    bg: "bg-gray-100",
+    text: "text-gray-700",
+    icon: "info",
+  };
+};
+
+// --- Main Component ---
 
 const Orders = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const loadOrders = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await fetchBuyerOrders();
+      setOrders(data);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+      setError("Failed to load orders. Please try refreshing.");
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
 
   const handleViewDetails = (orderId) => {
-    // Navigate to an order detail route (create this route if missing)
-    navigate(`/order/${orderId}`);
+    navigate(`/orders/${orderId}`);
   };
 
-  const handleReorder = (orderId) => {
-    // Example: navigate to a reorder flow or product page; here we pass order id as query param
-    navigate(`/marketplace?reorder=${orderId}`);
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Header />
+        <main className="flex-grow container mx-auto p-8 text-center">
+          <div className="text-lg text-gray-600 mt-16">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-emerald-600 mb-3" />
+            Loading your order history...
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // FIX: Define a single inline function for image source resolution
+  const resolveItemImageSrc = (item) => {
+    const imagePath = item.image || item.imagePath || item.img;
+
+    if (imagePath && imagePath.startsWith("http")) {
+      return imagePath;
+    }
+    if (imagePath) {
+      // Prepend API_BASE if path is relative
+      const normalizedPath = imagePath.startsWith("/")
+        ? imagePath
+        : `/${imagePath}`;
+      return `${API_BASE}${normalizedPath}`;
+    }
+
+    // Final fallback: Use a simple, visible icon that clearly shows the image failed to load
+    return "https://img.icons8.com/material-outlined/96/CCCCCC/image.png";
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f6f8f6] dark:bg-[#1a1a1a] text-[#111827] dark:text-[#E5E7EB]">
-      {/* Header component uses its own navigation; pass a dynamic cart count if you track it */}
+    <div className="min-h-screen flex flex-col bg-[#f6f8f6]">
       <Header />
 
       <main className="flex-grow">
-        {/* Hero */}
-        <section className="relative bg-[#111827]/6 dark:bg-[#000000]/20 py-20">
-          <div className="absolute inset-0 pointer-events-none">
-            <img
-              alt="Fresh produce background"
-              className="w-full h-full object-cover opacity-20"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuva8nZOSC9MEllnNvwqdONZx96jhGNsyCDx5RwK037w3Q_VSLwen2y8v3ASowKlEXdOTvmgmfMWzD6x4RaXH1ken8-TUQC9RSgSBXQ1WnNaX2z-xn0_Thx2pAOPHkqIUWuyjZsgsuFRUigHVNlddXkHiHhz2pwOZePYO8rkqxFeoyLUTBOA_qQEjDTq09Lyk8QKXxhq78UUqiKKlryS867k5Mr4HFFYXvc2x8MHygyEnZLlbjn_ifc7mkzWZUFs_UVyzk2Rcyll0"
-              loading="lazy"
-            />
-          </div>
-
-          <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h1 className="text-4xl md:text-5xl font-bold text-[#111827] dark:text-white mb-4">
-              Your Orders
+        {/* Hero Section - Clean Header */}
+        <section className="py-12 bg-white shadow-sm border-b border-gray-200">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              My Order History
             </h1>
-            <p className="text-lg text-[#374151] dark:text-[#D1D5DB] max-w-2xl mx-auto">
-              Track your fresh produce from the farm to your doorstep. Here you
-              can see your past and current orders.
+            <p className="text-lg text-gray-600">
+              You have completed{" "}
+              <span className="font-bold text-gray-900">{orders.length}</span>{" "}
+              orders with Mboga Fresh.
             </p>
           </div>
         </section>
 
-        {/* Orders list */}
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 -mt-16">
-          <div className="max-w-5xl mx-auto space-y-8">
-            {ORDERS.map((o) => (
-              <article
-                key={o.id}
-                className="bg-white dark:bg-[#242424] rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 overflow-hidden"
-                aria-labelledby={`order-${o.id}-title`}
-              >
-                <div className="p-6 md:p-8 flex flex-col md:flex-row items-center gap-8">
-                  {/* Image */}
-                  <div
-                    className="w-full md:w-48 h-48 md:h-auto md:self-stretch rounded-lg bg-cover bg-center flex-shrink-0"
-                    style={{ backgroundImage: `url('${o.image}')` }}
-                    role="img"
-                    aria-label={o.title}
-                  />
+        {/* Orders List Container */}
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="max-w-4xl mx-auto space-y-6">
+            {error && (
+              <div className="bg-red-100 text-red-700 p-4 rounded-lg">
+                {error}
+              </div>
+            )}
 
-                  {/* Content */}
-                  <div className="flex-grow space-y-4 text-center md:text-left">
-                    <div className="flex items-center justify-center md:justify-start gap-3">
+            {orders.length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-xl shadow-lg border border-gray-200">
+                <p className="text-xl font-medium text-gray-700">
+                  You have no past orders yet.
+                </p>
+                <button
+                  onClick={() => navigate("/marketplace")}
+                  className="mt-4 bg-emerald-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-700 transition"
+                >
+                  Start Shopping
+                </button>
+              </div>
+            ) : (
+              orders.map((o) => {
+                const badge = getStatusBadgeProps(o.orderStatus);
+                const itemNamesList = o.items.map((i) => i.name).join(", ");
+                const totalItems = o.items.reduce(
+                  (sum, i) => sum + i.quantity,
+                  0
+                );
+                const totalItemsDisplay =
+                  o.items.length > 3 ? `3+ items` : `${o.items.length} items`;
+
+                return (
+                  <div
+                    key={o._id}
+                    className="bg-white rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow duration-300 overflow-hidden"
+                  >
+                    {/* Order Header Row */}
+                    <div className="p-5 flex justify-between items-start border-b border-gray-100">
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase">
+                          Order ID
+                        </p>
+                        <p className="font-mono text-base font-semibold text-gray-800">
+                          #{o._id.substring(18).toUpperCase()}
+                        </p>
+                      </div>
                       <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${o.statusBadge.bg} ${o.statusBadge.text}`}
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${badge.bg} ${badge.text}`}
                       >
                         <span
-                          className={`material-symbols-outlined text-base mr-1.5 ${
-                            o.statusBadge.spin ? "animate-spin" : ""
-                          }`}
-                          style={
-                            o.statusBadge.spin
-                              ? { animationDuration: "3s" }
-                              : undefined
-                          }
+                          className={`material-symbols-outlined text-base mr-1`}
                         >
-                          {o.statusBadge.icon}
+                          {badge.icon}
                         </span>
-                        {o.statusBadge.label}
+                        {badge.label}
                       </span>
-
-                      <p className="text-sm text-[#6B7280] dark:text-[#9CA3AF]">
-                        {new Date(o.date).toLocaleDateString(undefined, {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </p>
                     </div>
 
-                    <h3
-                      id={`order-${o.id}-title`}
-                      className="text-xl font-bold text-[#111827] dark:text-white"
-                    >
-                      Order #{o.id}
-                    </h3>
+                    {/* Items & Total Section */}
+                    <div className="p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                      {/* Item Images/Previews */}
+                      <div className="flex items-center gap-2 mr-4 mb-4 sm:mb-0 w-full sm:w-auto">
+                        {o.items.slice(0, 3).map((item, index) => (
+                          <img
+                            key={item.product || index}
+                            // FIX: Use the new inline image resolver
+                            src={resolveItemImageSrc(item)}
+                            alt={item.name}
+                            className="w-12 h-12 rounded-lg object-cover border border-gray-200"
+                            // OPTIONAL: Add onError fallback attribute for broken paths
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src =
+                                "https://img.icons8.com/material-outlined/96/CCCCCC/image.png";
+                            }}
+                          />
+                        ))}
 
-                    <p className="text-[#4B5563] dark:text-[#9CA3AF]">
-                      {o.note}
-                    </p>
+                        <div className="text-sm text-gray-600 whitespace-nowrap">
+                          {totalItemsDisplay}
+                        </div>
+                      </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start pt-2">
-                      {/* Primary action (Reorder or Track) */}
-                      <button
-                        onClick={() =>
-                          o.status === "In Transit"
-                            ? handleTrack(navigate)
-                            : handleReorder(o.id, navigate)
-                        }
-                        className="bg-[#42cf17] hover:bg-[#36b90f] text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
-                        aria-label={
-                          o.status === "In Transit"
-                            ? `Track order ${o.id}`
-                            : `Reorder ${o.id}`
-                        }
-                      >
-                        <span className="material-symbols-outlined text-base">
-                          {o.status === "In Transit"
-                            ? "pin_drop"
-                            : "restart_alt"}
-                        </span>
-                        {o.status === "In Transit"
-                          ? "Track Delivery"
-                          : "Reorder"}
-                      </button>
+                      {/* Summary & Total */}
+                      <div className="flex-1 min-w-0 mr-4">
+                        <p className="text-sm font-medium text-gray-800 truncate">
+                          <span className="font-bold">Items:</span>{" "}
+                          {itemNamesList}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Delivering to {o.shippingAddress.city} (
+                          {o.shippingAddress.street})
+                        </p>
+                      </div>
 
-                      <button
-                        onClick={() => handleViewDetails(o.id)}
-                        className="bg-[#E5E7EB] dark:bg-[#2f2f2f] hover:bg-[#d1d5db] dark:hover:bg-[#3a3a3a] text-[#111827] dark:text-[#E5E7EB] font-bold py-2 px-6 rounded-lg text-sm transition-colors"
-                        aria-label={`View details for order ${o.id}`}
-                      >
-                        View Details
-                      </button>
+                      <div className="flex flex-col items-end pt-3 sm:pt-0">
+                        <p className="text-xl font-bold text-gray-900">
+                          {formatCurrency(o.totalAmount)}
+                        </p>
+                        <button
+                          onClick={() => handleViewDetails(o._id)}
+                          className="mt-2 text-sm font-semibold text-emerald-600 hover:underline"
+                        >
+                          View All Details
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                );
+              })
+            )}
           </div>
         </section>
       </main>
@@ -198,32 +260,5 @@ const Orders = () => {
     </div>
   );
 };
-
-/**
- * helper navigation handlers (kept outside component body to keep render clean)
- * note: they accept navigate as param so we can call from inline handlers.
- */
-function handleViewDetails(id, navigate) {
-  // If you have a route like /order/:id, navigate there.
-  // The earlier code in the component calls this with a bound navigate param.
-  // But our inline calls pass navigate directly (see below).
-  if (!navigate) {
-    // fallback no-op (shouldn't happen)
-    return;
-  }
-  navigate(`/order/${id}`);
-}
-
-function handleReorder(id, navigate) {
-  if (!navigate) return;
-  // Navigate to marketplace with reorder param so marketplace can prefill cart
-  navigate(`/marketplace?reorder=${encodeURIComponent(id)}`);
-}
-
-function handleTrack(navigate) {
-  if (!navigate) return;
-  // Navigate to tracking page — implement this route if you need it
-  navigate("/tracking");
-}
 
 export default Orders;

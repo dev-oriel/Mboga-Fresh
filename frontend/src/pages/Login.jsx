@@ -1,4 +1,3 @@
-// frontend/src/pages/Login.jsx
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -6,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("buyer");
+  // Removed role state; all non-buyer logins are now inferred on the backend.
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -15,23 +14,29 @@ const Login = () => {
   const location = useLocation();
   const info = location.state?.info ?? null;
 
+  // The map remains essential for client-side navigation after a successful login.
   const roleRedirectMap = {
     buyer: "/",
     vendor: "/vendordashboard",
     farmer: "/supplierdashboard",
     rider: "/riderdashboard",
-    admin: "/admin",
+    admin: "/admindashboard", // FIX: changed from '/admin' to existing route
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
-      // login() will call the API and refresh /me internally
-      const res = await login(email.trim(), password, role);
-      // Prefer server-canonical role: try res.user, then context user, then chosen role
-      const actualRole = res?.user?.role || user?.role || role;
+      // We default the role to "buyer" for the initial login attempt.
+      // The backend (to be modified next) will try to log in as any role.
+      const res = await login(email.trim(), password, "buyer"); // PASS DEFAULT ROLE
+
+      // Prefer server-canonical role or context user's role
+      const actualRole = res?.user?.role || user?.role || "buyer";
+
+      // If the actual role is 'admin', correct the path from the map
       const to = roleRedirectMap[actualRole] || "/";
       navigate(to);
     } catch (err) {
@@ -72,20 +77,7 @@ const Login = () => {
         {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm text-gray-700">Role</label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full border p-2 rounded"
-              disabled={loading}
-            >
-              <option value="buyer">Buyer</option>
-              <option value="vendor">Vendor</option>
-              <option value="farmer">Farmer</option>
-              <option value="rider">Rider</option>
-            </select>
-          </div>
+          {/* REMOVED ROLE SELECTION */}
 
           <div>
             <label className="block text-sm text-gray-700">Email</label>

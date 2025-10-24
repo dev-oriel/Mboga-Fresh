@@ -1,4 +1,3 @@
-// frontend/src/components/vendorComponents/VendorStoreInfoCard.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
@@ -15,12 +14,14 @@ const VendorStoreInfoCard = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
 
+  // Populate form from authenticated user data
   useEffect(() => {
     if (user) {
+      // FIX: Use businessName from profile if present, else fall back to signup data
       setForm({
-        shopName: user.shopName ?? user.storeName ?? "",
+        shopName: user.businessName ?? user.shopName ?? user.storeName ?? "",
         location: user.location ?? user.storeLocation ?? "",
-        contact: user.contact ?? user.phone ?? "",
+        contact: user.phone ?? user.contact ?? "",
         description: user.description ?? user.storeDescription ?? "",
       });
     }
@@ -43,7 +44,10 @@ const VendorStoreInfoCard = () => {
     if (saving) return;
 
     if (!form.shopName || !form.contact) {
-      setMessage({ type: "error", text: "Shop name and contact are required." });
+      setMessage({
+        type: "error",
+        text: "Shop name and contact are required.",
+      });
       return;
     }
 
@@ -51,12 +55,14 @@ const VendorStoreInfoCard = () => {
       setSaving(true);
 
       const payload = {
+        // FIX: Use the specific names the backend PUT /store endpoint expects
         shopName: form.shopName,
         location: form.location,
         contact: form.contact,
         description: form.description,
       };
 
+      // FIX: Point to the new dedicated store update endpoint
       await axios.put(
         `${import.meta.env.VITE_API_BASE || ""}/api/profile/store`,
         payload,
@@ -65,6 +71,7 @@ const VendorStoreInfoCard = () => {
         }
       );
 
+      // Critical: Refresh the user context after saving so the new data is available everywhere
       if (typeof refresh === "function") await refresh();
 
       setIsEditing(false);
@@ -97,9 +104,7 @@ const VendorStoreInfoCard = () => {
   return (
     <div className="bg-white rounded-xl shadow-md p-6" id="store-info">
       <div className="mb-6 flex items-start justify-between gap-4">
-        <h3 className="text-xl font-bold text-gray-900">
-          Store Information
-        </h3>
+        <h3 className="text-xl font-bold text-gray-900">Store Information</h3>
 
         {message && (
           <div

@@ -1,4 +1,3 @@
-// backend/routes/bulkProducts.route.js
 import express from "express";
 import { uploadAny } from "../middleware/multerUpload.js";
 import { requireAuth, requireRole } from "../middleware/auth.middleware.js";

@@ -1,184 +1,132 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useBulkCart } from "../../context/BulkCartContext"; // Use the B2B cart
 
-/**
- * VendorCart
- *
- * Lightweight vendor-side cart/quotes manager.
- * Uses localStorage key "vendorCart" so it doesn't interfere with buyer's CartContext.
- *
- * Item shape:
- * { id, title, qty, price, img, notes? }
- */
+const formatCurrency = (value) => {
+  return `KES ${Number(value).toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  })}`;
+};
 
-const STORAGE_KEY = "vendorCart";
-
-function readCart() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw);
-  } catch (e) {
-    console.error("Failed to read vendorCart", e);
-    return [];
-  }
-}
-
-function writeCart(items) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  } catch (e) {
-    console.error("Failed to write vendorCart", e);
-  }
-}
-
-const VendorCart = () => {
-  const [items, setItems] = useState(() => readCart());
+const VendorCart = ({ onClose }) => {
+  const { items, addItem, removeItem, subtotal, clearCart } = useBulkCart();
   const navigate = useNavigate();
 
-  useEffect(() => writeCart(items), [items]);
+  // Custom logic to handle removal for simplicity, since BulkCartContext doesn't expose increase/decrease
+  const decreaseItem = (id) => {
+    // Note: Since the bulk cart logic is minimal, we only implement removal here.
+    removeItem(id);
+  };
 
-  const subtotal = useMemo(
-    () => items.reduce((s, it) => s + Number(it.price || 0) * (it.qty || 1), 0),
-    [items]
-  );
-
-  const increase = (id) =>
-    setItems((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, qty: (it.qty || 1) + 1 } : it))
-    );
-
-  const decrease = (id) =>
-    setItems((prev) =>
-      prev
-        .map((it) =>
-          it.id === id ? { ...it, qty: Math.max(1, (it.qty || 1) - 1) } : it
-        )
-        .filter(Boolean)
-    );
-
-  const removeItem = (id) =>
-    setItems((prev) => prev.filter((it) => it.id !== id));
-
-  const handleCreateOrder = () => {
-    // This is vendor-side: create a vendor order (quote/dispatch). Replace with API call.
-    // For now navigate to vendordashboard and pass a quick flag.
-    navigate("/vendordashboard", { state: { from: "vendorCart", subtotal } });
+  const handleProceedToQuote = () => {
+    // Logic for submitting the bulk order quote
+    alert("Simulating Bulk Quote Submission/Checkout!");
+    // In a real system, navigate to /bulkorders/checkout
+    clearCart();
+    onClose();
+    navigate("/bulkorders");
   };
 
   return (
-    <div className="min-h-[300px]">
-      <h2 className="text-2xl font-bold mb-4">Vendor Cart & Quotes</h2>
+    <div className="fixed top-1/4 right-0 z-40 transform translate-x-0 transition-transform duration-300">
+      <div className="bg-white dark:bg-gray-800 rounded-l-xl shadow-2xl w-80 max-h-[80vh] overflow-hidden">
+        <div className="p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+              Your Cart (Bulk)
+            </h3>
+            <button
+              onClick={() => onClose?.()}
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              aria-label="Close cart preview"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
 
-      {items.length === 0 ? (
-        <div className="py-10 text-center text-gray-600 dark:text-gray-400">
-          No items in vendor cart. Use the product editor or click "Add to cart"
-          on products to start a quote.
-        </div>
-      ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="border-b border-gray-200 dark:border-gray-700">
-                <tr>
-                  <th className="p-4 text-sm font-semibold" colSpan="2">
-                    Product
-                  </th>
-                  <th className="p-4 text-sm font-semibold text-center">Qty</th>
-                  <th className="p-4 text-sm font-semibold text-right">
-                    Total
-                  </th>
-                  <th className="p-4"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((it) => (
-                  <tr
-                    key={it.id}
-                    className="border-b border-gray-100 dark:border-gray-700"
-                  >
-                    <td className="p-4 w-24">
+          {items.length === 0 ? (
+            <div className="py-8 text-center text-gray-500 dark:text-gray-400">
+              Your bulk cart is empty
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
+                {items.map((it) => {
+                  const priceValue = Number(
+                    it.price.match(/(\d+(\.\d+)?)/)?.[0] || 0
+                  );
+                  const totalItemPrice = priceValue * it.qty;
+
+                  return (
+                    <div key={it.id} className="flex items-center gap-3">
                       <img
-                        src={it.img}
                         alt={it.title}
-                        className="w-16 h-16 object-cover rounded-md"
+                        className="w-14 h-14 rounded-md object-cover flex-shrink-0"
+                        src={it.image}
                       />
-                    </td>
-                    <td className="p-4">
-                      <p className="font-semibold">{it.title}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {it.farmer ?? "You"}
-                      </p>
-                    </td>
-                    <td className="p-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => decrease(it.id)}
-                          className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                        >
-                          <span className="material-symbols-outlined text-base">
-                            remove
-                          </span>
-                        </button>
-                        <span className="w-10 text-center font-medium">
-                          {it.qty}
-                        </span>
-                        <button
-                          onClick={() => increase(it.id)}
-                          className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                        >
-                          <span className="material-symbols-outlined text-base">
-                            add
-                          </span>
-                        </button>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-sm text-gray-800 dark:text-gray-100">
+                          {it.title}
+                        </h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {it.qty} × {it.price}
+                        </p>
+
+                        <div className="mt-2 flex items-center gap-2">
+                          <button
+                            onClick={() => decreaseItem(it.id)}
+                            className="ml-2 text-xs text-red-600 dark:text-red-400"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
-                    </td>
-                    <td className="p-4 text-right font-semibold">
-                      KSh {(Number(it.price) * it.qty).toLocaleString()}
-                    </td>
-                    <td className="p-4 text-right">
-                      <button
-                        onClick={() => removeItem(it.id)}
-                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
-                      >
-                        <span className="material-symbols-outlined text-xl">
-                          delete
-                        </span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
 
-          <div className="mt-6 flex flex-col md:flex-row md:justify-between items-stretch md:items-center p-4 gap-4">
-            <div className="flex items-center gap-4 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 p-3 rounded-lg text-sm">
-              <span className="material-symbols-outlined">local_shipping</span>
-              <p className="font-medium">
-                Vendor order draft — action required to convert to sales order
-              </p>
-            </div>
-
-            <div className="w-full md:w-auto flex items-center gap-4">
-              <div className="text-right mr-2">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Subtotal
-                </div>
-                <div className="text-lg font-bold">
-                  KSh {Number(subtotal).toLocaleString()}
-                </div>
+                      <div className="font-bold text-sm text-gray-900 dark:text-white">
+                        {formatCurrency(totalItemPrice)}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <button
-                onClick={handleCreateOrder}
-                className="bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg hover:opacity-95 transition"
-              >
-                Create Order
-              </button>
-            </div>
-          </div>
+
+              <div className="border-t border-gray-200 dark:border-gray-700 mt-4 pt-4">
+                <div className="flex justify-between font-bold text-gray-900 dark:text-white">
+                  <span>Subtotal</span>
+                  <span>{formatCurrency(subtotal)}</span>
+                </div>
+
+                <div className="flex gap-3 mt-4">
+                  <button
+                    onClick={() => {
+                      alert("Navigating to bulk cart full view/checkout...");
+                      onClose();
+                      // navigate("/bulkcart-full"); // Or a dedicated route
+                    }}
+                    className="flex-1 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-semibold"
+                  >
+                    View Cart
+                  </button>
+
+                  <button
+                    onClick={handleProceedToQuote}
+                    className="flex-1 py-2 rounded-lg bg-emerald-600 text-white text-sm font-bold"
+                  >
+                    Submit Quote
+                  </button>
+                </div>
+
+                <button
+                  onClick={clearCart}
+                  className="mt-3 w-full text-xs text-gray-500 dark:text-gray-400"
+                >
+                  Clear Cart
+                </button>
+              </div>
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

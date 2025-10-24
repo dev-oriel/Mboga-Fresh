@@ -1,91 +1,87 @@
-// frontend/src/vendor/Farmily.jsx
-import React, { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom"; // Added useNavigate
 import Header from "../components/vendorComponents/Header";
 import Sidebar from "../components/vendorComponents/Sidebar";
 import SearchBar from "../components/vendorComponents/SearchBar";
 import ProductCard from "../components/vendorComponents/ProductCard";
-import VendorCart from "../components/vendorComponents/VendorCart";
-import VendorOrders from "../components/vendorComponents/VendorOrders";
+import VendorCart from "../components/vendorComponents/VendorCart"; // B2B Cart Preview
+import BulkOrdersList from "../vendor/BulkOrdersList";
+
 import { fetchBulkProducts } from "../api/bulkProducts";
 import { useAuth } from "../context/AuthContext";
+import { useBulkCart } from "../context/BulkCartContext"; // CRITICAL: Use Bulk Cart
+import { Loader2 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 
-const placeholder =
-  "https://images.unsplash.com/photo-1518976024611-0a4e3d1c9f05?auto=format&fit=crop&w=1200&q=60";
+const placeholder = "https://img.icons8.com/color/96/000000/cucumber.png";
 
 const resolveImage = (imagePath) => {
-  if (!imagePath) return placeholder;
-  if (imagePath.startsWith("http://") || imagePath.startsWith("https://"))
-    return imagePath;
-  if (API_BASE)
-    return `${API_BASE.replace(/\/$/, "")}${
-      imagePath.startsWith("/") ? imagePath : `/${imagePath}`
-    }`;
-  return `${window.location.origin}${
+  if (!imagePath || imagePath.startsWith("http"))
+    return imagePath || placeholder;
+
+  return `${API_BASE.replace(/\/$/, "")}${
     imagePath.startsWith("/") ? imagePath : `/${imagePath}`
   }`;
 };
 
 const Farmily = () => {
   const { user } = useAuth();
+  const { items: cartItems, addItem } = useBulkCart();
+  const navigate = useNavigate(); // For navigation
+
   const { search } = useLocation();
   const params = new URLSearchParams(search);
-  const category = params.get("category"); // e.g. "vegetables"
-  const view = params.get("view"); // e.g. "cart" or "vendor-orders"
+  const category = params.get("category");
+  const [searchQuery, setSearchQuery] = useState(params.get("q") || "");
 
   const [bulkProducts, setBulkProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isCartVisible, setIsCartVisible] = useState(false); // State to control cart flyout
 
-  // Fetch bulk products from backend. Use `q` param for simple search if category provided.
-  useEffect(() => {
-    let mounted = true;
+  // Fetch bulk products from backend. Use query/category filters.
+  const loadBulkProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
 
-    const q = category || undefined;
+    const q = searchQuery.trim() || undefined;
 
-    (async () => {
-      try {
-        // ask server for relevant bulk products
-        const results = await fetchBulkProducts(
-          q ? { q, limit: 200 } : { limit: 200 }
-        );
-        if (!mounted) return;
-        setBulkProducts(Array.isArray(results) ? results : []);
-      } catch (err) {
-        console.error("Failed to fetch bulk products", err);
-        if (!mounted) return;
-        setError(
-          typeof err === "string" ? err : err?.message || "Failed to fetch"
-        );
-        setBulkProducts([]);
-      } finally {
-        if (!mounted) return;
-        setLoading(false);
-      }
-    })();
+    try {
+      const results = await fetchBulkProducts(
+        q ? { q, category, limit: 200 } : { category, limit: 200 }
+      );
+      setBulkProducts(Array.isArray(results) ? results : []);
+    } catch (err) {
+      console.error("Failed to fetch bulk products", err);
+      setError(
+        typeof err === "string"
+          ? err
+          : err?.message || "Failed to fetch bulk products"
+      );
+      setBulkProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [category, searchQuery]);
 
-    return () => {
-      mounted = false;
-    };
-  }, [category]);
+  useEffect(() => {
+    loadBulkProducts();
+  }, [loadBulkProducts]);
 
   // Map backend bulk product shape -> ProductCard shape
   const visibleProducts = useMemo(() => {
-    if (view === "cart" || view === "vendor-orders") return [];
-    if (!bulkProducts || bulkProducts.length === 0) return [];
     return bulkProducts.map((p) => {
-      // ownerName convenience (backend may set it) or populated ownerId.name
       const ownerName =
-        p.ownerName || (p.ownerId && p.ownerId.name) || p.owner?.name;
+        p.ownerName ||
+        (p.ownerId && p.ownerId.name) ||
+        p.owner?.name ||
+        "Farmer";
 
       return {
         id: p._id || p.id,
         title: p.name || p.title || "Untitled",
-        farmer: ownerName || "Farmer",
+        farmer: ownerName,
         price:
           p.priceLabel ||
           (typeof p.price !== "undefined" ? `KES ${p.price}` : ""),
@@ -93,47 +89,63 @@ const Farmily = () => {
         __raw: p,
       };
     });
-  }, [bulkProducts, view]);
+  }, [bulkProducts]);
+
+  const handleSearch = (q) => {
+    setSearchQuery(q);
+  };
+
+  const handleAddToCart = (product) => {
+    addItem(product, 1); // Add to the bulk cart
+    setIsCartVisible(true); // Show cart preview on add
+    // Optional: Set a timeout to hide the cart automatically
+    setTimeout(() => setIsCartVisible(false), 3000);
+  };
+
+  const handleSidebarNavigation = (view) => {
+    if (view === "cart") {
+      setIsCartVisible(true);
+      // Do not navigate, just show the flyout/modal
+    } else if (view === "bulk-orders") {
+      navigate("/bulkorders"); // Navigate to dedicated page
+    }
+  };
+
+  // --- RENDER LOGIC ---
+
+  // RENDER the cart full-page if accessed directly via URL, otherwise render the marketplace.
+  const currentView = params.get("view");
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <Header
-        avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDeL7radWSj-FEteEjqLpufXII3-tc_o7GMvLvB07AaD_bYBkfAcIOnNbOXkTdMOHRgJQwLZE-Z_iw72Bd8bpHzfXP_m0pIvteSw7FKZ1qV9GD1KfgyDVG90bCO7OGe6JyYIkm9DBo2ArC60uEqSfDvnnYWeo6IqVEjWxsVX6dUoxjm9ozyVlriiMdVLc_jU9ZxS01QcxNa8hn-ePNbB6IcXSwExf2U61R-epab8nsOkbq95E7z6b-fH4zOt0j2MPt20nrqtPM1NHI"
-        userName={user?.name || "Vendor"}
-      />
+      <Header avatarUrl={user?.avatar} userName={user?.name || "Vendor"} />
 
       <div className="flex">
-        <Sidebar />
-
+        <Sidebar onNavigation={handleSidebarNavigation} />{" "}
+        {/* Pass navigation handler */}
         <main className="flex-1 p-8">
           <div className="mb-8">
             <h1 className="text-4xl font-extrabold tracking-tight">
-              Buy Fresh Produce Directly from Farmers
+              Bulk Marketplace (Farm-ily)
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Karibu Farm-ily! Explore a wide range of farm-fresh products
-              sourced directly from local farmers.
+              Source bulk fresh produce directly from farmers.
             </p>
-            {category && (
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Showing results for{" "}
-                <strong className="text-gray-800 dark:text-gray-100">
-                  {category}
-                </strong>
-              </p>
-            )}
           </div>
 
-          <SearchBar />
+          <SearchBar onSearch={handleSearch} initialQuery={searchQuery} />
 
-          {view === "cart" ? (
+          {currentView === "full-cart" ? (
+            // If a dedicated full cart page is built, render it here
             <VendorCart />
-          ) : view === "vendor-orders" ? (
-            <VendorOrders />
+          ) : currentView === "bulk-orders" ? (
+            // If B2B orders list is accessed via URL
+            <BulkOrdersList />
           ) : (
             <div>
               {loading ? (
                 <div className="py-10 text-center text-gray-600 dark:text-gray-400">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-emerald-600" />
                   Loading farmily products...
                 </div>
               ) : error ? (
@@ -142,16 +154,40 @@ const Farmily = () => {
                 </div>
               ) : visibleProducts.length === 0 ? (
                 <div className="col-span-full py-10 text-center text-gray-600 dark:text-gray-400">
-                  No products found for this category.
+                  No bulk products found matching your search/filters.
                 </div>
               ) : (
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-6">
                   {visibleProducts.map((p) => (
-                    <ProductCard key={p.id} product={p} />
+                    <ProductCard
+                      key={p.id}
+                      product={p}
+                      onAdd={() => handleAddToCart(p)}
+                    />
                   ))}
                 </div>
               )}
             </div>
+          )}
+
+          {/* BULK CART FLYOUT */}
+          {isCartVisible && cartItems.length > 0 && (
+            <div className="fixed top-1/4 right-0 z-50 transform translate-x-0 transition-transform duration-300">
+              <VendorCart onClose={() => setIsCartVisible(false)} />
+            </div>
+          )}
+
+          {/* Floating Cart Button for visibility */}
+          {cartItems.length > 0 && !isCartVisible && (
+            <button
+              onClick={() => setIsCartVisible(true)}
+              className="fixed bottom-10 right-10 bg-emerald-600 text-white p-3 rounded-full shadow-lg hover:bg-emerald-700 transition"
+            >
+              <span className="material-symbols-outlined">shopping_cart</span>
+              <span className="absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full">
+                {cartItems.length}
+              </span>
+            </button>
           )}
         </main>
       </div>

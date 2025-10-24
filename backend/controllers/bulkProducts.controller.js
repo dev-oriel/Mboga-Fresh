@@ -1,4 +1,3 @@
-// backend/controllers/bulkProducts.controller.js
 import BulkProduct from "../models/bulkProduct.model.js";
 import fs from "fs";
 import path from "path";
@@ -32,7 +31,6 @@ const updateSchema = Joi.object({
   vendorAssignedId: Joi.string().allow("").optional(),
 });
 
-// Helper to pick uploaded file (handles multer.single -> req.file and multer.any -> req.files[])
 function firstUploadedFile(req) {
   if (req.file) return req.file;
   if (Array.isArray(req.files) && req.files.length > 0) return req.files[0];

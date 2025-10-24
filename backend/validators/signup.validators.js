@@ -1,4 +1,3 @@
-// backend/validators/signup.validators.js
 import Joi from "joi";
 
 const base = Joi.object({
