@@ -1,7 +1,15 @@
-// src/signup/Farmersignup.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signupWithFormData } from "../api/auth";
+
+const normalizeError = (err) => {
+  if (!err) return "Signup failed";
+  if (typeof err === "object" && err.message) return err.message;
+  if (Array.isArray(err.details) && err.details.length) {
+    return err.details.map((d) => d.message).join(", ");
+  }
+  return String(err);
+};
 
 const FarmerSignUp = () => {
   const [formData, setFormData] = useState({
@@ -11,19 +19,24 @@ const FarmerSignUp = () => {
     phone: "",
     location: "",
     password: "",
+    produceTypes: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleChange = (e) =>
-    setFormData((p) => ({ ...p, [e.target.name]: e.target.value }));
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setError("");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     const { farmName, contactPerson, email, phone, location, password } =
       formData;
+
     if (
       !farmName ||
       !contactPerson ||
@@ -32,256 +45,227 @@ const FarmerSignUp = () => {
       !location ||
       !password
     ) {
-      setError("Please fill all fields");
+      setError("Please fill all required fields.");
       return;
     }
 
     setLoading(true);
     try {
-      // we will use FormData to keep parity with vendor (in case of docs later)
       const fd = new FormData();
       fd.append("role", "farmer");
-      fd.append("name", contactPerson);
+      fd.append("name", contactPerson); // User.name (Owner's Name)
       fd.append("email", email);
       fd.append("phone", phone);
       fd.append("password", password);
-      fd.append("farmName", farmName);
+      fd.append("farmName", farmName); // FarmerProfile field
       fd.append("contactPerson", contactPerson);
       fd.append("location", location);
+      // Assuming produceTypes is sent as a comma-separated string that the backend can parse
+      if (formData.produceTypes)
+        fd.append("produceTypes", formData.produceTypes);
 
       await signupWithFormData(fd);
       navigate("/login", {
-        state: { info: "Farmer account created (pending verification)" },
+        state: {
+          info: "Farmer account created (pending review). Please log in.",
+        },
       });
     } catch (err) {
-      setError(err?.message || "Signup failed");
+      setError(normalizeError(err));
     } finally {
       setLoading(false);
     }
   };
 
-  // reuse styles you already had by keeping the styles object
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        {/* simplified circular logo */}
-        <div style={styles.logoContainer}>
-          <div style={styles.logoCircle}></div>
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gray-50">
+      <div className="flex flex-col items-center mb-8">
+        <div className="h-16 w-16 bg-emerald-100 rounded-full flex items-center justify-center">
+          <span className="text-emerald-600 text-3xl material-symbols-outlined">
+            agriculture
+          </span>
         </div>
-        <h1 style={styles.title}>Mboga Fresh</h1>
-        <p style={styles.subtitle}>Freshness You Can Trust.</p>
+        <h1 className="text-3xl font-bold text-black mt-2">Mboga Fresh</h1>
+        <p className="text-gray-500">
+          Connect your farm directly to the market
+        </p>
       </div>
 
-      <div style={styles.formContainer}>
-        <h2 style={styles.formTitle}>Create a Bulk Supplier Account</h2>
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl p-8">
+        <h2 className="text-2xl font-semibold text-center text-gray-800">
+          Create your Farmer/Supplier Account
+        </h2>
+        <p className="text-sm text-center text-gray-500 mb-4">
+          Your identity and farm details must be verified by the admin.
+        </p>
 
-        {error && <div className="text-red-600 mb-3">{error}</div>}
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5" noValidate>
+          {error && (
+            <div className="text-sm text-red-600 bg-red-50 p-3 rounded">
+              {error}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.inputGroup}>
-            <input
-              name="farmName"
-              value={formData.farmName}
-              onChange={handleChange}
-              type="text"
-              placeholder="Farm Name"
-              style={styles.input}
-              required
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label
+                htmlFor="farmName"
+                className="block text-sm font-medium text-gray-600"
+              >
+                Farm Name
+              </label>
+              <input
+                type="text"
+                id="farmName"
+                name="farmName"
+                value={formData.farmName}
+                onChange={handleInputChange}
+                placeholder="Green Acres Farm"
+                required
+                className="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="contactPerson"
+                className="block text-sm font-medium text-gray-600"
+              >
+                Contact Person Name
+              </label>
+              <input
+                type="text"
+                id="contactPerson"
+                name="contactPerson"
+                value={formData.contactPerson}
+                onChange={handleInputChange}
+                placeholder="Daniel Mutuku"
+                required
+                className="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-600"
+              >
+                Email
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="farm@example.com"
+                required
+                className="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="phone"
+                className="block text-sm font-medium text-gray-600"
+              >
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                placeholder="+254 7XX XXX XXX"
+                required
+                className="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label
+                htmlFor="location"
+                className="block text-sm font-medium text-gray-600"
+              >
+                Farm Location (County/Town)
+              </label>
+              <input
+                type="text"
+                id="location"
+                name="location"
+                value={formData.location}
+                onChange={handleInputChange}
+                placeholder="Rift Valley, Nakuru"
+                required
+                className="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-600"
+              >
+                Password
+              </label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                placeholder="••••••••"
+                required
+                className="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label
+                htmlFor="produceTypes"
+                className="block text-sm font-medium text-gray-600"
+              >
+                Main Produce (e.g., Tomatoes, Maize, Avocados)
+              </label>
+              <input
+                type="text"
+                id="produceTypes"
+                name="produceTypes"
+                value={formData.produceTypes}
+                onChange={handleInputChange}
+                placeholder="Tomatoes, Maize, Avocados"
+                className="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
           </div>
 
-          <div style={styles.inputGroup}>
-            <input
-              name="contactPerson"
-              value={formData.contactPerson}
-              onChange={handleChange}
-              type="text"
-              placeholder="Contact Person"
-              style={styles.input}
-              required
-            />
-          </div>
-
-          <div style={styles.inputGroup}>
-            <input
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              type="email"
-              placeholder="Email Address"
-              style={styles.input}
-              required
-            />
-          </div>
-
-          <div style={styles.inputGroup}>
-            <input
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              type="tel"
-              placeholder="Phone Number"
-              style={styles.input}
-              required
-            />
-          </div>
-
-          <div style={styles.inputGroup}>
-            <input
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              type="text"
-              placeholder="Location (e.g., County, Town)"
-              style={styles.input}
-              required
-            />
-          </div>
-
-          <div style={styles.inputGroup}>
-            <input
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              type="password"
-              placeholder="Password"
-              style={styles.input}
-              required
-            />
-          </div>
-
-          <button type="submit" style={styles.submitButton} disabled={loading}>
-            {loading ? "Creating..." : "Sign Up"}
+          <button
+            type="submit"
+            disabled={loading}
+            aria-disabled={loading}
+            className={`w-full ${
+              loading ? "bg-gray-400" : "bg-emerald-600 hover:bg-emerald-700"
+            } text-white font-semibold py-3 rounded-lg transition-colors`}
+          >
+            {loading ? "Submitting for Review..." : "Sign Up as Farmer"}
           </button>
         </form>
 
-        <p style={styles.loginText}>
-          Already have an account?{" "}
-          <a href="/login" style={styles.loginLink}>
-            Log in
-          </a>
-        </p>
-
-        <div style={styles.languageSelector}>
-          <span style={styles.language}>English</span>
-          <span style={styles.languageSeparator}> | </span>
-          <span style={styles.language}>Swahili</span>
+        <div className="text-center mt-6">
+          <p className="text-sm text-gray-600">
+            Already have an account?{" "}
+            <a
+              href="/login"
+              className="text-emerald-600 hover:underline font-medium"
+            >
+              Log In
+            </a>
+          </p>
         </div>
       </div>
     </div>
   );
-};
-
-const styles = {
-  /* keep your existing styles object exactly as you provided earlier */
-  container: {
-    minHeight: "100vh",
-    backgroundColor: "#f8f9fa",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "20px",
-    fontFamily: "arial, sans-serif",
-  },
-  header: {
-    textAlign: "center",
-    marginBottom: "40px",
-  },
-  logoContainer: {
-    display: "flex",
-    justifyContent: "center",
-    marginBottom: "20px",
-  },
-  logoCircle: {
-    width: "80px",
-    height: "80px",
-    borderRadius: "50%",
-    backgroundColor: "#2e7d32",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0 4px 8px rgba(46, 125, 50, 0.3)",
-    position: "relative",
-  },
-  title: {
-    fontSize: "2.5rem",
-    fontWeight: "bold",
-    color: "#2e7d32",
-    margin: "10px 0 10px 0",
-  },
-  subtitle: {
-    fontSize: "1.2rem",
-    color: "#666",
-    margin: "0",
-    fontStyle: "italic",
-  },
-  formContainer: {
-    backgroundColor: "white",
-    padding: "40px",
-    borderRadius: "10px",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-    width: "100%",
-    maxWidth: "400px",
-  },
-  formTitle: {
-    fontSize: "1.5rem",
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: "30px",
-    textAlign: "center",
-  },
-  form: {
-    width: "100%",
-  },
-  inputGroup: {
-    marginBottom: "20px",
-  },
-  input: {
-    width: "100%",
-    padding: "12px 15px",
-    border: "1px solid #ddd",
-    borderRadius: "5px",
-    fontSize: "16px",
-    boxSizing: "border-box",
-    transition: "border-color 0.3s ease",
-    outline: "none",
-  },
-  submitButton: {
-    width: "100%",
-    padding: "12px",
-    backgroundColor: "#2e7d32",
-    color: "white",
-    border: "none",
-    borderRadius: "5px",
-    fontSize: "16px",
-    fontWeight: "bold",
-    cursor: "pointer",
-    transition: "background-color 0.3s ease",
-    marginTop: "10px",
-  },
-  loginText: {
-    textAlign: "center",
-    marginTop: "20px",
-    color: "#666",
-  },
-  loginLink: {
-    color: "#2e7d32",
-    textDecoration: "none",
-    fontWeight: "bold",
-  },
-  languageSelector: {
-    textAlign: "center",
-    marginTop: "30px",
-    color: "#666",
-    fontSize: "14px",
-  },
-  language: {
-    cursor: "pointer",
-  },
-  languageSeparator: {
-    margin: "0 5px",
-  },
 };
 
 export default FarmerSignUp;

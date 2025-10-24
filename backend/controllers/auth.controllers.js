@@ -2,6 +2,9 @@ import bcryptjs from "bcryptjs";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
+import VendorProfile from "../models/vendorProfile.model.js"; // <-- NEW IMPORT
+import FarmerProfile from "../models/farmerProfile.model.js"; // <-- NEW IMPORT
+import RiderProfile from "../models/riderProfile.model.js"; // <-- NEW IMPORT
 
 dotenv.config();
 
@@ -11,11 +14,25 @@ const COOKIE_NAME = process.env.COOKIE_NAME || "mbogafresh_token";
 
 const COOKIE_OPTIONS = (req) => ({
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production", // only true in prod
+  secure: process.env.NODE_ENV === "production",
   sameSite: "lax",
   maxAge: parseDurationToMs(JWT_EXPIRES_IN),
   path: "/",
 });
+
+function parseDurationToMs(value) {
+  if (!value) return undefined;
+  if (typeof value === "number") return value;
+  const match = /^(\d+)([dhm])$/.exec(value);
+  if (!match) return undefined;
+  const n = Number(match[1]);
+  const unit = match[2];
+  if (unit === "d") return n * 24 * 60 * 60 * 1000;
+  if (unit === "h") return n * 60 * 60 * 1000;
+  if (unit === "m") return n * 60 * 1000;
+  return undefined;
+}
+
 function getRoleAvatarUrl(role) {
   const roleKey = (role || "unknown").toLowerCase();
   const map = {
@@ -32,24 +49,31 @@ function getRoleAvatarUrl(role) {
   return map[roleKey] || map.unknown;
 }
 
-function parseDurationToMs(value) {
-  if (!value) return undefined;
-  if (typeof value === "number") return value;
-  const match = /^(\d+)([dhm])$/.exec(value);
-  if (!match) return undefined;
-  const n = Number(match[1]);
-  const unit = match[2];
-  if (unit === "d") return n * 24 * 60 * 60 * 1000;
-  if (unit === "h") return n * 60 * 60 * 1000;
-  if (unit === "m") return n * 60 * 1000;
-  return undefined;
-}
-
 export const signup = async (req, res) => {
-  const { email, password, name, phone, role } = req.body;
+  const {
+    email,
+    password,
+    name,
+    phone,
+    role,
+    /* Profile Fields: */ businessName,
+    location,
+    farmName,
+    contactPerson,
+    idNumber,
+    vehicleType,
+    vehicleName,
+  } = req.body;
+
+  // Determine status: Buyers are active immediately, others are pending review.
+  const initialStatus =
+    role === "buyer" || role === "admin" ? "active" : "pending";
+
   try {
     if (!email || !password || !name || !phone || !role) {
-      throw new Error("All fields are required");
+      throw new Error(
+        "All base fields (email, password, name, phone, role) are required."
+      );
     }
 
     const userAlreadyExists = await User.findOne({ email });
@@ -64,30 +88,95 @@ export const signup = async (req, res) => {
       100000 + Math.random() * 900000
     ).toString();
 
-    // For development convenience we mark new users active so "requireAuth" won't block them.
-    // In production you may want 'pending' and an email verification step.
+    // 1. CREATE BASE USER
     const user = new User({
       email,
       phone,
       role,
       password: hashedPassword,
       name,
+      avatar: getRoleAvatarUrl(role), // Assign default avatar
       VerificationToken,
       VerificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      status: process.env.NODE_ENV === "production" ? "pending" : "active",
+      status: initialStatus,
+      isVerified: initialStatus === "active",
     });
 
     await user.save();
 
+    // 2. CREATE LINKED PROFILE BASED ON ROLE
+    const userId = user._id;
+
+    switch (role) {
+      case "vendor":
+        if (!businessName || !location) {
+          // Critical data missing
+          await User.deleteOne({ _id: userId }); // Rollback base user
+          return res.status(400).json({
+            success: false,
+            message: "Vendor signup requires business name and location.",
+          });
+        }
+        await VendorProfile.create({
+          user: userId,
+          businessName: businessName,
+          ownerName: name, // Use User's name
+          location: location,
+          // doc paths are handled by multer middleware which places files on req.files/req.file
+        });
+        break;
+
+      case "farmer":
+        if (!farmName || !location || !contactPerson) {
+          await User.deleteOne({ _id: userId }); // Rollback base user
+          return res.status(400).json({
+            success: false,
+            message:
+              "Farmer signup requires farm name, location, and contact person.",
+          });
+        }
+        await FarmerProfile.create({
+          user: userId,
+          farmName: farmName,
+          contactPerson: contactPerson,
+          location: location,
+          produceTypes: (req.body.produceTypes || "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+        });
+        break;
+
+      case "rider":
+        if (!idNumber || !vehicleType) {
+          await User.deleteOne({ _id: userId }); // Rollback base user
+          return res.status(400).json({
+            success: false,
+            message: "Rider signup requires ID number and vehicle type.",
+          });
+        }
+        await RiderProfile.create({
+          user: userId,
+          idNumber: idNumber,
+          vehicleType: vehicleType,
+          vehicleName: vehicleName,
+        });
+        break;
+
+      // Buyers and Admins do not require a separate profile model.
+    }
+
     res.status(201).json({
       success: true,
-      message: "User created successfully",
+      message: `Account created successfully. Status: ${user.status.toUpperCase()}`,
       user: {
         ...user._doc,
         password: undefined,
       },
     });
   } catch (error) {
+    // Log error code if available to help debug database constraint issues
+    console.error("Signup failed:", error);
     res.status(400).json({ success: false, message: error.message });
   }
 };
