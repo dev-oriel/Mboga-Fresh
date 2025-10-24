@@ -10,11 +10,12 @@ import {
   Plus,
   ClipboardList,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import Header from "../components/vendorComponents/Header";
 import { useVendorData } from "../context/VendorDataContext";
 import { useAuth } from "../context/AuthContext";
-import { fetchVendorNotifications } from "../api/orders";
+import { fetchVendorNotifications, fetchVendorOrders } from "../api/orders";
 
 // Icon mapping
 const iconComponents = {
@@ -31,46 +32,82 @@ const VendorDashboard = () => {
     notifications,
     handleWithdraw,
     setNotifications,
-    updateDashboardData,
+    updateDashboardData, // <-- Used to update live stats in context
     markNotificationAsRead,
     deleteReadNotifications,
   } = useVendorData();
 
   const { user, loadingAuth } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Initial loading for dashboard data
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Load notifications from API
-  const loadNotifications = useCallback(async () => {
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  // 1. Fetch Live Orders and Calculate Escrow Metrics
+  const loadDashboardMetrics = useCallback(async () => {
     if (!user || loadingAuth) return;
+
+    setLoading(true);
+    setError(null);
     try {
-      const data = await fetchVendorNotifications();
-      setNotifications(data);
-    } catch (err) {
-      console.error("Failed to fetch live notifications:", err);
-      setError("Failed to load notifications.");
-    }
-  }, [user, loadingAuth, setNotifications]);
+      const [ordersData, notifsData] = await Promise.all([
+        fetchVendorOrders(), // Fetches orders containing this vendor's products
+        fetchVendorNotifications(),
+      ]);
 
-  useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
+      // 1. Update Notifications
+      setNotifications(notifsData);
 
-  // Load dummy dashboard metrics (A proper implementation would have a dedicated API call here)
-  useEffect(() => {
-    if (user && !loadingAuth && dashboardData.ordersReceived === 0) {
-      // Simulate data update just once, when the context is still at initial zero state
-      updateDashboardData({
-        ordersReceived: 28,
-        pendingDeliveries: 5,
-        salesInEscrow: 14500,
-        earningsReleased: 7200,
+      // 2. ESCROW LOGIC CALCULATION:
+      let totalOrders = 0;
+      let pendingDeliveries = 0;
+      let salesInEscrow = 0;
+      let earningsReleased = 0;
+
+      ordersData.forEach((order) => {
+        const amount = order.totalAmount;
+
+        totalOrders++;
+
+        if (order.orderStatus === "Delivered") {
+          earningsReleased += amount; // Funds released after delivery
+        } else if (order.orderStatus !== "Cancelled") {
+          salesInEscrow += amount; // Funds held for Processing, QR Scanning, Confirmed, Shipped
+
+          if (order.orderStatus !== "Processing") {
+            pendingDeliveries++; // Focus on orders actively in the logistics chain
+          }
+        }
+
+        if (order.orderStatus === "Processing") {
+          pendingDeliveries++; // Count initial orders awaiting acceptance/processing
+        }
       });
-    }
-  }, [user, loadingAuth, dashboardData.ordersReceived, updateDashboardData]);
 
-  // HANDLERS (Defined directly for use in JSX, resolving Linter warnings)
+      // 3. Update Global Context State with live calculated data
+      updateDashboardData({
+        ordersReceived: totalOrders,
+        pendingDeliveries: pendingDeliveries,
+        salesInEscrow: salesInEscrow,
+        earningsReleased: earningsReleased,
+      });
+    } catch (err) {
+      console.error("Failed to load dashboard metrics:", err);
+      setError("Failed to load dashboard data. Please check API status.");
+    } finally {
+      setLoading(false);
+    }
+  }, [user, loadingAuth, setNotifications, updateDashboardData]);
+
+  useEffect(() => {
+    // Initial data load when user context is ready
+    if (user && !loadingAuth) {
+      loadDashboardMetrics();
+    }
+  }, [user, loadingAuth, loadDashboardMetrics]);
+
+  // HANDLERS
 
   const handleAddProduct = useCallback(
     () => navigate("/vendorproducts"),
@@ -111,8 +148,6 @@ const VendorDashboard = () => {
     deleteReadNotifications();
   };
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Header
@@ -136,23 +171,31 @@ const VendorDashboard = () => {
           </div>
         )}
 
+        {/* Loading Spinner */}
+        {loading && (
+          <div className="mb-6 flex justify-center text-gray-600">
+            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+            Updating live metrics...
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {[
             {
               title: "Orders Received",
-              value: dashboardData.ordersReceived,
+              value: dashboardData.ordersReceived.toLocaleString(),
               note: "Total orders processed",
             },
             {
               title: "Pending Deliveries",
-              value: dashboardData.pendingDeliveries,
-              note: "Need attention",
+              value: dashboardData.pendingDeliveries.toLocaleString(),
+              note: "Awaiting Rider/Confirmation",
             },
             {
               title: "Sales in Escrow",
               value: `Ksh ${dashboardData.salesInEscrow.toLocaleString()}`,
-              note: "Pending delivery confirmation",
+              note: "Funds held until delivery",
             },
             {
               title: "Earnings Released",
@@ -181,7 +224,7 @@ const VendorDashboard = () => {
           <div className="flex flex-wrap gap-4">
             <button
               onClick={handleAddProduct}
-              className="flex items-center bg-emerald-600 space-x-2 px-4 py-2 rounded-lg text-white font-medium shadow-sm hover:opacity-90 transition transform hover:scale-105"
+              className="flex items-center space-x-2 bg-emerald-600 px-4 py-2 rounded-lg text-white font-medium shadow-sm hover:opacity-90 transition transform hover:scale-105"
             >
               <Plus className="w-5 h-5" />
               <span>Add New Product</span>
@@ -230,7 +273,7 @@ const VendorDashboard = () => {
             </div>
           </div>
           <div className="space-y-4">
-            {notifications.length === 0 ? (
+            {notifications.length === 0 && !loading ? (
               <div className="text-gray-500 p-6 bg-white rounded-lg text-center border">
                 All caught up! No notifications to display.
               </div>
@@ -243,14 +286,14 @@ const VendorDashboard = () => {
                     className={`bg-white rounded-lg p-4 shadow-sm border border-gray-200 flex items-start space-x-4 transition ${
                       notification.isRead
                         ? "opacity-70 border-l-4 border-l-gray-300"
-                        : "border-l-4 border-l-green-600 hover:shadow-lg"
+                        : "border-l-4 border-l-emerald-600 hover:shadow-lg"
                     }`}
                   >
                     <div
                       className={`w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0 ${
                         notification.isRead
                           ? "bg-gray-100 text-gray-500"
-                          : "bg-green-100 text-green-600"
+                          : "bg-emerald-100 text-emerald-600"
                       }`}
                     >
                       <IconComponent className="w-5 h-5" />
@@ -282,7 +325,7 @@ const VendorDashboard = () => {
                     {!notification.isRead ? (
                       <button
                         onClick={() => markNotificationAsRead(notification.id)}
-                        className="text-xs font-semibold text-green-600 hover:text-green-800 ml-4 flex items-center space-x-1 flex-shrink-0"
+                        className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 ml-4 flex items-center space-x-1 flex-shrink-0"
                         title="Mark as Read"
                       >
                         <CheckCircle className="w-4 h-4" />
