@@ -322,3 +322,22 @@ export const acceptDeliveryTask = async (req, res) => {
     res.status(500).json({ message: "Failed to accept delivery task." });
   }
 };
+
+export const getTotalEscrowBalance = async (req, res) => {
+  try {
+    // Find orders that are NOT Delivered and NOT Cancelled
+    const ordersInEscrow = await Order.find({
+      orderStatus: { $nin: ["Delivered", "Cancelled"] },
+    }).select("totalAmount");
+
+    const totalEscrow = ordersInEscrow.reduce(
+      (sum, order) => sum + order.totalAmount,
+      0
+    );
+
+    res.json({ totalEscrow: totalEscrow });
+  } catch (error) {
+    console.error("Error fetching total escrow balance:", error);
+    res.status(500).json({ message: "Failed to calculate escrow balance." });
+  }
+};
