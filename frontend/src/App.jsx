@@ -23,6 +23,7 @@ import OrderPlaced from "./pages/OrderPlaced";
 import CategoryPage from "./pages/CategoryPage";
 import VendorPage from "./pages/VendorPage";
 import BuyerProfile from "./pages/BuyerProfile.jsx";
+import OrderDetails from "./pages/OrderDetails";
 
 // Footer Info pages
 import Contact from "./pages/Contact.jsx";
@@ -46,6 +47,7 @@ import RiderProfile from "./rider/RiderProfileSettings.jsx";
 import RiderEarningsAndHistory from "./rider/RiderEarningsAndHistory.jsx";
 import RiderDeliveryDetail from "./rider/RiderDeliveryDetail.jsx";
 import RiderDeliveryRoute from "./rider/RiderDeliveryRoute.jsx";
+import RiderOrderConfirmation from "./rider/RiderOrderConfirmation.jsx";
 
 // Farmer pages
 import SupplierDashboard from "./farmer/SupplierDashboard.jsx";
@@ -118,6 +120,7 @@ function App() {
               <Route path="/cart" element={<ShoppingCart />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/profile" element={<BuyerProfile />} />
+              <Route path="/orders/:orderId" element={<OrderDetails />} />
               <Route path="/order-placed" element={<OrderPlaced />} />
             </Route>
 
@@ -153,6 +156,10 @@ function App() {
             {/* Rider (ONLY accessible by Rider/Admin) */}
             <Route element={<PrivateRoute allowedRoles={["rider", "admin"]} />}>
               <Route path="/riderdashboard" element={<RiderDashboard />} />
+              <Route
+                path="/rider-confirm-delivery"
+                element={<RiderOrderConfirmation />}
+              />
               <Route
                 path="/riderdeliveryqueue"
                 element={<RiderDeliveryQueue />}

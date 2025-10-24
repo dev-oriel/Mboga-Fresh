@@ -1,4 +1,4 @@
-// backend/controllers/order.controller.js - MODIFIED
+// backend/controllers/order.controller.js - FINAL VERSION
 
 import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
@@ -22,17 +22,17 @@ export const placeOrder = async (req, res) => {
 
     // 1. Validate items and calculate total amount (security check)
     for (const item of items) {
-      // Validate MongoDB ObjectId (Fix from previous step)
+      // Validate MongoDB ObjectId
       if (!mongoose.Types.ObjectId.isValid(item.product)) {
         return res
           .status(400)
           .json({ message: `Invalid Product ID format: ${item.product}` });
       }
 
-      // Fetch product and explicitly select the vendor field
+      // Fetch product and explicitly select the required fields, including imagePath
       const product = await Product.findById(item.product).select(
-        "price vendorId name"
-      ); // <-- MODIFIED: Use vendorId from Product model
+        "price vendorId name imagePath"
+      );
 
       if (!product) {
         return res
@@ -40,18 +40,12 @@ export const placeOrder = async (req, res) => {
           .json({ message: `Product not found: ${item.product}` });
       }
 
-      // The Product model uses 'vendorId' (type: String) but the Order model expects ObjectId.
-      // We must use the Product's 'vendorId' field.
-      if (!product.vendorId) {
-        return res
-          .status(500)
-          .json({ message: `Product ${product.name} is missing a vendorId.` });
-      }
-
-      // Ensure vendorId is a valid ObjectId before saving to the Order (best practice, even if stored as string in Product)
-      if (!mongoose.Types.ObjectId.isValid(product.vendorId)) {
+      if (
+        !product.vendorId ||
+        !mongoose.Types.ObjectId.isValid(product.vendorId)
+      ) {
         return res.status(500).json({
-          message: `Vendor ID for product ${product.name} is invalid.`,
+          message: `Vendor ID for product ${product.name} is invalid or missing.`,
         });
       }
 
@@ -64,12 +58,13 @@ export const placeOrder = async (req, res) => {
         name: product.name,
         quantity: item.quantity,
         price: itemPrice,
-        vendor: product.vendorId, // <-- CRUCIAL FIX: Assign the required vendor ID
+        vendor: product.vendorId,
+        image: product.imagePath, // CRITICAL FIX: Use the correct field name
       });
     }
 
     // Add a small shipping fee simulation
-    const SHIPPING_FEE = 300;
+    const SHIPPING_FEE = 210;
     totalAmount += SHIPPING_FEE;
 
     // 2. Create the Order
@@ -90,7 +85,6 @@ export const placeOrder = async (req, res) => {
     });
   } catch (error) {
     console.error("Order placement error:", error);
-    // Log the detailed validation error structure for better debugging
     res.status(500).json({
       message: "Failed to place order due to validation issues.",
       details: error.message,
@@ -105,10 +99,37 @@ export const getBuyerOrders = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
       .sort({ createdAt: -1 })
-      .select("-items.vendor -items.product"); // Exclude redundant refs for history list
+      .select("-__v -updatedAt");
 
     res.json(orders);
   } catch (error) {
+    console.error("Error fetching buyer orders:", error);
     res.status(500).json({ message: "Failed to fetch order history." });
+  }
+};
+
+/**
+ * Get details for a specific order by ID.
+ */
+export const getOrderDetailsById = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ message: "Invalid order ID format." });
+    }
+
+    const order = await Order.findOne({ _id: orderId, user: req.user._id });
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found or you don't have permission to view it.",
+      });
+    }
+
+    res.json(order);
+  } catch (error) {
+    console.error("Error fetching order details:", error);
+    res.status(500).json({ message: "Failed to fetch order details." });
   }
 };
