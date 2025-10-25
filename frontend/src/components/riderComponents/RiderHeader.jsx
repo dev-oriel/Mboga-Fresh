@@ -38,6 +38,7 @@ const RiderHeader = ({ userAvatarUrl = "" }) => {
           Mboga Fresh
         </h2>
       </div>
+   
 
       <nav className="hidden md:flex items-center gap-3">
         {navItems.map((item) => (
