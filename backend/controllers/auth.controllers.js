@@ -2,9 +2,9 @@ import bcryptjs from "bcryptjs";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
-import VendorProfile from "../models/vendorProfile.model.js"; // <-- NEW IMPORT
-import FarmerProfile from "../models/farmerProfile.model.js"; // <-- NEW IMPORT
-import RiderProfile from "../models/riderProfile.model.js"; // <-- NEW IMPORT
+import VendorProfile from "../models/vendorProfile.model.js";
+import FarmerProfile from "../models/farmerProfile.model.js";
+import RiderProfile from "../models/riderProfile.model.js";
 
 dotenv.config();
 
@@ -12,8 +12,11 @@ const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const COOKIE_NAME = process.env.COOKIE_NAME || "mbogafresh_token";
 
+// --- BASE COOKIE OPTIONS ---
+// This compliant setting works for localhost cross-port communication.
 const COOKIE_OPTIONS = (req) => ({
   httpOnly: true,
+  // Secure must be false in development (localhost)
   secure: process.env.NODE_ENV === "production",
   sameSite: "lax",
   maxAge: parseDurationToMs(JWT_EXPIRES_IN),
@@ -63,9 +66,8 @@ export const signup = async (req, res) => {
     idNumber,
     vehicleType,
     vehicleName,
-  } = req.body;
+  } = req.body; // Determine status: Buyers are active immediately, others are pending review.
 
-  // Determine status: Buyers are active immediately, others are pending review.
   const initialStatus =
     role === "buyer" || role === "admin" ? "active" : "pending";
 
@@ -86,9 +88,8 @@ export const signup = async (req, res) => {
     const hashedPassword = await bcryptjs.hash(password, 10);
     const VerificationToken = Math.floor(
       100000 + Math.random() * 900000
-    ).toString();
+    ).toString(); // 1. CREATE BASE USER
 
-    // 1. CREATE BASE USER
     const user = new User({
       email,
       phone,
@@ -102,15 +103,13 @@ export const signup = async (req, res) => {
       isVerified: initialStatus === "active",
     });
 
-    await user.save();
+    await user.save(); // 2. CREATE LINKED PROFILE BASED ON ROLE
 
-    // 2. CREATE LINKED PROFILE BASED ON ROLE
     const userId = user._id;
 
     switch (role) {
       case "vendor":
         if (!businessName || !location) {
-          // Critical data missing
           await User.deleteOne({ _id: userId }); // Rollback base user
           return res.status(400).json({
             success: false,
@@ -122,7 +121,6 @@ export const signup = async (req, res) => {
           businessName: businessName,
           ownerName: name, // Use User's name
           location: location,
-          // doc paths are handled by multer middleware which places files on req.files/req.file
         });
         break;
 
@@ -161,9 +159,7 @@ export const signup = async (req, res) => {
           vehicleType: vehicleType,
           vehicleName: vehicleName,
         });
-        break;
-
-      // Buyers and Admins do not require a separate profile model.
+        break; // Buyers and Admins do not require a separate profile model.
     }
 
     res.status(201).json({
@@ -183,42 +179,33 @@ export const signup = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    // We explicitly exclude 'role' from destructuring, as we will find the user regardless of role.
     const { email, password } = req.body;
 
     if (!email || !password) {
       return res
         .status(400)
         .json({ success: false, message: "Email and password are required" }); // MODIFIED MESSAGE
-    }
+    } // 1. Find user by email (regardless of role)
 
-    // 1. Find user by email (regardless of role)
     const user = await User.findOne({ email }).lean();
     if (!user) {
       return res
         .status(401)
         .json({ success: false, message: "Invalid credentials" });
-    }
+    } // 2. Validate password
 
-    // 2. Validate password
     const valid = await bcryptjs.compare(password, user.password);
     if (!valid) {
       return res
         .status(401)
         .json({ success: false, message: "Invalid credentials" });
-    }
+    } // 3. REMOVED: Previous code had a block to check if the provided role matched the user's role. // We are now REMOVING this role-specific check to allow any user to log in. // 4. Create token with the user's *actual* role from the database
 
-    // 3. REMOVED: Previous code had a block to check if the provided role matched the user's role.
-    // We are now REMOVING this role-specific check to allow any user to log in.
-
-    // 4. Create token with the user's *actual* role from the database
     const payload = { id: user._id, role: user.role };
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN }); // FIX: Revert to the original, non-overridden COOKIE_OPTIONS (Lax, Secure: false in dev)
 
-    // set cookie
-    res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS(req));
+    res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS(req)); // don't send password back
 
-    // don't send password back
     const { password: _p, ...userSafe } = user;
     return res.json({ success: true, message: "Logged in", user: userSafe });
   } catch (err) {
@@ -272,17 +259,15 @@ export const createAdminAccount = async (req, res) => {
       return res
         .status(400)
         .json({ success: false, message: "Email and password are required" });
-    }
+    } // Security Check 1: Do not allow creation if an admin already exists
 
-    // Security Check 1: Do not allow creation if an admin already exists
     const existingAdmin = await User.findOne({ role: "admin" });
     if (existingAdmin) {
       return res
         .status(403)
         .json({ success: false, message: "An admin account already exists." });
-    }
+    } // Security Check 2: Do not allow creation if user already exists
 
-    // Security Check 2: Do not allow creation if user already exists
     const userAlreadyExists = await User.findOne({ email });
     if (userAlreadyExists) {
       return res.status(400).json({

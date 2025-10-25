@@ -1,15 +1,27 @@
-import axios from "axios"; // <-- Directly import base axios
+// frontend/src/api/orders.js
 
-const API_URL_BASE = `${
-  import.meta.env.VITE_API_BASE || "http://localhost:5000"
-}/api/orders`;
+import axios from "axios";
+
+// Dynamic Base URL Resolver (Pasted into each file for independence)
+const getBaseUrl = () => {
+  const currentHost = window.location.hostname;
+  const API_PORT = 5000;
+
+  if (currentHost === "localhost" || currentHost === "127.0.0.1") {
+    return `http://localhost:${API_PORT}`;
+  } else {
+    return `http://${currentHost}:${API_PORT}`;
+  }
+};
+
+const BASE = getBaseUrl();
+const API_URL_BASE = `${BASE}/api/orders`;
 
 /**
  * Sends order data to the backend for logging and simulated payment.
  */
 export async function placeOrderRequest(payload) {
   const res = await axios.post(API_URL_BASE, payload, {
-    // CRUCIAL: Must include credentials for session/cookie auth
     withCredentials: true,
     headers: { "Content-Type": "application/json" },
   });
@@ -21,7 +33,7 @@ export async function placeOrderRequest(payload) {
  */
 export async function fetchBuyerOrders() {
   const res = await axios.get(`${API_URL_BASE}/my-orders`, {
-    withCredentials: true, // CRUCIAL
+    withCredentials: true,
   });
   return res.data;
 }

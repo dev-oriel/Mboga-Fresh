@@ -1,5 +1,19 @@
 // frontend/src/api/auth.js
-const BASE = import.meta.env.VITE_API_BASE || "";
+
+// Dynamic Base URL Resolver (Pasted into each file for independence)
+const getBaseUrl = () => {
+  const currentHost = window.location.hostname;
+  const API_PORT = 5000;
+
+  if (currentHost === "localhost" || currentHost === "127.0.0.1") {
+    return `http://localhost:${API_PORT}`;
+  } else {
+    return `http://${currentHost}:${API_PORT}`;
+  }
+};
+
+const BASE = getBaseUrl();
+const API_URL_BASE = `${BASE}/api/auth`;
 
 async function handleResponse(res) {
   const text = await res.text();
@@ -13,9 +27,8 @@ async function handleResponse(res) {
   if (res.ok) {
     // Return parsed JSON (or raw text) directly
     return typeof data === "object" ? data : { data };
-  }
+  } // Normalize error object so callers can read `.message`
 
-  // Normalize error object so callers can read `.message`
   if (typeof data === "object") {
     throw {
       message: data.message || data.error || JSON.stringify(data),
@@ -33,7 +46,7 @@ async function handleResponse(res) {
 }
 
 export async function loginRequest(email, password, role = "buyer") {
-  const res = await fetch(`${BASE}/api/auth/login`, {
+  const res = await fetch(`${API_URL_BASE}/login`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -43,14 +56,14 @@ export async function loginRequest(email, password, role = "buyer") {
 }
 
 export async function meRequest() {
-  const res = await fetch(`${BASE}/api/auth/me`, {
+  const res = await fetch(`${API_URL_BASE}/me`, {
     credentials: "include",
   });
   return handleResponse(res);
 }
 
 export async function logoutRequest() {
-  const res = await fetch(`${BASE}/api/auth/logout`, {
+  const res = await fetch(`${API_URL_BASE}/logout`, {
     method: "POST",
     credentials: "include",
   });
@@ -59,7 +72,7 @@ export async function logoutRequest() {
 
 // JSON signup (no files)
 export async function signupJson(payload) {
-  const res = await fetch(`${BASE}/api/auth/signup`, {
+  const res = await fetch(`${API_URL_BASE}/signup`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -70,7 +83,7 @@ export async function signupJson(payload) {
 
 // FormData signup (files). DO NOT set Content-Type header.
 export async function signupWithFormData(formData) {
-  const res = await fetch(`${BASE}/api/auth/signup`, {
+  const res = await fetch(`${API_URL_BASE}/signup`, {
     method: "POST",
     credentials: "include",
     body: formData,

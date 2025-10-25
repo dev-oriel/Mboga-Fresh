@@ -1,13 +1,24 @@
+// frontend/src/api/admin.js
+
 import axios from "axios";
 
-const BASE_URL = `${
-  import.meta.env.VITE_API_BASE || "http://localhost:5000"
-}/api/admin`;
+// Dynamic Base URL Resolver (Pasted into each file for independence)
+const getBaseUrl = () => {
+  const currentHost = window.location.hostname;
+  const API_PORT = 5000;
+
+  if (currentHost === "localhost" || currentHost === "127.0.0.1") {
+    return `http://localhost:${API_PORT}`;
+  } else {
+    return `http://${currentHost}:${API_PORT}`;
+  }
+};
+
+const BASE = getBaseUrl();
+const BASE_URL = `${BASE}/api/admin`;
 
 /**
  * Fetches all products (retail and bulk) for the Admin panel.
- * @param {string} type - 'all', 'retail', or 'bulk'
- * @param {string} q - search query
  */
 export const fetchAdminProducts = async (type = "all", q = "") => {
   const response = await axios.get(`${BASE_URL}/products`, {
@@ -19,12 +30,8 @@ export const fetchAdminProducts = async (type = "all", q = "") => {
 
 /**
  * Updates the status (Suspended/In Stock) of a specific product.
- * @param {string} id - Product ID
- * @param {string} type - 'Retail' or 'Bulk'
- * @param {boolean} isSuspended - true to suspend, false to activate
  */
 export const updateProductStatus = async (id, type, isSuspended) => {
-  // Note: The URL parameter 'type' should be lowercase for the backend path
   const urlType = type.toLowerCase();
 
   const response = await axios.patch(
@@ -38,6 +45,3 @@ export const updateProductStatus = async (id, type, isSuspended) => {
   );
   return response.data;
 };
-
-// You can add other admin API functions here (e.g., fetchUsers, resolveDispute)
-// For now, listAllProducts is enough for ProductManagement.jsx
