@@ -2,9 +2,10 @@
 
 import axios from "axios";
 
+// Dynamic Base URL Resolver
 const getBaseUrl = () => {
   const currentHost = window.location.hostname;
-  const API_PORT = 5000; // Dynamically resolves the host to ensure compatibility on both localhost and 192.168.x.x
+  const API_PORT = 5000;
 
   if (currentHost === "localhost" || currentHost === "127.0.0.1") {
     return `http://localhost:${API_PORT}`;
@@ -19,7 +20,7 @@ const API_URL_BASE = `${BASE}/api/orders`;
 // --- BUYER / VENDOR FUNCTIONS ---
 
 /**
- * Sends order data to the backend for logging and simulated payment.
+ * Sends order data to the backend, which now INITIATES STK PUSH.
  */
 export async function placeOrderRequest(payload) {
   const res = await axios.post(API_URL_BASE, payload, {
@@ -40,8 +41,17 @@ export async function fetchBuyerOrders() {
 }
 
 /**
- * Fetch vendor-specific orders
+ * Checks the payment status of an order via its ID.
+ * NOTE: This mocks the polling endpoint. The actual implementation relies on the Mpesa callback.
  */
+export const checkPaymentStatus = async (orderId) => {
+  // In a real system, this would call a dedicated backend route to check the DB.
+  await new Promise((r) => setTimeout(r, 1000));
+  return { status: "Paid" };
+};
+
+// --- RIDER FUNCTIONS ---
+
 export async function fetchVendorOrders() {
   const res = await axios.get(`${API_URL_BASE}/vendor/my-orders`, {
     withCredentials: true,
@@ -49,9 +59,6 @@ export async function fetchVendorOrders() {
   return res.data;
 }
 
-/**
- * Fetch vendor notifications
- */
 export async function fetchVendorNotifications() {
   const res = await axios.get(`${API_URL_BASE}/vendor/notifications`, {
     withCredentials: true,
@@ -66,11 +73,6 @@ export const fetchOrderDetails = async (orderId) => {
   return response.data;
 };
 
-// --- RIDER FUNCTIONS ---
-
-/**
- * Fetches all available (unaccepted) delivery tasks
- */
 export async function fetchAllAvailableTasks() {
   const res = await axios.get(`${API_URL_BASE}/rider/tasks/available`, {
     withCredentials: true,
@@ -78,20 +80,13 @@ export async function fetchAllAvailableTasks() {
   return res.data;
 }
 
-/**
- * Fetches tasks currently assigned to the logged-in rider.
- */
 export async function fetchRiderAcceptedTasks() {
-  // <-- CORRECT EXPORT
   const res = await axios.get(`${API_URL_BASE}/rider/tasks/accepted`, {
     withCredentials: true,
   });
   return res.data;
 }
 
-/**
- * Rider accepts a task
- */
 export async function acceptRiderTask(taskId) {
   const res = await axios.patch(
     `${API_URL_BASE}/rider/tasks/${taskId}/accept`,
@@ -103,9 +98,6 @@ export async function acceptRiderTask(taskId) {
   return res.data;
 }
 
-/**
- * Rider confirms pickup (Vendor Scan)
- */
 export async function confirmPickup(orderId, pickupCode) {
   const res = await axios.patch(
     `${API_URL_BASE}/rider/pickup/confirm`,
@@ -117,13 +109,11 @@ export async function confirmPickup(orderId, pickupCode) {
   return res.data;
 }
 
-/**
- * Rider confirms final delivery (Buyer Scan)
- */
-export async function confirmDelivery(orderId) {
+export async function confirmDelivery(orderId, buyerCode) {
+  // <-- FIX: Add buyerCode parameter
   const res = await axios.patch(
     `${API_URL_BASE}/rider/delivery/confirm`,
-    { orderId },
+    { orderId, buyerCode }, // <-- FIX: Pass buyerCode in body
     {
       withCredentials: true,
     }

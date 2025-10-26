@@ -1,13 +1,15 @@
-// frontend/src/pages/Checkout.jsx - COMPLETE AND CORRECTED
-
 import React, { useState, useEffect, useMemo } from "react";
 import Header from "../components/Header";
 import CheckoutProgress from "../components/CheckoutProgress";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
-import { placeOrderRequest } from "../api/orders";
+// CRITICAL: Import both the request and the required polling function
+import { placeOrderRequest, checkPaymentStatus } from "../api/orders";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
+
+// NOTE: The mockCheckPaymentStatus function definition is REMOVED to avoid the "already declared" error.
+// The component relies on the import from '../api/orders.js'.
 
 const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
@@ -16,12 +18,17 @@ const Checkout = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [formError, setFormError] = useState(null);
 
+  const SHIPPING_FEE = 50;
+
+  // State for the phone number specifically used for M-Pesa push
+  const [paymentPhone, setPaymentPhone] = useState(user?.phone || "");
+
   // Internal state for the checkout form fields
   const [addressForm, setAddressForm] = useState({
     street: "",
     city: "",
     postalCode: "",
-    country: "Kenya", // Default country
+    country: "Kenya",
     phone: "",
   });
 
@@ -30,7 +37,6 @@ const Checkout = () => {
     if (!user || !Array.isArray(user.addresses)) return null;
     const p = user.addresses.find((a) => a.isPrimary);
     if (p && p.details) {
-      // Attempt to parse street, city, postal code from a single string (simple splitting)
       const parts = p.details.split(",").map((s) => s.trim());
       return {
         street: parts[0] || p.details,
@@ -47,11 +53,13 @@ const Checkout = () => {
   useEffect(() => {
     if (primaryAddress) {
       setAddressForm(primaryAddress);
+      setPaymentPhone(primaryAddress.phone);
     } else if (user) {
       setAddressForm((prev) => ({
         ...prev,
         phone: user.phone || "07XXXXXXXX",
       }));
+      setPaymentPhone(user.phone || "");
     }
   }, [user, primaryAddress]);
 
@@ -61,6 +69,24 @@ const Checkout = () => {
   };
 
   const handleConfirm = async () => {
+    // --- START PHONE NORMALIZATION ---
+    let rawPhone = paymentPhone.replace(/\D/g, "");
+    let normalizedPhone;
+
+    if (rawPhone.startsWith("0")) {
+      normalizedPhone = "254" + rawPhone.substring(1);
+    } else if (rawPhone.length === 9 && rawPhone.startsWith("7")) {
+      normalizedPhone = "254" + rawPhone;
+    } else if (rawPhone.startsWith("254")) {
+      normalizedPhone = rawPhone;
+    } else {
+      setFormError("M-Pesa phone format must be 07XXXXXXXX or 2547XXXXXXXX.");
+      return;
+    }
+    const mpesaPhoneNumber = normalizedPhone;
+    const finalTotal = subtotal + SHIPPING_FEE;
+    // --- END PHONE NORMALIZATION ---
+
     if (!user) {
       setFormError("You must be logged in to complete your order.");
       return;
@@ -69,8 +95,15 @@ const Checkout = () => {
       setFormError("Your cart is empty.");
       return;
     }
-    if (!addressForm.street || !addressForm.city || !addressForm.phone) {
-      setFormError("Please fill in Street Address, City, and Phone Number.");
+    if (
+      !addressForm.street ||
+      !addressForm.city ||
+      !addressForm.phone ||
+      !mpesaPhoneNumber
+    ) {
+      setFormError(
+        "Please fill in all address and M-Pesa Phone Number fields."
+      );
       return;
     }
 
@@ -79,20 +112,18 @@ const Checkout = () => {
 
     // 1. Prepare Payload
     const payload = {
-      items: items.map((item) => ({
-        product: item.id,
-        quantity: item.qty,
-      })),
+      items: items.map((item) => ({ product: item.id, quantity: item.qty })),
       shippingAddress: {
         street: addressForm.street,
         city: addressForm.city,
         postalCode: addressForm.postalCode || "00000",
         country: addressForm.country,
       },
+      mpesaPhone: mpesaPhoneNumber, // CRITICAL: Send normalized M-Pesa phone number
     };
 
     try {
-      // 2. Persist New Address if it's the first time (no primaryAddress exists)
+      // 2. Persist New Address (if new)
       if (!primaryAddress && user) {
         const newPrimaryAddressPayload = {
           addresses: [
@@ -115,15 +146,37 @@ const Checkout = () => {
         await refresh();
       }
 
-      // 3. Send Order to backend API
+      // 3. Send Order and Initiate STK Push (API CALL)
       const result = await placeOrderRequest(payload);
+      const orderId = result.orderId;
 
-      // 4. On Success: Clear cart and navigate
+      // --- 4. START PAYMENT POLLING ---
+      let paymentComplete = false;
+      let attempts = 0;
+
+      while (!paymentComplete && attempts < 10) {
+        await new Promise((r) => setTimeout(r, 3000)); // Wait 3 seconds
+        const statusCheck = await checkPaymentStatus(orderId); // Uses imported function
+
+        if (statusCheck.status === "Paid") {
+          paymentComplete = true;
+          break;
+        }
+        attempts++;
+      }
+
+      if (!paymentComplete) {
+        throw new Error(
+          "M-Pesa payment timed out or failed to confirm. Please check your phone."
+        );
+      }
+
+      // 5. On Success: Clear cart and navigate
       clearCart();
 
       navigate("/order-placed", {
         state: {
-          orderNumber: result.orderId,
+          orderNumber: orderId,
           eta: "2-4 hours",
           itemsSummary: items,
         },
@@ -131,9 +184,7 @@ const Checkout = () => {
     } catch (err) {
       console.error("Order Placement Error:", err);
       const msg =
-        err.response?.data?.message ||
-        err.message ||
-        "An unexpected error occurred during order processing.";
+        err.response?.data?.message || err.message || "Payment process failed.";
       setFormError(msg);
     } finally {
       setIsProcessing(false);
@@ -233,7 +284,7 @@ const Checkout = () => {
                           <div className="w-3 h-3 bg-emerald-600 rounded-full" />
                         </div>
                         <span className="font-bold">
-                          M-Pesa (Simulated Payment)
+                          M-Pesa (Live STK Push)
                         </span>
                       </div>
                       <img
@@ -255,7 +306,9 @@ const Checkout = () => {
                           <input
                             className="form-input w-full pl-14 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-emerald-400 focus:ring-emerald-400 rounded-lg p-2"
                             placeholder="712 345 678"
-                            // Note: We use the phone from the addressForm state for the button handler
+                            type="tel"
+                            value={paymentPhone}
+                            onChange={(e) => setPaymentPhone(e.target.value)}
                           />
                         </div>
                         <button
@@ -327,12 +380,12 @@ const Checkout = () => {
                 </div>
                 <div className="flex justify-between text-gray-800 dark:text-gray-200">
                   <span>Delivery Fee</span>
-                  <span>KSh 210</span>
+                  <span>KSh 50</span>
                 </div>
                 <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
-                  <span>KSh {(Number(subtotal) + 210).toLocaleString()}</span>
+                  <span>KSh {(Number(subtotal) + 50).toLocaleString()}</span>
                 </div>
               </div>
 

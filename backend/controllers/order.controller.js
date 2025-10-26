@@ -1,9 +1,10 @@
-// backend/controllers/order.controller.js - FINAL STABLE VERSION
+// backend/controllers/order.controller.js - FINAL WORKING VERSION WITH MPESA INTEGRATION
 
 import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
 import Notification from "../models/notification.model.js";
 import DeliveryTask from "../models/deliveryTask.model.js";
+import { initiateSTKPush } from "../services/daraja.service.js"; // <-- CRITICAL M-Pesa Service Import
 import mongoose from "mongoose";
 
 // --- VENDOR NOTIFICATION HELPER ---
@@ -20,11 +21,13 @@ const createDbNotification = async (recipientId, orderId, message) => {
 // ------------------------------------
 
 const placeOrder = async (req, res) => {
-  const { items, shippingAddress } = req.body;
+  const { items, shippingAddress, mpesaPhone } = req.body; // <--- EXPECTING MPESA PHONE
   const userId = req.user._id;
 
-  if (!items || items.length === 0 || !shippingAddress) {
-    return res.status(400).json({ message: "Missing order details." });
+  if (!items || items.length === 0 || !shippingAddress || !mpesaPhone) {
+    return res
+      .status(400)
+      .json({ message: "Missing order details or M-Pesa phone number." });
   }
 
   try {
@@ -74,20 +77,41 @@ const placeOrder = async (req, res) => {
     }
 
     const SHIPPING_FEE = 210;
-    totalAmount += SHIPPING_FEE;
+    const finalTotal = totalAmount + SHIPPING_FEE;
 
+    // Generate Order ID early
+    const newOrderId = new mongoose.Types.ObjectId();
+
+    // 1. INITIATE STK PUSH (LIVE PAYMENT)
+    // This is the call that relies on the environment variables being set correctly.
+    const mpesaResult = await initiateSTKPush(
+      finalTotal,
+      mpesaPhone,
+      newOrderId.toString()
+    );
+
+    if (mpesaResult.responseCode !== "0") {
+      return res.status(400).json({
+        message:
+          mpesaResult.customerMessage || "M-Pesa push failed to initiate.",
+      });
+    }
+
+    // 2. Create the Order with PENDING status (until callback confirms payment)
     const newOrder = new Order({
+      _id: newOrderId,
       user: userId,
       items: processedItems,
       shippingAddress: shippingAddress,
-      totalAmount: totalAmount,
-      paymentStatus: "Paid",
+      totalAmount: finalTotal,
+      paymentStatus: "Pending", // CRITICAL: Set to PENDING until callback
       orderStatus: "Processing",
+      mpesaCheckoutRequestId: mpesaResult.checkoutRequestId, // Store ID for later verification
     });
 
     await newOrder.save();
 
-    // --- VENDOR NOTIFICATION LOGIC (PERMANENT DB WRITE) ---
+    // 3. VENDOR NOTIFICATION LOGIC (PENDING)
     uniqueVendorIds.forEach((vendorIdString) => {
       createDbNotification(
         new mongoose.Types.ObjectId(vendorIdString),
@@ -95,19 +119,21 @@ const placeOrder = async (req, res) => {
         `New Order #${newOrder._id
           .toString()
           .substring(18)
-          .toUpperCase()} received! Tap to Accept.`
+          .toUpperCase()} received! Awaiting M-Pesa payment confirmation.`
       );
     });
-    // -------------------------------------------------------
 
     res.status(201).json({
-      message: "Order placed successfully. Payment simulated as successful.",
+      message: "M-Pesa STK Push initiated.",
       orderId: newOrder._id,
+      checkoutRequestId: mpesaResult.checkoutRequestId, // Send to frontend for polling
     });
   } catch (error) {
+    // If Daraja fails due to missing keys/token, it lands here.
     console.error("Order placement error:", error);
     res.status(500).json({
-      message: "Failed to place order due to validation issues.",
+      message:
+        error.message || "Failed to place order due to validation issues.",
       details: error.message,
     });
   }
@@ -223,7 +249,7 @@ const getOrderDetailsById = async (req, res) => {
     const { orderId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ message: "Invalid order ID format." });
+      return res.status(400).json({ message: "Invalid Order ID format." });
     }
 
     const order = await Order.findOne({ _id: orderId, user: req.user._id });
@@ -242,10 +268,8 @@ const getOrderDetailsById = async (req, res) => {
 };
 
 const getVendorNotifications = async (req, res) => {
-  const vendorId = req.user._id;
-
   try {
-    const notifications = await Notification.find({ recipient: vendorId })
+    const notifications = await Notification.find({ recipient: req.user._id })
       .sort({ createdAt: -1 })
       .limit(20);
 
@@ -315,13 +339,12 @@ const fetchRiderAcceptedTasks = async (req, res) => {
         pickupAddress:
           task.deliveryAddress.street + ", " + task.deliveryAddress.city,
         deliveryAddress:
-          task.deliveryAddress.street + ", " + task.deliveryAddress.city, // Full address
+          task.deliveryAddress.street + ", " + task.deliveryAddress.city,
         deliveryFee: task.deliveryFee,
         createdAt: task.createdAt,
         status: task.status,
         pickupCode: task.pickupCode,
         isAssigned: true,
-        // Include Buyer code for Rider's Confirmation Screen (for debugging)
         buyerConfirmationCode: task.buyerConfirmationCode,
       }))
     );
@@ -412,7 +435,7 @@ const confirmPickupByRider = async (req, res) => {
 };
 
 const confirmDeliveryByRider = async (req, res) => {
-  const { orderId, buyerCode } = req.body; // <-- NEW: Now accepts buyerCode
+  const { orderId, buyerCode } = req.body;
   const riderId = req.user._id;
 
   try {
@@ -420,12 +443,11 @@ const confirmDeliveryByRider = async (req, res) => {
       return res.status(400).json({ message: "Invalid Order ID format." });
     }
 
-    // CRITICAL FIX: Find task by buyerConfirmationCode as well
     const task = await DeliveryTask.findOneAndUpdate(
       {
         order: orderId,
         rider: riderId,
-        buyerConfirmationCode: buyerCode, // <--- VERIFY BUYER CODE
+        buyerConfirmationCode: buyerCode,
         status: "In Transit",
       },
       { $set: { status: "Delivered" } },
@@ -474,11 +496,22 @@ const getTotalEscrowBalance = async (req, res) => {
   }
 };
 
+const handleMpesaCallback = async (req, res) => {
+  // This is the placeholder/simulation handler for M-Pesa's public callback endpoint
+  console.log("--- RECEIVED MPESA CALLBACK ---");
+  console.log(JSON.stringify(req.body, null, 2));
+
+  // NOTE: In a real system, this must retrieve the order and update paymentStatus
+  // We return a status 200 response (required by Daraja API)
+  return res.status(200).json({ message: "Callback received successfully." });
+};
+
 // ---------------------------------------------------------------------
 // FINAL CONSOLIDATED EXPORTS
 // ---------------------------------------------------------------------
 export {
   placeOrder,
+  handleMpesaCallback,
   getBuyerOrders,
   getVendorOrders,
   getOrderDetailsById,

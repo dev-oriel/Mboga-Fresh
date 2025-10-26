@@ -22,6 +22,7 @@ const orderSchema = new mongoose.Schema(
           ref: "User",
           required: true,
         }, // The vendor/seller of this specific item
+        image: { type: String, default: "" }, // Added missing field
       },
     ],
     shippingAddress: {
@@ -43,6 +44,11 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: ["Processing", "Confirmed", "Shipped", "Delivered", "Cancelled"],
       default: "Processing",
+    },
+    mpesaCheckoutRequestId: {
+      type: String, // CRITICAL: Stores the ID needed to link the order to the callback
+      unique: true,
+      sparse: true, // Allows null values
     },
   },
   {
