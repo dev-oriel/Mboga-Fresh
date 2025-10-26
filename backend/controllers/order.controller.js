@@ -70,7 +70,7 @@ const placeOrder = async (req, res) => {
       });
     }
 
-    const SHIPPING_FEE = 50;
+    const SHIPPING_FEE = 1;
     const finalTotal = totalAmount + SHIPPING_FEE;
 
     const newOrderId = new mongoose.Types.ObjectId();

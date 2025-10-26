@@ -12,7 +12,7 @@ const CheckoutSummary = () => {
   const { items, subtotal, clearCart } = useCart();
   const navigate = useNavigate();
 
-  const deliveryFee = subtotal >= 1000 || subtotal === 0 ? 0 : 50;
+  const deliveryFee = subtotal >= 1000 || subtotal === 0 ? 0 : 1;
   const total = subtotal + deliveryFee;
 
   return (
