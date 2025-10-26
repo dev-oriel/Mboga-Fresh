@@ -1,5 +1,3 @@
-// frontend/src/api/orders.js
-
 import axios from "axios";
 
 // Dynamic Base URL Resolver
@@ -42,15 +40,17 @@ export async function fetchBuyerOrders() {
 
 /**
  * Checks the payment status of an order via its ID.
- * NOTE: This mocks the polling endpoint. The actual implementation relies on the Mpesa callback.
+ * NOTE: This calls the new backend route that checks the DB status.
  */
 export const checkPaymentStatus = async (orderId) => {
-  // In a real system, this would call a dedicated backend route to check the DB.
-  await new Promise((r) => setTimeout(r, 1000));
-  return { status: "Paid" };
+  const res = await axios.get(`${API_URL_BASE}/status/${orderId}`, {
+    withCredentials: true,
+  });
+  // Returns { paymentStatus: 'Paid'/'Pending'/'Failed', failureReason: '...' }
+  return res.data;
 };
 
-// --- RIDER FUNCTIONS ---
+// --- RIDER FUNCTIONS (remaining functions are kept here) ---
 
 export async function fetchVendorOrders() {
   const res = await axios.get(`${API_URL_BASE}/vendor/my-orders`, {
@@ -91,9 +91,7 @@ export async function acceptRiderTask(taskId) {
   const res = await axios.patch(
     `${API_URL_BASE}/rider/tasks/${taskId}/accept`,
     {},
-    {
-      withCredentials: true,
-    }
+    { withCredentials: true }
   );
   return res.data;
 }
@@ -102,21 +100,16 @@ export async function confirmPickup(orderId, pickupCode) {
   const res = await axios.patch(
     `${API_URL_BASE}/rider/pickup/confirm`,
     { orderId, pickupCode },
-    {
-      withCredentials: true,
-    }
+    { withCredentials: true }
   );
   return res.data;
 }
 
-export async function confirmDelivery(orderId, buyerCode) {
-  // <-- FIX: Add buyerCode parameter
+export async function confirmDelivery(orderId) {
   const res = await axios.patch(
     `${API_URL_BASE}/rider/delivery/confirm`,
-    { orderId, buyerCode }, // <-- FIX: Pass buyerCode in body
-    {
-      withCredentials: true,
-    }
+    { orderId },
+    { withCredentials: true }
   );
   return res.data;
 }

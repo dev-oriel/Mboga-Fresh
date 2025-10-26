@@ -3,13 +3,9 @@ import Header from "../components/Header";
 import CheckoutProgress from "../components/CheckoutProgress";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
-// CRITICAL: Import both the request and the required polling function
 import { placeOrderRequest, checkPaymentStatus } from "../api/orders";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
-
-// NOTE: The mockCheckPaymentStatus function definition is REMOVED to avoid the "already declared" error.
-// The component relies on the import from '../api/orders.js'.
 
 const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
@@ -53,13 +49,13 @@ const Checkout = () => {
   useEffect(() => {
     if (primaryAddress) {
       setAddressForm(primaryAddress);
-      setPaymentPhone(primaryAddress.phone);
+      setPaymentPhone(primaryAddress.phone); // Sync payment phone
     } else if (user) {
       setAddressForm((prev) => ({
         ...prev,
         phone: user.phone || "07XXXXXXXX",
       }));
-      setPaymentPhone(user.phone || "");
+      setPaymentPhone(user.phone || ""); // Set initial phone for Mpesa
     }
   }, [user, primaryAddress]);
 
@@ -152,23 +148,33 @@ const Checkout = () => {
 
       // --- 4. START PAYMENT POLLING ---
       let paymentComplete = false;
+      let paymentFailed = false;
       let attempts = 0;
+      let finalErrorMessage = "M-Pesa payment timed out. Please try again.";
 
-      while (!paymentComplete && attempts < 10) {
+      while (!paymentComplete && !paymentFailed && attempts < 10) {
         await new Promise((r) => setTimeout(r, 3000)); // Wait 3 seconds
         const statusCheck = await checkPaymentStatus(orderId); // Uses imported function
 
-        if (statusCheck.status === "Paid") {
+        if (statusCheck.paymentStatus === "Paid") {
           paymentComplete = true;
-          break;
+        } else if (statusCheck.paymentStatus === "Failed") {
+          // Check for failed status
+          paymentFailed = true;
+          // CRITICAL: Extract the specific failure reason from the DB polling response
+          finalErrorMessage =
+            statusCheck.paymentFailureReason ||
+            "M-Pesa transaction failed: Insufficient funds or cancelled by user.";
         }
         attempts++;
       }
 
+      if (paymentFailed) {
+        throw new Error(finalErrorMessage); // Throw the specific failure message
+      }
+
       if (!paymentComplete) {
-        throw new Error(
-          "M-Pesa payment timed out or failed to confirm. Please check your phone."
-        );
+        throw new Error(finalErrorMessage); // Handles timeout case
       }
 
       // 5. On Success: Clear cart and navigate

@@ -13,6 +13,7 @@ import {
   getTotalEscrowBalance,
   acceptDeliveryTask,
   fetchRiderAcceptedTasks,
+  checkOrderStatus,
   confirmPickupByRider,
   confirmDeliveryByRider,
 } from "../controllers/order.controller.js";
@@ -92,6 +93,13 @@ router.patch(
   requireAuth,
   requireRole(["rider"]),
   confirmDeliveryByRider
+);
+
+router.get(
+  "/status/:orderId",
+  requireAuth,
+  requireRole(["buyer", "admin"]),
+  checkOrderStatus
 );
 
 // ------------------------------------

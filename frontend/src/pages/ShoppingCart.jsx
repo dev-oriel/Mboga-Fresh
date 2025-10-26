@@ -147,12 +147,12 @@ const ShoppingCart = () => {
                 </div>
                 <div className="flex justify-between text-gray-800 dark:text-gray-200">
                   <span>Delivery Fee</span>
-                  <span>KSh 210</span>
+                  <span>KSh 50</span>
                 </div>
                 <div className="border-t border-gray-100 dark:border-gray-700 my-4"></div>
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
-                  <span>KSh {(Number(subtotal) + 210).toLocaleString()}</span>
+                  <span>KSh {(Number(subtotal) + 50).toLocaleString()}</span>
                 </div>
               </div>
 
