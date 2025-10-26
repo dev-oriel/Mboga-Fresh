@@ -1,14 +1,10 @@
-// frontend/src/vendor/OrderManagement.jsx - MODIFIED FOR LIVE DATA AND QR GENERATION
-
 import React, { useState, useEffect, useCallback } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import Header from "../components/vendorComponents/Header";
 import { useAuth } from "../context/AuthContext";
-// Import the live data fetching API
 import { fetchVendorOrders } from "../api/orders";
 import { Loader2 } from "lucide-react";
-
-// --- Helper Functions (Re-used for UI) ---
+import axios from "axios"; // <-- Import axios for PATCH request
 
 const formatCurrency = (amount) =>
   `Ksh ${Number(amount).toLocaleString("en-KE", { minimumFractionDigits: 0 })}`;
@@ -45,22 +41,25 @@ const getActionButton = (action) => {
   } else if (action === "Accept Order") {
     return "bg-emerald-500 text-white hover:bg-emerald-600";
   } else if (action === "Show QR Code") {
-    return "bg-emerald-500 text-white hover:bg-emerald-600"; // Changed to emerald for QR action
+    return "bg-emerald-500 text-white hover:bg-emerald-600";
   } else {
     return "bg-gray-100 text-gray-600 cursor-not-allowed";
   }
 };
+
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
+
 // -----------------------------------------------------------
 
 export default function OrderManagement() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("new");
-  const [orders, setOrders] = useState([]); // Will hold LIVE API data
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState(null);
-  const [selectedOrder, setSelectedOrder] = useState(null); // Used for details modal
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const [showQrCodeModal, setShowQrCodeModal] = useState(false);
-  const [qrCodeOrder, setQrCodeOrder] = useState(null); // Order to generate QR for
+  const [qrCodeOrder, setQrCodeOrder] = useState(null);
 
   // 1. Fetch Live Orders for this Vendor
   const loadVendorOrders = useCallback(async () => {
@@ -71,7 +70,6 @@ export default function OrderManagement() {
       const data = await fetchVendorOrders();
 
       const mappedOrders = data.map((order) => {
-        // Ensure total amount is formatted
         const totalAmount = order.totalAmount;
         const totalItems = order.items.reduce((sum, i) => sum + i.quantity, 0);
 
@@ -110,25 +108,47 @@ export default function OrderManagement() {
   }, [loadVendorOrders]);
 
   // 2. Handle Actions (Accept, Show QR)
-  const handleAction = (order) => {
+  const handleAction = async (order) => {
+    // <-- NOW ASYNCHRONOUS
     if (order.action === "Accept Order") {
-      // CRITICAL STEP: When accepting, we immediately generate QR data based on the API order ID
-      const acceptedOrders = orders.map((o) =>
-        o.id === order.id
-          ? {
-              ...o,
-              status: "QR Scanning",
-              action: "Show QR Code",
-            }
-          : o
-      );
-      setOrders(acceptedOrders);
+      setApiError(null);
 
-      // Show QR code right away using the updated order object
-      setQrCodeOrder(acceptedOrders.find((o) => o.id === order.id));
-      setShowQrCodeModal(true);
+      if (
+        !window.confirm(
+          `Accept Order #${order.id
+            .substring(18)
+            .toUpperCase()}? This will notify riders.`
+        )
+      ) {
+        return;
+      }
 
-      // NOTE: In production, you would call a PATCH /api/orders/{id}/status API here.
+      setLoading(true);
+      try {
+        // CRITICAL API CALL: Vendor accepts the order and creates the Delivery Task
+        const endpoint = `${API_BASE}/api/orders/vendor/order/${order.id}/accept`;
+
+        await axios.patch(endpoint, {}, { withCredentials: true });
+
+        // On successful acceptance, refresh the entire list
+        await loadVendorOrders();
+
+        // Switch tab to QR Scanning and show the QR code immediately
+        setActiveTab("qr");
+        const acceptedOrder = orders.find((o) => o.id === order.id);
+        if (acceptedOrder) {
+          setQrCodeOrder(acceptedOrder);
+          setShowQrCodeModal(true);
+        }
+      } catch (err) {
+        console.error("Order Acceptance Failed:", err);
+        setApiError(
+          err.response?.data?.message ||
+            "Failed to accept order. Check task status."
+        );
+      } finally {
+        setLoading(false);
+      }
     } else if (order.action === "Show QR Code") {
       setQrCodeOrder(order);
       setShowQrCodeModal(true);
@@ -138,8 +158,8 @@ export default function OrderManagement() {
   };
 
   const handleMarkAsDelivered = (orderId) => {
-    // This button is mainly for the QR scan confirmation process or manual closing.
-    // It should call a backend endpoint to finalize the order.
+    // This function is now mainly used for internal simulation/testing, but in the final flow,
+    // the delivery status is changed only by the rider scanning the buyer's QR code.
     alert(`Simulating completion for Order ${orderId}`);
     setOrders((prev) =>
       prev.map((o) =>
@@ -159,7 +179,7 @@ export default function OrderManagement() {
   const filteredOrders = orders.filter((order) => {
     if (activeTab === "new") return order.status === "Processing";
     if (activeTab === "qr") return order.status === "QR Scanning";
-    if (activeTab === "delivery") return order.status === "Confirmed";
+    if (activeTab === "delivery") return order.status === "Confirmed"; // This status is 'Shipped' from the Rider's perspective
     if (activeTab === "completed") return order.status === "Delivered";
     return true;
   });
@@ -170,7 +190,9 @@ export default function OrderManagement() {
     if (tab === "qr")
       return orders.filter((o) => o.status === "QR Scanning").length;
     if (tab === "delivery")
-      return orders.filter((o) => o.status === "Confirmed").length;
+      return orders.filter(
+        (o) => o.status === "Confirmed" || o.status === "Shipped"
+      ).length; // Include Shipped status
     if (tab === "completed")
       return orders.filter((o) => o.status === "Delivered").length;
     return 0;

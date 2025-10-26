@@ -1,4 +1,4 @@
-// backend/routes/order.route.js - FINAL AND SECURE
+// backend/routes/order.route.js - MODIFIED
 
 import express from "express";
 import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
@@ -10,8 +10,11 @@ import {
   getVendorNotifications,
   updateOrderStatusAndNotifyRider,
   fetchAllAvailableTasks,
-  getTotalEscrowBalance, 
+  getTotalEscrowBalance,
   acceptDeliveryTask,
+  fetchRiderAcceptedTasks,
+  confirmPickupByRider,
+  confirmDeliveryByRider,
 } from "../controllers/order.controller.js";
 
 const router = express.Router();
@@ -29,12 +32,12 @@ router.get(
 router.get(
   "/:orderId",
   requireAuth,
-  requireRole(["buyer", "admin"]),
+  requireRole(["buyer", "admin", "rider"]), // <--- FIX 2: ADDED 'rider' ROLE HERE
   getOrderDetailsById
 );
 
 // ------------------------------------
-// 2. VENDOR SPECIFIC ROUTES
+// 2. VENDOR SPECIFIC ROUTES (UNCHANGED)
 // ------------------------------------
 router.get(
   "/vendor/my-orders",
@@ -57,13 +60,19 @@ router.patch(
 );
 
 // ------------------------------------
-// 3. RIDER SPECIFIC ROUTES
+// 3. RIDER SPECIFIC ROUTES (UNCHANGED)
 // ------------------------------------
 router.get(
   "/rider/tasks/available",
   requireAuth,
   requireRole(["rider"]),
   fetchAllAvailableTasks
+);
+router.get(
+  "/rider/tasks/accepted",
+  requireAuth,
+  requireRole(["rider"]),
+  fetchRiderAcceptedTasks
 );
 router.patch(
   "/rider/tasks/:taskId/accept",
@@ -72,9 +81,27 @@ router.patch(
   acceptDeliveryTask
 );
 
+router.patch(
+  "/rider/pickup/confirm",
+  requireAuth,
+  requireRole(["rider"]),
+  confirmPickupByRider
+);
+router.patch(
+  "/rider/delivery/confirm",
+  requireAuth,
+  requireRole(["rider"]),
+  confirmDeliveryByRider
+);
+
 // ------------------------------------
-// REMOVED: ADMIN METRICS ROUTE
-// This route belongs ONLY in user.route.js (mounted under /api/admin)
+// 4. ADMIN METRICS ROUTE (UNCHANGED)
 // ------------------------------------
+router.get(
+  "/escrow-balance",
+  requireAuth,
+  requireRole(["admin"]),
+  getTotalEscrowBalance
+);
 
 export default router;

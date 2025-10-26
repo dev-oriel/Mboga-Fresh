@@ -1,3 +1,5 @@
+// backend/controllers/order.controller.js - FINAL STABLE VERSION
+
 import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
 import Notification from "../models/notification.model.js";
@@ -17,7 +19,7 @@ const createDbNotification = async (recipientId, orderId, message) => {
 };
 // ------------------------------------
 
-export const placeOrder = async (req, res) => {
+const placeOrder = async (req, res) => {
   const { items, shippingAddress } = req.body;
   const userId = req.user._id;
 
@@ -111,7 +113,7 @@ export const placeOrder = async (req, res) => {
   }
 };
 
-export const updateOrderStatusAndNotifyRider = async (req, res) => {
+const updateOrderStatusAndNotifyRider = async (req, res) => {
   const { orderId } = req.params;
   const vendorId = req.user._id;
 
@@ -137,8 +139,12 @@ export const updateOrderStatusAndNotifyRider = async (req, res) => {
       });
     }
 
-    // 1. Generate unique pickup code (used for QR scanning)
+    // 1. Generate unique pickup code (for Rider to scan)
     const pickupCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    // Generate Buyer Confirmation Code (6 digits)
+    const buyerConfirmationCode = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
 
     // 2. Create the permanent Delivery Task for the Rider pool
     const newTask = await DeliveryTask.create({
@@ -146,6 +152,7 @@ export const updateOrderStatusAndNotifyRider = async (req, res) => {
       vendor: vendorId,
       status: "Awaiting Acceptance",
       pickupCode: pickupCode,
+      buyerConfirmationCode: buyerConfirmationCode, // <-- NEW FIELD
       deliveryAddress: order.shippingAddress,
     });
 
@@ -183,7 +190,7 @@ export const updateOrderStatusAndNotifyRider = async (req, res) => {
   }
 };
 
-export const getBuyerOrders = async (req, res) => {
+const getBuyerOrders = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
       .sort({ createdAt: -1 })
@@ -196,7 +203,7 @@ export const getBuyerOrders = async (req, res) => {
   }
 };
 
-export const getVendorOrders = async (req, res) => {
+const getVendorOrders = async (req, res) => {
   const vendorId = req.user._id;
 
   try {
@@ -211,7 +218,7 @@ export const getVendorOrders = async (req, res) => {
   }
 };
 
-export const getOrderDetailsById = async (req, res) => {
+const getOrderDetailsById = async (req, res) => {
   try {
     const { orderId } = req.params;
 
@@ -234,7 +241,7 @@ export const getOrderDetailsById = async (req, res) => {
   }
 };
 
-export const getVendorNotifications = async (req, res) => {
+const getVendorNotifications = async (req, res) => {
   const vendorId = req.user._id;
 
   try {
@@ -260,7 +267,7 @@ export const getVendorNotifications = async (req, res) => {
   }
 };
 
-export const fetchAllAvailableTasks = async (req, res) => {
+const fetchAllAvailableTasks = async (req, res) => {
   try {
     const tasks = await DeliveryTask.find({ status: "Awaiting Acceptance" })
       .populate("vendor", "name businessName")
@@ -286,7 +293,45 @@ export const fetchAllAvailableTasks = async (req, res) => {
   }
 };
 
-export const acceptDeliveryTask = async (req, res) => {
+const fetchRiderAcceptedTasks = async (req, res) => {
+  const riderId = req.user._id;
+
+  try {
+    const tasks = await DeliveryTask.find({
+      rider: riderId,
+      status: { $in: ["Accepted/Awaiting Pickup", "In Transit"] },
+    })
+      .populate("vendor", "name businessName")
+      .populate("order", "totalAmount")
+      .sort({ createdAt: 1 })
+      .lean();
+
+    res.json(
+      tasks.map((task) => ({
+        id: task._id,
+        orderId: task.order._id,
+        totalAmount: task.order.totalAmount,
+        vendorName: task.vendor.businessName || task.vendor.name,
+        pickupAddress:
+          task.deliveryAddress.street + ", " + task.deliveryAddress.city,
+        deliveryAddress:
+          task.deliveryAddress.street + ", " + task.deliveryAddress.city, // Full address
+        deliveryFee: task.deliveryFee,
+        createdAt: task.createdAt,
+        status: task.status,
+        pickupCode: task.pickupCode,
+        isAssigned: true,
+        // Include Buyer code for Rider's Confirmation Screen (for debugging)
+        buyerConfirmationCode: task.buyerConfirmationCode,
+      }))
+    );
+  } catch (error) {
+    console.error("Error fetching accepted tasks:", error);
+    res.status(500).json({ message: "Failed to fetch accepted tasks." });
+  }
+};
+
+const acceptDeliveryTask = async (req, res) => {
   const { taskId } = req.params;
   const riderId = req.user._id;
 
@@ -323,9 +368,96 @@ export const acceptDeliveryTask = async (req, res) => {
   }
 };
 
-export const getTotalEscrowBalance = async (req, res) => {
+const confirmPickupByRider = async (req, res) => {
+  const { orderId, pickupCode } = req.body;
+  const riderId = req.user._id;
+
   try {
-    // Find orders that are NOT Delivered and NOT Cancelled
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ message: "Invalid Order ID format." });
+    }
+
+    const task = await DeliveryTask.findOne({
+      order: orderId,
+      rider: riderId,
+      pickupCode: pickupCode,
+      status: "Accepted/Awaiting Pickup",
+    });
+
+    if (!task) {
+      return res
+        .status(401)
+        .json({ message: "Invalid scan or task not ready for pickup." });
+    }
+
+    task.status = "In Transit";
+    await task.save();
+
+    await Order.findByIdAndUpdate(orderId, { orderStatus: "Shipped" });
+
+    await createDbNotification(
+      task.vendor,
+      orderId,
+      `Order #${orderId
+        .toString()
+        .substring(18)
+        .toUpperCase()} has been picked up and is In Transit.`
+    );
+
+    res.json({ message: "Pickup confirmed. Delivery is now in transit." });
+  } catch (error) {
+    console.error("Rider pickup confirmation error:", error);
+    res.status(500).json({ message: "Failed to confirm pickup." });
+  }
+};
+
+const confirmDeliveryByRider = async (req, res) => {
+  const { orderId, buyerCode } = req.body; // <-- NEW: Now accepts buyerCode
+  const riderId = req.user._id;
+
+  try {
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ message: "Invalid Order ID format." });
+    }
+
+    // CRITICAL FIX: Find task by buyerConfirmationCode as well
+    const task = await DeliveryTask.findOneAndUpdate(
+      {
+        order: orderId,
+        rider: riderId,
+        buyerConfirmationCode: buyerCode, // <--- VERIFY BUYER CODE
+        status: "In Transit",
+      },
+      { $set: { status: "Delivered" } },
+      { new: true }
+    );
+
+    if (!task) {
+      return res
+        .status(401)
+        .json({ message: "Invalid Delivery Code or task not in transit." });
+    }
+
+    await Order.findByIdAndUpdate(orderId, { orderStatus: "Delivered" });
+
+    await createDbNotification(
+      task.vendor,
+      orderId,
+      `Order #${orderId
+        .toString()
+        .substring(18)
+        .toUpperCase()} has been successfully delivered and funds released from escrow.`
+    );
+
+    res.json({ message: "Delivery confirmed. Escrow funds released." });
+  } catch (error) {
+    console.error("Rider final delivery confirmation error:", error);
+    res.status(500).json({ message: "Failed to confirm final delivery." });
+  }
+};
+
+const getTotalEscrowBalance = async (req, res) => {
+  try {
     const ordersInEscrow = await Order.find({
       orderStatus: { $nin: ["Delivered", "Cancelled"] },
     }).select("totalAmount");
@@ -340,4 +472,22 @@ export const getTotalEscrowBalance = async (req, res) => {
     console.error("Error fetching total escrow balance:", error);
     res.status(500).json({ message: "Failed to calculate escrow balance." });
   }
+};
+
+// ---------------------------------------------------------------------
+// FINAL CONSOLIDATED EXPORTS
+// ---------------------------------------------------------------------
+export {
+  placeOrder,
+  getBuyerOrders,
+  getVendorOrders,
+  getOrderDetailsById,
+  getVendorNotifications,
+  updateOrderStatusAndNotifyRider,
+  fetchAllAvailableTasks,
+  fetchRiderAcceptedTasks,
+  acceptDeliveryTask,
+  confirmPickupByRider,
+  confirmDeliveryByRider,
+  getTotalEscrowBalance,
 };
