@@ -1,11 +1,12 @@
-// frontend/src/components/vendorComponents/Header.jsx
+// frontend/src/components/FarmerComponents/Header.jsx
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { DEFAULT_AVATAR_MAP } from "../../constants";
 
 /**
  * Header
  * - navItems: [{ label, to, icon (optional material symbol name) }]
- * - userName, avatarUrl: self-explanatory
  */
 
 const Header = ({
@@ -15,11 +16,14 @@ const Header = ({
     { label: "Products", to: "/supplierproducts", icon: "inventory_2" },
     { label: "Payments", to: "/supplierwallet", icon: "paid" },
   ],
-  userName = "Daniel Mutuku",
-  avatarUrl,
 }) => {
+  const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
+
+  // Get user info from context
+  const userName = user?.name ?? user?.fullName ?? "Farmer";
+  const avatarUrl = user?.avatar || DEFAULT_AVATAR_MAP[user?.role] || DEFAULT_AVATAR_MAP.unknown || "https://via.placeholder.com/150";
 
   const linkClass = (isActive) =>
     `text-sm font-medium flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
@@ -132,11 +136,9 @@ const Header = ({
                 <button
                   type="button"
                   onClick={handleOpenProfile}
-                  className="w-10 h-10 rounded-full bg-center bg-cover focus:ring-2 focus:ring-emerald-300 dark:focus:ring-emerald-600"
+                  className="w-10 h-10 rounded-full bg-center bg-cover border-2 border-emerald-600 hover:border-emerald-700 focus:ring-2 focus:ring-emerald-300 dark:focus:ring-emerald-600 transition-all shadow-sm hover:shadow-md bg-gray-200"
                   style={{
-                    backgroundImage: `url("${
-                      avatarUrl || "https://via.placeholder.com/150"
-                    }")`,
+                    backgroundImage: `url("${avatarUrl}")`,
                   }}
                   aria-label="Open vendor profile"
                 />
@@ -188,11 +190,9 @@ const Header = ({
                   aria-label="Open vendor profile"
                 >
                   <div
-                    className="w-9 h-9 rounded-full bg-center bg-cover"
+                    className="w-9 h-9 rounded-full bg-center bg-cover border-2 border-emerald-600 shadow-sm bg-gray-200"
                     style={{
-                      backgroundImage: `url("${
-                        avatarUrl || "https://via.placeholder.com/150"
-                      }")`,
+                      backgroundImage: `url("${avatarUrl}")`,
                     }}
                     aria-hidden
                   />
