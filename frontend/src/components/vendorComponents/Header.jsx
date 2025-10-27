@@ -2,8 +2,7 @@ import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { DEFAULT_AVATAR_MAP } from "../../constants";
 import { useAuth } from "../../context/AuthContext";
-import { useVendorData } from "../../context/VendorDataContext"; // Imported for notifications
-import { Bell } from "lucide-react"; // Imported for the notification icon
+import { Bell } from "lucide-react";
 
 const Header = ({
   navItems = [
@@ -14,13 +13,11 @@ const Header = ({
     { label: "Farm-ily Market", to: "/farmily", icon: "agriculture" },
   ],
   userName = "Vendor",
+  unreadCount = 0, // FIX: Accept unreadCount prop
 }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { notifications } = useVendorData();
-
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const finalAvatarUrl =
     user?.avatar ||
@@ -33,7 +30,7 @@ const Header = ({
   };
 
   const handleViewNotifications = () => {
-    navigate("/vendordashboard"); // Navigates to dashboard where notification list is visible
+    navigate("/vendordashboard");
   };
 
   const linkClass = (isActive) =>
@@ -100,8 +97,8 @@ const Header = ({
             >
               <Bell className="w-6 h-6 text-gray-700 dark:text-gray-300" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 h-3 w-3 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                  {/* Red notification dot */}
+                <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  {unreadCount} {/* FIX: Display the count */}
                 </span>
               )}
             </button>

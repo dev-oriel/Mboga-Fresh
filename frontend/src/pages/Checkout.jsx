@@ -7,19 +7,22 @@ import { placeOrderRequest, checkPaymentStatus } from "../api/orders";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 
+// Import the new components
+import DeliveryAddressForm from "../components/buyerComponents/DeliveryAddressForm";
+import MpesaPaymentBlock from "../components/buyerComponents/MpesaPaymentBlock";
+import CheckoutErrorBanner from "../components/buyerComponents/CheckoutErrorBanner";
+
 const Checkout = () => {
   const { items, subtotal, clearCart } = useCart();
   const { user, refresh } = useAuth();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
   const [formError, setFormError] = useState(null);
+  const [lastMpesaError, setLastMpesaError] = useState(null);
 
-  const SHIPPING_FEE = 50;
+  const SHIPPING_FEE = 1;
 
-  // State for the phone number specifically used for M-Pesa push
   const [paymentPhone, setPaymentPhone] = useState(user?.phone || "");
-
-  // Internal state for the checkout form fields
   const [addressForm, setAddressForm] = useState({
     street: "",
     city: "",
@@ -28,7 +31,6 @@ const Checkout = () => {
     phone: "",
   });
 
-  // Determine the user's primary address using useMemo
   const primaryAddress = useMemo(() => {
     if (!user || !Array.isArray(user.addresses)) return null;
     const p = user.addresses.find((a) => a.isPrimary);
@@ -45,17 +47,16 @@ const Checkout = () => {
     return null;
   }, [user]);
 
-  // Effect to initialize form with primary address or user phone
   useEffect(() => {
     if (primaryAddress) {
       setAddressForm(primaryAddress);
-      setPaymentPhone(primaryAddress.phone); // Sync payment phone
+      setPaymentPhone(primaryAddress.phone);
     } else if (user) {
       setAddressForm((prev) => ({
         ...prev,
         phone: user.phone || "07XXXXXXXX",
       }));
-      setPaymentPhone(user.phone || ""); // Set initial phone for Mpesa
+      setPaymentPhone(user.phone || "");
     }
   }, [user, primaryAddress]);
 
@@ -65,7 +66,7 @@ const Checkout = () => {
   };
 
   const handleConfirm = async () => {
-    // --- START PHONE NORMALIZATION ---
+    // --- START PHONE VALIDATION ---
     let rawPhone = paymentPhone.replace(/\D/g, "");
     let normalizedPhone;
 
@@ -81,7 +82,7 @@ const Checkout = () => {
     }
     const mpesaPhoneNumber = normalizedPhone;
     const finalTotal = subtotal + SHIPPING_FEE;
-    // --- END PHONE NORMALIZATION ---
+    // --- END PHONE VALIDATION ---
 
     if (!user) {
       setFormError("You must be logged in to complete your order.");
@@ -105,8 +106,8 @@ const Checkout = () => {
 
     setIsProcessing(true);
     setFormError(null);
+    setLastMpesaError(null);
 
-    // 1. Prepare Payload
     const payload = {
       items: items.map((item) => ({ product: item.id, quantity: item.qty })),
       shippingAddress: {
@@ -115,11 +116,11 @@ const Checkout = () => {
         postalCode: addressForm.postalCode || "00000",
         country: addressForm.country,
       },
-      mpesaPhone: mpesaPhoneNumber, // CRITICAL: Send normalized M-Pesa phone number
+      mpesaPhone: mpesaPhoneNumber,
     };
 
     try {
-      // 2. Persist New Address (if new)
+      // 2. Persist New Address
       if (!primaryAddress && user) {
         const newPrimaryAddressPayload = {
           addresses: [
@@ -142,7 +143,7 @@ const Checkout = () => {
         await refresh();
       }
 
-      // 3. Send Order and Initiate STK Push (API CALL)
+      // 3. Send Order and Initiate STK Push
       const result = await placeOrderRequest(payload);
       const orderId = result.orderId;
 
@@ -150,31 +151,43 @@ const Checkout = () => {
       let paymentComplete = false;
       let paymentFailed = false;
       let attempts = 0;
-      let finalErrorMessage = "M-Pesa payment timed out. Please try again.";
+      let maxAttempts = 20;
+      let finalErrorMessage = "M-Pesa payment timed out. Please retry.";
+      let statusCheck;
 
-      while (!paymentComplete && !paymentFailed && attempts < 10) {
-        await new Promise((r) => setTimeout(r, 3000)); // Wait 3 seconds
-        const statusCheck = await checkPaymentStatus(orderId); // Uses imported function
+      while (!paymentComplete && !paymentFailed && attempts < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 3000));
 
-        if (statusCheck.paymentStatus === "Paid") {
+        try {
+          statusCheck = await checkPaymentStatus(orderId);
+        } catch (pollingError) {
+          // Handle 404 (order deleted on backend due to payment failure)
+          if (pollingError.response?.status === 404) {
+            paymentFailed = true;
+            finalErrorMessage =
+              "Payment process cancelled or failed at M-Pesa. No order was recorded.";
+            break;
+          }
+          console.warn(
+            "Polling still running, encountered non-fatal error:",
+            pollingError
+          );
+        }
+
+        if (statusCheck?.paymentStatus === "Paid") {
           paymentComplete = true;
-        } else if (statusCheck.paymentStatus === "Failed") {
-          // Check for failed status
+        } else if (statusCheck?.paymentStatus === "Failed") {
           paymentFailed = true;
-          // CRITICAL: Extract the specific failure reason from the DB polling response
           finalErrorMessage =
             statusCheck.paymentFailureReason ||
-            "M-Pesa transaction failed: Insufficient funds or cancelled by user.";
+            "M-Pesa transaction failed due to insufficient balance or cancellation.";
         }
         attempts++;
       }
 
-      if (paymentFailed) {
-        throw new Error(finalErrorMessage); // Throw the specific failure message
-      }
-
-      if (!paymentComplete) {
-        throw new Error(finalErrorMessage); // Handles timeout case
+      if (paymentFailed || !paymentComplete) {
+        setLastMpesaError(finalErrorMessage);
+        throw new Error(finalErrorMessage);
       }
 
       // 5. On Success: Clear cart and navigate
@@ -190,7 +203,10 @@ const Checkout = () => {
     } catch (err) {
       console.error("Order Placement Error:", err);
       const msg =
-        err.response?.data?.message || err.message || "Payment process failed.";
+        lastMpesaError ||
+        err.response?.data?.message ||
+        err.message ||
+        "Payment process failed. Check your phone for the M-Pesa prompt.";
       setFormError(msg);
     } finally {
       setIsProcessing(false);
@@ -203,147 +219,34 @@ const Checkout = () => {
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
         <CheckoutProgress step={2} />
-        {formError && (
-          <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mt-4 rounded-lg shadow-sm">
-            {formError}
-          </div>
-        )}
+
+        {/* Consolidated Error Display (Using New Component) */}
+        <CheckoutErrorBanner
+          formError={formError}
+          lastMpesaError={lastMpesaError}
+          handleConfirm={handleConfirm}
+          isProcessing={isProcessing}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 mt-8">
           <div className="lg:col-span-2">
             <h2 className="text-3xl font-bold mb-6">Checkout</h2>
 
             <div className="space-y-8">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-3">
-                  <span className="material-symbols-outlined text-emerald-600">
-                    local_shipping
-                  </span>{" "}
-                  Delivery Address
-                  {primaryAddress && (
-                    <span className="text-xs font-normal text-gray-500 ml-3">
-                      (Primary: {primaryAddress.street}, {primaryAddress.city})
-                    </span>
-                  )}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="font-medium text-sm text-gray-600 dark:text-gray-300">
-                      Street Address
-                    </label>
-                    <input
-                      className="form-input w-full mt-1 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-emerald-400 focus:ring-emerald-400 rounded-lg p-2"
-                      name="street"
-                      value={addressForm.street}
-                      onChange={handleAddressChange}
-                    />
-                  </div>
-                  <div>
-                    <label className="font-medium text-sm text-gray-600 dark:text-gray-300">
-                      City
-                    </label>
-                    <input
-                      className="form-input w-full mt-1 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-emerald-400 focus:ring-emerald-400 rounded-lg p-2"
-                      name="city"
-                      value={addressForm.city}
-                      onChange={handleAddressChange}
-                    />
-                  </div>
-                  <div>
-                    <label className="font-medium text-sm text-gray-600 dark:text-gray-300">
-                      Postal Code
-                    </label>
-                    <input
-                      className="form-input w-full mt-1 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-emerald-400 focus:ring-emerald-400 rounded-lg p-2"
-                      name="postalCode"
-                      value={addressForm.postalCode}
-                      onChange={handleAddressChange}
-                    />
-                  </div>
-                  <div>
-                    <label className="font-medium text-sm text-gray-600 dark:text-gray-300">
-                      Phone Number for delivery updates
-                    </label>
-                    <input
-                      className="form-input w-full mt-1 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-emerald-400 focus:ring-emerald-400 rounded-lg p-2"
-                      name="phone"
-                      value={addressForm.phone}
-                      onChange={handleAddressChange}
-                    />
-                  </div>
-                </div>
-              </div>
+              {/* Delivery Address (Using New Component) */}
+              <DeliveryAddressForm
+                addressForm={addressForm}
+                handleAddressChange={handleAddressChange}
+              />
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-3">
-                  <span className="material-symbols-outlined text-emerald-600">
-                    payment
-                  </span>{" "}
-                  Payment Method
-                </h3>
-
-                <div className="space-y-4">
-                  <div className="border border-emerald-600 rounded-lg p-4">
-                    <label className="flex items-center justify-between cursor-pointer">
-                      <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full border-2 border-emerald-600 flex items-center justify-center">
-                          <div className="w-3 h-3 bg-emerald-600 rounded-full" />
-                        </div>
-                        <span className="font-bold">
-                          M-Pesa (Live STK Push)
-                        </span>
-                      </div>
-                      <img
-                        alt="M-Pesa Logo"
-                        className="h-6"
-                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2u5GkHrRLhuO9LpWPl721n2LmnE9GP5yWC_8cgeJ6HwkD50FgaMLcEgTsEDQMRIRx0NmduUyN8q4rBzpY7QuhUZvqUksVdWyRM2esIihJ-Z4PgqhuZDdcLNfJ6nkUcU-yPSWCoevqbTx72CRvOK6KVLBRUKvFM4r5bROSnO6w8-xRoApO7YxDNZnQnx1hdVyPz-CAofPz57bsUR6Uf1KI162Si8Xz1uBT7ptiK8EPthrhCLfjCm7dyi-YQPYrj4y2N-KBY1R1nHI"
-                      />
-                    </label>
-
-                    <div className="mt-4 pl-9">
-                      <label className="font-medium text-sm text-gray-600 dark:text-gray-300">
-                        M-Pesa Phone Number
-                      </label>
-                      <div className="flex items-center gap-3 mt-1">
-                        <div className="relative flex-grow">
-                          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 dark:text-gray-400">
-                            +254
-                          </span>
-                          <input
-                            className="form-input w-full pl-14 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-emerald-400 focus:ring-emerald-400 rounded-lg p-2"
-                            placeholder="712 345 678"
-                            type="tel"
-                            value={paymentPhone}
-                            onChange={(e) => setPaymentPhone(e.target.value)}
-                          />
-                        </div>
-                        <button
-                          className="bg-emerald-600 text-white font-bold py-2 px-6 rounded-lg hover:opacity-90 transition-opacity"
-                          onClick={handleConfirm}
-                          disabled={isProcessing}
-                        >
-                          {isProcessing ? "Processing..." : "Pay"}
-                        </button>
-                      </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        A payment prompt will be sent to this number.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 opacity-60">
-                    <label className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600"></div>
-                        <span className="font-bold">Cash on Delivery</span>
-                      </div>
-                      <span className="text-xs font-semibold bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
-                        Coming Soon
-                      </span>
-                    </label>
-                  </div>
-                </div>
-              </div>
+              {/* Payment Method (Using New Component) */}
+              <MpesaPaymentBlock
+                paymentPhone={paymentPhone}
+                setPaymentPhone={setPaymentPhone}
+                handleConfirm={handleConfirm}
+                isProcessing={isProcessing}
+                lastMpesaError={lastMpesaError}
+              />
             </div>
           </div>
 
@@ -386,12 +289,14 @@ const Checkout = () => {
                 </div>
                 <div className="flex justify-between text-gray-800 dark:text-gray-200">
                   <span>Delivery Fee</span>
-                  <span>KSh 1</span>
+                  <span>KSh {SHIPPING_FEE}</span>
                 </div>
                 <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
-                  <span>KSh {(Number(subtotal) + 1).toLocaleString()}</span>
+                  <span>
+                    KSh {(Number(subtotal) + SHIPPING_FEE).toLocaleString()}
+                  </span>
                 </div>
               </div>
 

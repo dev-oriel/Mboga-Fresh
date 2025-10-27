@@ -15,7 +15,7 @@ const getBaseUrl = () => {
 const BASE = getBaseUrl();
 const API_URL_BASE = `${BASE}/api/orders`;
 
-// --- BUYER / VENDOR FUNCTIONS ---
+// --- BUYER / VENDOR FUNCTIONS (Remains Unchanged) ---
 
 /**
  * Sends order data to the backend, which now INITIATES STK PUSH.
@@ -40,7 +40,6 @@ export async function fetchBuyerOrders() {
 
 /**
  * Checks the payment status of an order via its ID.
- * NOTE: This calls the new backend route that checks the DB status.
  */
 export const checkPaymentStatus = async (orderId) => {
   const res = await axios.get(`${API_URL_BASE}/status/${orderId}`, {
@@ -50,7 +49,7 @@ export const checkPaymentStatus = async (orderId) => {
   return res.data;
 };
 
-// --- RIDER FUNCTIONS (remaining functions are kept here) ---
+// --- VENDOR FUNCTIONS (Remains Unchanged) ---
 
 export async function fetchVendorOrders() {
   const res = await axios.get(`${API_URL_BASE}/vendor/my-orders`, {
@@ -72,6 +71,8 @@ export const fetchOrderDetails = async (orderId) => {
   });
   return response.data;
 };
+
+// --- RIDER FUNCTIONS (Finalizing the confirmation logic) ---
 
 export async function fetchAllAvailableTasks() {
   const res = await axios.get(`${API_URL_BASE}/rider/tasks/available`, {
@@ -96,6 +97,9 @@ export async function acceptRiderTask(taskId) {
   return res.data;
 }
 
+/**
+ * Confirms pickup using the Vendor-provided pickup code.
+ */
 export async function confirmPickup(orderId, pickupCode) {
   const res = await axios.patch(
     `${API_URL_BASE}/rider/pickup/confirm`,
@@ -105,10 +109,13 @@ export async function confirmPickup(orderId, pickupCode) {
   return res.data;
 }
 
-export async function confirmDelivery(orderId) {
+/**
+ * Confirms final delivery using the Buyer's secret code.
+ */
+export async function confirmDelivery(orderId, buyerCode) {
   const res = await axios.patch(
     `${API_URL_BASE}/rider/delivery/confirm`,
-    { orderId },
+    { orderId, buyerCode }, // CRITICAL: Pass buyerCode
     { withCredentials: true }
   );
   return res.data;

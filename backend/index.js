@@ -55,7 +55,7 @@ app.use("/api/payments", paymentRouter);
 connectDB()
   .then(() => {
     app.listen(PORT, () =>
-      console.log(`Server running on http://192.168.62.43:${PORT}`)
+      console.log(`Server running on http://192.168.100.20:${PORT}`)
     );
   })
   .catch((err) => {

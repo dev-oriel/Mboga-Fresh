@@ -1,4 +1,21 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
+import axios from "axios";
+
+// Define the assumed API calls for notifications
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
+
+const markNotificationAsReadRequest = async (notificationId) => {
+  const url = `${API_BASE}/api/notifications/${notificationId}/read`;
+  // Assuming a simple PATCH endpoint exists under /api/notifications (you'll need to add this route/controller)
+  const res = await axios.patch(url, {}, { withCredentials: true });
+  return res.data;
+};
+
+const deleteReadNotificationsRequest = async () => {
+  const url = `${API_BASE}/api/notifications/read`;
+  const res = await axios.delete(url, { withCredentials: true });
+  return res.data;
+};
 
 const VendorDataContext = createContext();
 
@@ -14,6 +31,7 @@ export const VendorDataProvider = ({ children }) => {
   // Shared dashboard data - Initialized to 0/empty, ready for API fetch
   const [dashboardData, setDashboardData] = useState({
     ordersReceived: 0,
+    pendingAcceptance: 0, // FIX: Added missing property
     pendingDeliveries: 0,
     salesInEscrow: 0,
     earningsReleased: 0,
@@ -50,9 +68,9 @@ export const VendorDataProvider = ({ children }) => {
   // Handle withdrawal
   const handleWithdraw = useCallback(
     (amount, mpesaNumber) => {
+      // Dummy withdrawal logic remains the same for now
       if (amount <= 0 || amount > dashboardData.earningsReleased) return false;
 
-      // Logic for updating local state and pushing a notification/transaction when a simulated withdrawal occurs
       setDashboardData((prev) => ({
         ...prev,
         earningsReleased: prev.earningsReleased - amount,
@@ -84,16 +102,30 @@ export const VendorDataProvider = ({ children }) => {
     [dashboardData.earningsReleased]
   );
 
-  // Mark notification as read
-  const markNotificationAsRead = useCallback((id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
+  // FIX: Mark notification as read (with DB update)
+  const markNotificationAsRead = useCallback(async (id) => {
+    try {
+      await markNotificationAsReadRequest(id); // API Call
+      setNotifications((prev) =>
+        prev.map((n) =>
+          String(n.id) === String(id) ? { ...n, isRead: true } : n
+        )
+      );
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+      // Optionally show a local failure message
+    }
   }, []);
 
-  // Delete read notifications
-  const deleteReadNotifications = useCallback(() => {
-    setNotifications((prev) => prev.filter((n) => !n.isRead));
+  // FIX: Delete read notifications (with DB update)
+  const deleteReadNotifications = useCallback(async () => {
+    try {
+      await deleteReadNotificationsRequest(); // API Call
+      setNotifications((prev) => prev.filter((n) => !n.isRead));
+    } catch (error) {
+      console.error("Failed to delete read notifications:", error);
+      // Optionally show a local failure message
+    }
   }, []);
 
   const value = {
@@ -114,3 +146,5 @@ export const VendorDataProvider = ({ children }) => {
     </VendorDataContext.Provider>
   );
 };
+
+export default VendorDataProvider;

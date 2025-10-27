@@ -1,5 +1,3 @@
-// frontend/src/rider/RiderDeliveryQueue.jsx - MODIFIED FOR LIVE TASK FETCH
-
 import React, { useState, useEffect, useCallback } from "react";
 import RiderHeader from "../components/riderComponents/RiderHeader";
 import DeliveryItem from "../components/riderComponents/DeliveryItem";
@@ -45,6 +43,9 @@ const RiderDeliveryQueue = () => {
 
   useEffect(() => {
     loadTasks();
+    // Optional: setup interval to refresh available tasks
+    const interval = setInterval(loadTasks, 60000);
+    return () => clearInterval(interval);
   }, [loadTasks]);
 
   // Handler for accepting a task
@@ -65,16 +66,15 @@ const RiderDeliveryQueue = () => {
     }
   };
 
+  // Handler to view/start the confirmation process (for accepted tasks)
+  const handleViewConfirmation = (orderId) => {
+    navigate(`/riderdelivery/${orderId}`);
+  };
+
   // Determine which list to display
   const currentTasks =
     activeTab === "available" ? availableTasks : acceptedTasks;
   const isAvailableTab = activeTab === "available";
-
-  // Handler for pickup scan (Vendor QR)
-  const handleScanPickup = (orderId) => {
-    // Navigate to the RiderDeliveryDetail page for the QR scan, passing the orderId
-    navigate(`/riderdelivery/${orderId}`);
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
@@ -143,10 +143,10 @@ const RiderDeliveryQueue = () => {
                       dropoff={task.deliveryAddress}
                       earnings={formatCurrency(task.deliveryFee)}
                       vendor={task.vendorName}
+                      status={task.status}
                       onAccept={() => handleAcceptTask(task.id)}
                       isTaskAvailable={isAvailableTab}
-                      onScan={() => handleScanPickup(task.orderId)}
-                      status={task.status}
+                      onScan={() => handleViewConfirmation(task.orderId)} // FIX: Route to detail page
                     />
                   ))}
                 </ul>

@@ -1,5 +1,3 @@
-// frontend/src/rider/RiderDeliveryDetail.jsx - FINAL DEFINITIVE WORKING VERSION
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import RiderHeader from "../components/riderComponents/RiderHeader";
@@ -17,9 +15,10 @@ import {
   Package,
   Camera,
   AlertTriangle,
+  X, // Added X icon for dismiss
 } from "lucide-react";
 
-// --- Helper Functions ---
+// --- Helper Functions (Remains Unchanged) ---
 
 const getStatusBadgeProps = (status) => {
   const lowerStatus = status ? status.toLowerCase() : "";
@@ -30,9 +29,9 @@ const getStatusBadgeProps = (status) => {
       text: "text-emerald-700",
       icon: "check_circle",
     };
-  if (lowerStatus === "shipped" || lowerStatus === "in transit")
+  if (lowerStatus === "in delivery" || lowerStatus === "in transit")
     return {
-      label: "In Transit",
+      label: "In Delivery",
       bg: "bg-blue-100",
       text: "text-blue-700",
       icon: "local_shipping",
@@ -48,7 +47,7 @@ const getStatusBadgeProps = (status) => {
       icon: "schedule",
     };
   return {
-    label: status || "Error",
+    label: status || "Pending",
     bg: "bg-gray-100",
     text: "text-gray-700",
     icon: "info",
@@ -63,13 +62,13 @@ const RiderDeliveryDetail = () => {
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null); // New state to hold API error
   const [vendorCodeInput, setVendorCodeInput] = useState("");
   const [buyerCodeInput, setBuyerCodeInput] = useState("");
   const [apiMessage, setApiMessage] = useState(null);
   const [processing, setProcessing] = useState(false);
 
   // State to manage the primary view mode (false = show scan placeholder, true = show manual input)
-  // Initialize based on navigation state (if forced from queue) or default to scan view.
   const [showManualInput, setShowManualInput] = useState(
     location.state?.forceManual || false
   );
@@ -81,15 +80,17 @@ const RiderDeliveryDetail = () => {
       return;
     }
     setLoading(true);
+    setFetchError(null); // Clear previous fetch error
     try {
+      // NOTE: This endpoint should fetch the ORDER and implicitly link to the DeliveryTask
       const data = await fetchOrderDetails(orderId);
       setOrder(data);
     } catch (err) {
       console.error("Error fetching order details:", err);
-      setApiMessage({
-        type: "error",
-        text: "Failed to load task details. (Check console)",
-      });
+      setOrder(null);
+      setFetchError(
+        err.response?.data?.message || "Failed to load order/task details."
+      );
     } finally {
       setLoading(false);
     }
@@ -110,17 +111,19 @@ const RiderDeliveryDetail = () => {
         if (vendorCodeInput.length !== 6)
           throw new Error("Pickup code must be 6 characters.");
 
+        // API Call: Vendor Confirmation (QR Scanning -> In Delivery)
         await confirmPickup(orderId, vendorCodeInput);
+
         setApiMessage({
           type: "success",
-          text: "Pickup confirmed! Order status updated to In Transit.",
+          text: "Pickup confirmed! Order status updated to In Delivery.",
         });
         setVendorCodeInput("");
       } else if (actionType === "DELIVERY") {
         if (buyerCodeInput.length !== 6)
           throw new Error("Buyer confirmation code must be 6 digits.");
 
-        // CRITICAL FIX: Pass buyerCode to the API
+        // API Call: Buyer Confirmation (In Delivery -> Delivered, Escrow Released)
         await confirmDelivery(orderId, buyerCodeInput);
 
         setApiMessage({
@@ -149,6 +152,7 @@ const RiderDeliveryDetail = () => {
     const placeholderText = isPickup
       ? "Enter VENDOR Pickup Code"
       : "Enter BUYER Confirmation Code";
+    const isCodeValid = codeValue.length === 6;
 
     return (
       <div className="space-y-4 pt-2">
@@ -164,14 +168,16 @@ const RiderDeliveryDetail = () => {
           }
           placeholder={placeholderText}
           maxLength={6}
-          className="w-full p-3 border-2 border-gray-300 rounded-lg font-mono text-lg uppercase text-center"
+          className={`w-full p-3 border-2 rounded-lg font-mono text-lg uppercase text-center ${
+            isCodeValid ? "border-emerald-400" : "border-gray-300"
+          }`}
           disabled={processing}
         />
 
         <button
           onClick={() => handleStatusUpdate(type)}
-          disabled={processing || codeValue.length !== 6}
-          className="w-full py-3 rounded-lg font-bold text-white transition bg-red-600 hover:bg-red-700 disabled:bg-gray-400"
+          disabled={processing || !isCodeValid}
+          className={`w-full py-3 rounded-lg font-bold text-white transition bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400`}
         >
           {processing ? "Verifying..." : buttonLabel}
         </button>
@@ -190,13 +196,11 @@ const RiderDeliveryDetail = () => {
     <div className="space-y-4 pt-2">
       <div className="w-full max-w-sm h-32 mx-auto mb-3 rounded-xl border-4 border-gray-300 flex flex-col items-center justify-center bg-gray-100 text-gray-500">
         <Camera size={40} />
-        <p className="mt-2 text-sm text-red-500 font-semibold">
-          Camera Blocked on HTTP/IP
-        </p>
+        <p className="mt-2 text-sm font-semibold">Camera Scan Placeholder</p>
       </div>
       <button
         onClick={() => setShowManualInput(true)}
-        className="w-full py-3 rounded-lg font-bold text-white transition bg-emerald-600 hover:bg-emerald-700"
+        className="w-full py-3 rounded-lg font-bold text-white transition bg-red-600 hover:bg-red-700"
       >
         Use Manual Code Input
       </button>
@@ -205,12 +209,37 @@ const RiderDeliveryDetail = () => {
 
   // --- Main Render Logic ---
 
-  if (loading || !order) {
+  if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <RiderHeader />
         <main className="flex-grow container mx-auto p-8 text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-emerald-600 mt-16" />
+        </main>
+      </div>
+    );
+  }
+
+  if (fetchError || !order) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <RiderHeader />
+        <main className="flex-grow container mx-auto p-8 max-w-lg">
+          <div className="bg-white rounded-xl shadow-xl p-6 border-l-4 border-red-500 mt-16 text-center">
+            <AlertTriangle className="w-8 h-8 text-red-600 mx-auto mb-3" />
+            <h1 className="text-xl font-bold text-gray-900 mb-2">
+              Error Loading Task
+            </h1>
+            <p className="text-sm text-gray-600 mb-4">
+              {fetchError || "The order or task could not be found."}
+            </p>
+            <button
+              onClick={() => navigate("/riderdeliveryqueue")}
+              className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition"
+            >
+              Back to Queue
+            </button>
+          </div>
         </main>
       </div>
     );
@@ -222,7 +251,7 @@ const RiderDeliveryDetail = () => {
     currentStatus === "qr scanning" ||
     currentStatus === "accepted/awaiting pickup";
   const isReadyForDeliveryConfirmation =
-    currentStatus === "shipped" || currentStatus === "in transit";
+    currentStatus === "in delivery" || currentStatus === "in transit";
   const isCompleted = currentStatus === "delivered";
 
   return (
@@ -265,6 +294,9 @@ const RiderDeliveryDetail = () => {
               <span className="text-sm font-medium text-gray-700">
                 Pickup: {order.shippingAddress.city} (Vendor)
               </span>
+              <span className="text-xs text-gray-400">
+                Code: {order.items[0]?.vendor.substring(18)}
+              </span>
             </div>
             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
               <MapPin size={20} className="text-blue-600" />
@@ -284,7 +316,7 @@ const RiderDeliveryDetail = () => {
           {isReadyForPickup && !isCompleted && (
             <div className="pt-4 border-t border-gray-200">
               <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Vendor Confirmation
+                Vendor Confirmation (Pickup)
               </h3>
               {showManualInput
                 ? renderManualForm("PICKUP")
@@ -296,22 +328,25 @@ const RiderDeliveryDetail = () => {
           {isReadyForDeliveryConfirmation && !isCompleted && (
             <div className="pt-4 border-t border-gray-200">
               <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Buyer Confirmation
+                Buyer Confirmation (Dropoff)
               </h3>
+              {/* For dropoff, we default to the manual form */}
               {renderManualForm("DELIVERY")}
             </div>
           )}
 
           {/* 3. COMPLETED STATE */}
           {isCompleted && (
-            <div className="text-center p-4 bg-emerald-50 rounded-lg border border-emerald-200">
-              <CheckCircle
-                size={32}
-                className="text-emerald-600 mx-auto mb-2"
-              />
-              <p className="font-semibold text-emerald-800">
-                Task Completed. Earnings secured.
-              </p>
+            <div className="pt-4 border-t border-gray-200">
+              <div className="text-center p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                <CheckCircle
+                  size={32}
+                  className="text-emerald-600 mx-auto mb-2"
+                />
+                <p className="font-semibold text-emerald-800">
+                  Task Completed. Order fulfillment finished.
+                </p>
+              </div>
             </div>
           )}
 
@@ -326,5 +361,16 @@ const RiderDeliveryDetail = () => {
     </div>
   );
 };
+
+// Helper component for clean detail rows (kept for full component code structure)
+const DetailRow = ({ icon: Icon, label, value }) => (
+  <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
+    <Icon size={18} className="text-emerald-600 flex-shrink-0" />
+    <div className="text-sm">
+      <span className="font-medium text-gray-700">{label}:</span>
+      <span className="font-semibold text-gray-900 ml-1">{value}</span>
+    </div>
+  </div>
+);
 
 export default RiderDeliveryDetail;

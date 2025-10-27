@@ -10,15 +10,15 @@ const DeliveryItem = ({
   vendor,
   status,
   onAccept,
-  onScan,
+  onScan, // This now maps to handleViewConfirmation in the parent
   isTaskAvailable = false,
 }) => {
   const navigate = useNavigate();
 
   // Handler to navigate and immediately activate manual input mode on the next page
-  const handleManualClick = () => {
+  const handleManualClick = (orderId) => {
     // Navigating to the detail page and passing state to force manual input on load
-    navigate(`/riderdelivery/${id}`, { state: { forceManual: true } });
+    navigate(`/riderdelivery/${orderId}`, { state: { forceManual: true } });
   };
 
   // Determine the action button text/color
@@ -34,22 +34,22 @@ const DeliveryItem = ({
     if (status === "Accepted/Awaiting Pickup") {
       return {
         label: "Scan Pickup QR",
-        action: () => navigate(`/riderdelivery/${id}`),
+        action: onScan, // Routes to detail page
         style: "bg-emerald-600 hover:bg-emerald-700 text-white",
-        showManualLink: true, // Allow manual switch for pickup
+        showManualLink: true,
       };
     }
     if (status === "In Transit") {
       return {
         label: "Scan Buyer QR",
-        action: () => navigate(`/riderdelivery/${id}`),
+        action: onScan, // Routes to detail page
         style: "bg-amber-600 hover:bg-amber-700 text-white",
-        showManualLink: true, // Allow manual switch for delivery
+        showManualLink: true,
       };
     }
     return {
       label: "View Details",
-      action: () => navigate(`/riderdelivery/${id}`),
+      action: onScan,
       style: "border border-gray-300 text-gray-700 hover:bg-gray-100",
       showManualLink: false,
     };
@@ -117,7 +117,7 @@ const DeliveryItem = ({
             {/* CRITICAL FIX: The manual link, only visible for active tasks */}
             {actionButton.showManualLink && status !== "Delivered" && (
               <button
-                onClick={handleManualClick}
+                onClick={() => handleManualClick(id)}
                 className="text-xs text-gray-500 hover:text-red-600 underline mt-1"
                 title="Bypass camera issue"
               >

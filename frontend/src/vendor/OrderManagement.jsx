@@ -4,18 +4,20 @@ import Header from "../components/vendorComponents/Header";
 import { useAuth } from "../context/AuthContext";
 import { fetchVendorOrders } from "../api/orders";
 import { Loader2 } from "lucide-react";
-import axios from "axios"; // <-- Import axios for PATCH request
+import axios from "axios";
+import { useLocation } from "react-router-dom"; // Import useLocation to check for notification clicks
 
 const formatCurrency = (amount) =>
   `Ksh ${Number(amount).toLocaleString("en-KE", { minimumFractionDigits: 0 })}`;
 
 const getStatusColor = (status) => {
   switch (status) {
-    case "Processing":
+    case "New Order":
+    case "Processing": // Fallback for Processing status if payment is still pending
       return "bg-yellow-100 text-yellow-700";
     case "QR Scanning":
       return "bg-emerald-100 text-emerald-700";
-    case "Confirmed":
+    case "In Delivery":
       return "bg-blue-100 text-blue-700";
     case "Delivered":
       return "bg-green-100 text-green-700";
@@ -26,10 +28,10 @@ const getStatusColor = (status) => {
 
 const getPaymentColor = (payment) => {
   switch (payment) {
-    case "Escrow":
-      return "bg-yellow-100 text-yellow-700";
     case "Paid":
       return "bg-green-100 text-green-700";
+    case "Escrow":
+      return "bg-yellow-100 text-yellow-700";
     default:
       return "bg-red-100 text-red-700";
   }
@@ -39,9 +41,9 @@ const getActionButton = (action) => {
   if (action === "View Details") {
     return "border border-gray-300 text-gray-700 bg-white hover:bg-gray-50";
   } else if (action === "Accept Order") {
-    return "bg-emerald-500 text-white hover:bg-emerald-600";
+    return "bg-emerald-600 text-white hover:bg-emerald-700";
   } else if (action === "Show QR Code") {
-    return "bg-emerald-500 text-white hover:bg-emerald-600";
+    return "bg-emerald-600 text-white hover:bg-emerald-700";
   } else {
     return "bg-gray-100 text-gray-600 cursor-not-allowed";
   }
@@ -53,13 +55,16 @@ const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
 export default function OrderManagement() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("new");
+  const location = useLocation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showQrCodeModal, setShowQrCodeModal] = useState(false);
   const [qrCodeOrder, setQrCodeOrder] = useState(null);
+
+  // Default active tab to 'new' or override if a notification click forces focus
+  const [activeTab, setActiveTab] = useState("new");
 
   // 1. Fetch Live Orders for this Vendor
   const loadVendorOrders = useCallback(async () => {
@@ -71,7 +76,14 @@ export default function OrderManagement() {
 
       const mappedOrders = data.map((order) => {
         const totalAmount = order.totalAmount;
-        const totalItems = order.items.reduce((sum, i) => sum + i.quantity, 0);
+
+        // NOTE: The backend's response already contains the final orderStatus.
+        // We base the frontend action on that status.
+        const currentStatus = order.orderStatus;
+
+        let action = "View Details";
+        if (currentStatus === "New Order") action = "Accept Order";
+        else if (currentStatus === "QR Scanning") action = "Show QR Code";
 
         const itemsList = order.items
           .map((i) => `${i.quantity}x ${i.name}`)
@@ -82,14 +94,9 @@ export default function OrderManagement() {
           buyer: `Buyer #${order.user.substring(18).toUpperCase()}`, // Mock buyer name
           items: itemsList,
           amount: formatCurrency(totalAmount),
-          status: order.orderStatus,
+          status: currentStatus,
           payment: order.paymentStatus === "Paid" ? "Escrow" : "Unpaid",
-          action:
-            order.orderStatus === "Processing"
-              ? "Accept Order"
-              : order.orderStatus === "QR Scanning"
-              ? "Show QR Code"
-              : "View Details", // Dynamic Action
+          action: action, // Dynamic Action
           __raw: order,
         };
       });
@@ -107,9 +114,30 @@ export default function OrderManagement() {
     loadVendorOrders();
   }, [loadVendorOrders]);
 
+  // Effect to handle notification click navigation
+  useEffect(() => {
+    if (location.state?.autoFocus && orders.length > 0) {
+      // When autoFocus is true (from notification click), find the status of the order.
+      const targetOrder = orders.find(
+        (o) => String(o.id) === String(location.state.highlightId)
+      );
+
+      if (targetOrder) {
+        // Map DB status to the corresponding tab (New Order -> new, QR Scanning -> qr, etc.)
+        let targetTab = "new";
+        if (targetOrder.status === "QR Scanning") targetTab = "qr";
+        else if (targetOrder.status === "In Delivery") targetTab = "delivery";
+        else if (targetOrder.status === "Delivered") targetTab = "completed";
+
+        setActiveTab(targetTab);
+        // Clear state to prevent repeat auto-focus on future navigations/refreshes
+        window.history.replaceState({}, document.title, location.pathname);
+      }
+    }
+  }, [orders, location]);
+
   // 2. Handle Actions (Accept, Show QR)
   const handleAction = async (order) => {
-    // <-- NOW ASYNCHRONOUS
     if (order.action === "Accept Order") {
       setApiError(null);
 
@@ -127,7 +155,6 @@ export default function OrderManagement() {
       try {
         // CRITICAL API CALL: Vendor accepts the order and creates the Delivery Task
         const endpoint = `${API_BASE}/api/orders/vendor/order/${order.id}/accept`;
-
         await axios.patch(endpoint, {}, { withCredentials: true });
 
         // On successful acceptance, refresh the entire list
@@ -135,11 +162,13 @@ export default function OrderManagement() {
 
         // Switch tab to QR Scanning and show the QR code immediately
         setActiveTab("qr");
-        const acceptedOrder = orders.find((o) => o.id === order.id);
-        if (acceptedOrder) {
-          setQrCodeOrder(acceptedOrder);
-          setShowQrCodeModal(true);
-        }
+
+        // NOTE: We re-find the order in the updated state to ensure latest status/codes are used
+        // For the simulation, we use the old object since loadVendorOrders() updates the state correctly.
+        const acceptedOrder = { ...order, status: "QR Scanning" };
+
+        setQrCodeOrder(acceptedOrder);
+        setShowQrCodeModal(true);
       } catch (err) {
         console.error("Order Acceptance Failed:", err);
         setApiError(
@@ -157,42 +186,23 @@ export default function OrderManagement() {
     }
   };
 
-  const handleMarkAsDelivered = (orderId) => {
-    // This function is now mainly used for internal simulation/testing, but in the final flow,
-    // the delivery status is changed only by the rider scanning the buyer's QR code.
-    alert(`Simulating completion for Order ${orderId}`);
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId
-          ? {
-              ...o,
-              status: "Delivered",
-              action: "View Details",
-              payment: "Paid",
-            }
-          : o
-      )
-    );
-  };
-
-  // Filters remain dependent on the local 'orders' state
   const filteredOrders = orders.filter((order) => {
-    if (activeTab === "new") return order.status === "Processing";
+    // FIX: Filter on new statuses
+    if (activeTab === "new") return order.status === "New Order";
     if (activeTab === "qr") return order.status === "QR Scanning";
-    if (activeTab === "delivery") return order.status === "Confirmed"; // This status is 'Shipped' from the Rider's perspective
+    if (activeTab === "delivery") return order.status === "In Delivery";
     if (activeTab === "completed") return order.status === "Delivered";
     return true;
   });
 
   const getTabCount = (tab) => {
+    // FIX: Count based on new statuses
     if (tab === "new")
-      return orders.filter((o) => o.status === "Processing").length;
+      return orders.filter((o) => o.status === "New Order").length;
     if (tab === "qr")
       return orders.filter((o) => o.status === "QR Scanning").length;
     if (tab === "delivery")
-      return orders.filter(
-        (o) => o.status === "Confirmed" || o.status === "Shipped"
-      ).length; // Include Shipped status
+      return orders.filter((o) => o.status === "In Delivery").length;
     if (tab === "completed")
       return orders.filter((o) => o.status === "Delivered").length;
     return 0;
@@ -230,14 +240,13 @@ export default function OrderManagement() {
               }`}
             >
               <div className="flex items-center space-x-2">
-                {/* Using placeholder SVG for icons for brevity, replace with actual Lucide icons */}
                 <span>
                   {tab === "new"
                     ? "New Orders"
                     : tab === "qr"
                     ? "QR Scanning"
-                    : tab === "delivery"
-                    ? "In Delivery"
+                      ? "In Delivery"
+                      : tab === "delivery"
                     : "Completed"}
                 </span>
                 <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -321,16 +330,19 @@ export default function OrderManagement() {
                       </span>
                     </td>
                     <td className="py-4 px-6 text-right">
-                      {activeTab !== "delivery" && (
-                        <button
-                          onClick={() => handleAction(order)}
-                          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${getActionButton(
-                            order.action
-                          )}`}
-                        >
-                          {order.action}
-                        </button>
-                      )}
+                      {
+                        // Only show action button if not completed
+                        order.status !== "Delivered" && (
+                          <button
+                            onClick={() => handleAction(order)}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${getActionButton(
+                              order.action
+                            )}`}
+                          >
+                            {order.action}
+                          </button>
+                        )
+                      }
                     </td>
                   </tr>
                 ))}
@@ -339,7 +351,7 @@ export default function OrderManagement() {
           )}
         </div>
 
-        {/* QR Code Display Modal (for rider to scan) */}
+        {/* QR Code Display Modal */}
         {showQrCodeModal && qrCodeOrder && (
           <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
             <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md relative">
@@ -351,7 +363,6 @@ export default function OrderManagement() {
               </p>
               <div className="flex justify-center mb-6 bg-gray-50 p-4 rounded">
                 <QRCodeCanvas
-                  // CRITICAL: The data must contain the Order ID for the rider to confirm
                   value={JSON.stringify({
                     orderId: qrCodeOrder.id,
                     vendorId: user._id,
@@ -379,13 +390,27 @@ export default function OrderManagement() {
           </div>
         )}
 
-        {/* Order Details Modal (Selected Order) - unchanged for now */}
+        {/* Order Details Modal (Selected Order) */}
         {selectedOrder && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
             onClick={() => setSelectedOrder(null)}
           >
-            {/* ... (Modal content for details view) ... */}
+            <div
+              className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                Order Details
+              </h2>
+              <p>{selectedOrder.items}</p>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="mt-4 bg-gray-200 p-2 rounded"
+              >
+                Close
+              </button>
+            </div>
           </div>
         )}
       </main>

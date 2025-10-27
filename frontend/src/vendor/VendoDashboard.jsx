@@ -17,13 +17,16 @@ import { useVendorData } from "../context/VendorDataContext";
 import { useAuth } from "../context/AuthContext";
 import { fetchVendorNotifications, fetchVendorOrders } from "../api/orders";
 
-// Icon mapping
+// Icon mapping (imported for use in notification list)
 const iconComponents = {
   Package: Package,
   DollarSign: DollarSign,
   AlertTriangle: AlertTriangle,
   CheckCircle: CheckCircle,
   Clock: Clock,
+  order: Package, // Map notification type 'order' to an icon
+  payment: DollarSign, // Map notification type 'payment' to an icon
+  system: AlertTriangle, // Map notification type 'system' to an icon
 };
 
 const VendorDashboard = () => {
@@ -32,13 +35,13 @@ const VendorDashboard = () => {
     notifications,
     handleWithdraw,
     setNotifications,
-    updateDashboardData, // <-- Used to update live stats in context
+    updateDashboardData,
     markNotificationAsRead,
     deleteReadNotifications,
   } = useVendorData();
 
   const { user, loadingAuth } = useAuth();
-  const [loading, setLoading] = useState(true); // Initial loading for dashboard data
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
@@ -52,7 +55,7 @@ const VendorDashboard = () => {
     setError(null);
     try {
       const [ordersData, notifsData] = await Promise.all([
-        fetchVendorOrders(), // Fetches orders containing this vendor's products
+        fetchVendorOrders(),
         fetchVendorNotifications(),
       ]);
 
@@ -61,7 +64,8 @@ const VendorDashboard = () => {
 
       // 2. ESCROW LOGIC CALCULATION:
       let totalOrders = 0;
-      let pendingDeliveries = 0;
+      let pendingAcceptance = 0; // New Orders
+      let pendingDeliveries = 0; // QR Scanning & In Delivery
       let salesInEscrow = 0;
       let earningsReleased = 0;
 
@@ -71,23 +75,23 @@ const VendorDashboard = () => {
         totalOrders++;
 
         if (order.orderStatus === "Delivered") {
-          earningsReleased += amount; // Funds released after delivery
-        } else if (order.orderStatus !== "Cancelled") {
-          salesInEscrow += amount; // Funds held for Processing, QR Scanning, Confirmed, Shipped
-
-          if (order.orderStatus !== "Processing") {
-            pendingDeliveries++; // Focus on orders actively in the logistics chain
-          }
-        }
-
-        if (order.orderStatus === "Processing") {
-          pendingDeliveries++; // Count initial orders awaiting acceptance/processing
+          earningsReleased += amount;
+        } else if (order.orderStatus === "New Order") {
+          salesInEscrow += amount;
+          pendingAcceptance++;
+        } else if (
+          order.orderStatus === "QR Scanning" ||
+          order.orderStatus === "In Delivery"
+        ) {
+          salesInEscrow += amount;
+          pendingDeliveries++;
         }
       });
 
       // 3. Update Global Context State with live calculated data
       updateDashboardData({
         ordersReceived: totalOrders,
+        pendingAcceptance: pendingAcceptance, // Use new metric for better clarity
         pendingDeliveries: pendingDeliveries,
         salesInEscrow: salesInEscrow,
         earningsReleased: earningsReleased,
@@ -101,7 +105,6 @@ const VendorDashboard = () => {
   }, [user, loadingAuth, setNotifications, updateDashboardData]);
 
   useEffect(() => {
-    // Initial data load when user context is ready
     if (user && !loadingAuth) {
       loadDashboardMetrics();
     }
@@ -135,7 +138,6 @@ const VendorDashboard = () => {
     }
   }, [dashboardData.earningsReleased, handleWithdraw]);
 
-  // Delete read notifications
   const handleDeleteReadNotifications = () => {
     const readCount = notifications.filter((n) => n.isRead).length;
     if (readCount === 0) return;
@@ -148,12 +150,26 @@ const VendorDashboard = () => {
     deleteReadNotifications();
   };
 
+  // FIX: Notification Click Handler
+  const handleNotificationClick = (notification) => {
+    markNotificationAsRead(notification.id);
+
+    if (notification.type === "order" && notification.relatedId) {
+      // Navigate to the OrderManagement page, optionally passing the relatedId to highlight the order.
+      navigate("/ordermanagement", {
+        state: { highlightId: notification.relatedId, autoFocus: true },
+      });
+    } else if (notification.type === "payment") {
+      navigate("/vendorwallet");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header
         avatarUrl={user?.avatar}
         userName={user?.name || "Vendor"}
-        unreadCount={unreadCount}
+        unreadCount={unreadCount} // Pass unread count to header bell
       />
 
       <main className="p-6">
@@ -179,18 +195,18 @@ const VendorDashboard = () => {
           </div>
         )}
 
-        {/* Stats Cards */}
+        {/* Stats Cards - Updated to reflect new state properties */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {[
             {
-              title: "Orders Received",
-              value: dashboardData.ordersReceived.toLocaleString(),
-              note: "Total orders processed",
+              title: "New Orders",
+              value: dashboardData.pendingAcceptance.toLocaleString(),
+              note: "Awaiting your acceptance",
             },
             {
-              title: "Pending Deliveries",
+              title: "Active Deliveries",
               value: dashboardData.pendingDeliveries.toLocaleString(),
-              note: "Awaiting Rider/Confirmation",
+              note: "In fulfillment process",
             },
             {
               title: "Sales in Escrow",
@@ -283,7 +299,8 @@ const VendorDashboard = () => {
                 return (
                   <div
                     key={notification.id}
-                    className={`bg-white rounded-lg p-4 shadow-sm border border-gray-200 flex items-start space-x-4 transition ${
+                    onClick={() => handleNotificationClick(notification)} // FIX: Clickable row
+                    className={`cursor-pointer bg-white rounded-lg p-4 shadow-sm border border-gray-200 flex items-start space-x-4 transition ${
                       notification.isRead
                         ? "opacity-70 border-l-4 border-l-gray-300"
                         : "border-l-4 border-l-emerald-600 hover:shadow-lg"
@@ -296,7 +313,7 @@ const VendorDashboard = () => {
                           : "bg-emerald-100 text-emerald-600"
                       }`}
                     >
-                      <IconComponent className="w-5 h-5" />
+                      {IconComponent && <IconComponent className="w-5 h-5" />}
                     </div>
 
                     <div className="flex-1">
@@ -324,7 +341,10 @@ const VendorDashboard = () => {
 
                     {!notification.isRead ? (
                       <button
-                        onClick={() => markNotificationAsRead(notification.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markNotificationAsRead(notification.id);
+                        }}
                         className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 ml-4 flex items-center space-x-1 flex-shrink-0"
                         title="Mark as Read"
                       >

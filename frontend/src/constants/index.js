@@ -511,8 +511,8 @@ export const DEFAULT_AVATAR_MAP = {
   // Vendor (Mama Mboga): Market Stall / Shop Icon
   vendor: "https://img.icons8.com/material-outlined/96/00A85E/shop.png",
 
-  // Farmer (Supplier): Plant / Seedling icon
-  farmer: "https://img.icons8.com/material-outlined/96/00A85E/potted-plant.png",
+  // Farmer (Supplier): Person/User icon
+  farmer: "https://img.icons8.com/material-outlined/96/00A85E/user.png",
 
   // Rider: Motorbike / Delivery Scooter icon
   rider: "https://img.icons8.com/material-outlined/96/00A85E/motorcycle.png",
