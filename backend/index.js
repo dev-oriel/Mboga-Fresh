@@ -28,7 +28,7 @@ app.use(cookieParser());
 
 // --- CRITICAL CORS MODIFICATION ---
 const LOCAL_HOST_ORIGIN = process.env.CLIENT_URL || "http://localhost:5173";
-const IP_BASED_ORIGIN = "http://192.168.100.20:5173";
+const IP_BASED_ORIGIN = "http://192.168.62.43:5173";
 
 app.use(
   cors({
@@ -55,7 +55,7 @@ app.use("/api/payments", paymentRouter);
 connectDB()
   .then(() => {
     app.listen(PORT, () =>
-      console.log(`Server running on http://192.168.100.20:${PORT}`)
+      console.log(`Server running on http://192.168.62.43:${PORT}`)
     );
   })
   .catch((err) => {
