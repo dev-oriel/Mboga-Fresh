@@ -1,5 +1,3 @@
-// backend/routes/order.route.js - MODIFIED
-
 import express from "express";
 import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
 import {
@@ -16,6 +14,8 @@ import {
   checkOrderStatus,
   confirmPickupByRider,
   confirmDeliveryByRider,
+  markNotificationAsReadDb,
+  deleteReadNotificationsDb,
 } from "../controllers/order.controller.js";
 
 const router = express.Router();
@@ -38,7 +38,7 @@ router.get(
 );
 
 // ------------------------------------
-// 2. VENDOR SPECIFIC ROUTES (UNCHANGED)
+// 2. VENDOR SPECIFIC ROUTES (Order Management)
 // ------------------------------------
 router.get(
   "/vendor/my-orders",
@@ -61,7 +61,28 @@ router.patch(
 );
 
 // ------------------------------------
-// 3. RIDER SPECIFIC ROUTES (UNCHANGED)
+// 3. NOTIFICATION MANAGEMENT ROUTES (NEW SECTION)
+// NOTE: These endpoints handle both vendor and admin notification actions.
+// ------------------------------------
+
+// Mark single notification as read
+router.patch(
+  "/notifications/:id/read",
+  requireAuth,
+  requireRole(["vendor", "rider", "admin", "buyer"]), // Allowed for any logged-in user
+  markNotificationAsReadDb
+);
+
+// Delete all read notifications for the current user
+router.delete(
+  "/notifications/read",
+  requireAuth,
+  requireRole(["vendor", "rider", "admin", "buyer"]),
+  deleteReadNotificationsDb
+);
+
+// ------------------------------------
+// 4. RIDER SPECIFIC ROUTES
 // ------------------------------------
 router.get(
   "/rider/tasks/available",
@@ -103,7 +124,7 @@ router.get(
 );
 
 // ------------------------------------
-// 4. ADMIN METRICS ROUTE (UNCHANGED)
+// 5. ADMIN METRICS ROUTE
 // ------------------------------------
 router.get(
   "/escrow-balance",

@@ -42,7 +42,14 @@ const orderSchema = new mongoose.Schema(
     },
     orderStatus: {
       type: String,
-      enum: ["Processing", "Confirmed", "Shipped", "Delivered", "Cancelled"],
+      enum: [
+        "Processing", // 0. Initial/Payment Pending
+        "New Order", // 1. Payment Confirmed / Awaiting Vendor Acceptance
+        "QR Scanning", // 2. Accepted by Vendor / Awaiting Rider Pickup
+        "In Delivery", // 3. Rider Picked Up / In Transit
+        "Delivered", // 4. Final Delivery Confirmation
+        "Cancelled",
+      ],
       default: "Processing",
     },
     mpesaCheckoutRequestId: {

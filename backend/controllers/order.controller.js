@@ -75,6 +75,7 @@ const placeOrder = async (req, res) => {
 
     const newOrderId = new mongoose.Types.ObjectId();
 
+    // 1. Initiate M-Pesa STK Push
     const mpesaResult = await initiateSTKPush(
       finalTotal,
       mpesaPhone,
@@ -88,24 +89,26 @@ const placeOrder = async (req, res) => {
       });
     }
 
+    // 2. ONLY CREATE THE ORDER TEMPORARILY WITH PENDING STATUS
     const newOrder = new Order({
       _id: newOrderId,
       user: userId,
       items: processedItems,
       shippingAddress: shippingAddress,
       totalAmount: finalTotal,
-      paymentStatus: "Pending",
-      orderStatus: "Processing",
+      paymentStatus: "Pending", // Payment is still pending confirmation
+      orderStatus: "Processing", // Initial state before payment confirmation
       mpesaCheckoutRequestId: mpesaResult.checkoutRequestId,
     });
 
     await newOrder.save();
 
+    // Send initial notifications (optional, but kept from original flow)
     uniqueVendorIds.forEach((vendorIdString) => {
       createDbNotification(
         new mongoose.Types.ObjectId(vendorIdString),
         newOrder._id,
-        `New Order #${newOrder._id
+        `New potential order #${newOrder._id
           .toString()
           .substring(18)
           .toUpperCase()} received! Awaiting M-Pesa payment confirmation.`
@@ -147,7 +150,8 @@ const updateOrderStatusAndNotifyRider = async (req, res) => {
         .json({ message: "Order not found or access denied." });
     }
 
-    if (order.orderStatus !== "Processing") {
+    // FIX 1: Check against the correct preceding status
+    if (order.orderStatus !== "New Order") {
       return res.status(400).json({
         message: `Order status is already ${order.orderStatus}. Cannot accept.`,
       });
@@ -158,6 +162,7 @@ const updateOrderStatusAndNotifyRider = async (req, res) => {
       100000 + Math.random() * 900000
     ).toString();
 
+    // FIX 2: Create the DeliveryTask with the Vendor's pickup code
     const newTask = await DeliveryTask.create({
       order: orderId,
       vendor: vendorId,
@@ -167,16 +172,14 @@ const updateOrderStatusAndNotifyRider = async (req, res) => {
       deliveryAddress: order.shippingAddress,
     });
 
+    // FIX 3: Set new Order Status
     const newStatus = "QR Scanning";
     await Order.findByIdAndUpdate(orderId, { orderStatus: newStatus });
 
     await createDbNotification(
       vendorId,
       orderId,
-      `Order #${orderId
-        .toString()
-        .substring(18)
-        .toUpperCase()} accepted. Status: Awaiting Rider Pickup.`
+      `Order accepted. Status: Awaiting Rider Pickup (Code: ${pickupCode}).`
     );
 
     res.json({
@@ -222,22 +225,58 @@ const getVendorOrders = async (req, res) => {
 };
 
 const getOrderDetailsById = async (req, res) => {
+  const { orderId } = req.params;
+  const userId = req.user._id;
+  const userRole = req.user.role;
+
+  if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    return res.status(400).json({ message: "Invalid Order ID format." });
+  }
+
   try {
-    const { orderId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ message: "Invalid Order ID format." });
-    }
-
-    const order = await Order.findOne({ _id: orderId, user: req.user._id });
+    // 1. Attempt to find the order by ID
+    const order = await Order.findById(orderId).lean();
 
     if (!order) {
       return res.status(404).json({
-        message: "Order not found or you don't have permission to view it.",
+        message: "Order not found.",
       });
     }
 
-    res.json(order);
+    // 2. Check Authorization Logic
+
+    // Condition A: User is the Buyer or Admin (highest authority)
+    if (String(order.user) === String(userId) || userRole === "admin") {
+      return res.json(order);
+    }
+
+    // Condition B: User is the Rider assigned to the task for this order
+    if (userRole === "rider") {
+      const task = await DeliveryTask.findOne({
+        order: orderId,
+        rider: userId, // Check if the current user is the assigned rider
+      }).lean();
+
+      if (task) {
+        // Rider can see the order details (we might enhance this later to embed task details)
+        return res.json(order);
+      }
+    }
+
+    // Condition C: User is the Vendor for an item in the order
+    if (userRole === "vendor") {
+      const isVendorForOrder = order.items.some(
+        (item) => String(item.vendor) === String(userId)
+      );
+      if (isVendorForOrder) {
+        return res.json(order);
+      }
+    }
+
+    // 3. If none of the above are met, deny access
+    return res.status(403).json({
+      message: "Forbidden. You do not have permission to view this order.",
+    });
   } catch (error) {
     console.error("Error fetching order details:", error);
     res.status(500).json({ message: "Failed to fetch order details." });
@@ -267,6 +306,47 @@ const getVendorNotifications = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch notifications." });
   }
 };
+
+// --- NEW/MODIFIED NOTIFICATION MANAGEMENT ENDPOINTS ---
+
+const markNotificationAsReadDb = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await Notification.findOneAndUpdate(
+      { _id: id, recipient: req.user._id },
+      { $set: { isRead: true } },
+      { new: true }
+    );
+    res.json({ success: true, message: "Notification marked as read." });
+  } catch (error) {
+    console.error("Mark read error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to mark notification as read.",
+    });
+  }
+};
+
+const deleteReadNotificationsDb = async (req, res) => {
+  try {
+    const result = await Notification.deleteMany({
+      recipient: req.user._id,
+      isRead: true,
+    });
+    res.json({
+      success: true,
+      message: `${result.deletedCount} notifications deleted.`,
+    });
+  } catch (error) {
+    console.error("Delete read error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete read notifications.",
+    });
+  }
+};
+
+// --- END NEW/MODIFIED NOTIFICATION MANAGEMENT ENDPOINTS ---
 
 const fetchAllAvailableTasks = async (req, res) => {
   try {
@@ -390,10 +470,12 @@ const confirmPickupByRider = async (req, res) => {
         .json({ message: "Invalid scan or task not ready for pickup." });
     }
 
+    // FIX 1: Set Task Status
     task.status = "In Transit";
     await task.save();
 
-    await Order.findByIdAndUpdate(orderId, { orderStatus: "Shipped" });
+    // FIX 2: Set Order Status
+    await Order.findByIdAndUpdate(orderId, { orderStatus: "In Delivery" });
 
     await createDbNotification(
       task.vendor,
@@ -401,7 +483,7 @@ const confirmPickupByRider = async (req, res) => {
       `Order #${orderId
         .toString()
         .substring(18)
-        .toUpperCase()} has been picked up and is In Transit.`
+        .toUpperCase()} has been picked up and is In Delivery.`
     );
 
     res.json({ message: "Pickup confirmed. Delivery is now in transit." });
@@ -412,7 +494,7 @@ const confirmPickupByRider = async (req, res) => {
 };
 
 const confirmDeliveryByRider = async (req, res) => {
-  const { orderId, buyerCode } = req.body;
+  const { orderId, buyerCode } = req.body; // CRITICAL: Now expects buyerCode
   const riderId = req.user._id;
 
   try {
@@ -424,7 +506,7 @@ const confirmDeliveryByRider = async (req, res) => {
       {
         order: orderId,
         rider: riderId,
-        buyerConfirmationCode: buyerCode,
+        buyerConfirmationCode: buyerCode, // CRITICAL: Use buyerCode for validation
         status: "In Transit",
       },
       { $set: { status: "Delivered" } },
@@ -434,9 +516,10 @@ const confirmDeliveryByRider = async (req, res) => {
     if (!task) {
       return res
         .status(401)
-        .json({ message: "Invalid Delivery Code or task not in transit." });
+        .json({ message: "Invalid Buyer Code or task not in transit." });
     }
 
+    // FIX: Set Order Status to Delivered (Order Complete)
     await Order.findByIdAndUpdate(orderId, { orderStatus: "Delivered" });
 
     await createDbNotification(
@@ -513,8 +596,6 @@ const handleMpesaCallback = async (req, res) => {
   const resultCode = stkCallback?.ResultCode;
   const resultDesc = stkCallback?.ResultDesc;
 
-  let orderUpdate = {};
-
   try {
     // 1. Find Order by the unique CheckoutRequestID
     const order = await Order.findOne({
@@ -530,44 +611,44 @@ const handleMpesaCallback = async (req, res) => {
     }
 
     if (resultCode === 0) {
-      // Success
-      orderUpdate = {
+      // PAYMENT SUCCESS: Update order status to PAID and next ORDER status to 'New Order'
+      const orderUpdate = {
         paymentStatus: "Paid",
-        orderStatus: "Confirmed", // Ready for vendor acceptance
+        orderStatus: "New Order", // FIX: Ready for vendor action
         mpesaReceiptNumber: stkCallback.CallbackMetadata.Item.find(
           (i) => i.Name === "MpesaReceiptNumber"
         )?.Value,
       };
+      await Order.findByIdAndUpdate(order._id, orderUpdate);
+
+      // Notify Vendor of confirmed payment
+      const notificationMessage = `Payment confirmed! New Order #${order._id
+        .toString()
+        .substring(18)
+        .toUpperCase()} is ready for your acceptance.`;
+
+      await createDbNotification(
+        order.items[0].vendor,
+        order._id,
+        notificationMessage
+      );
     } else {
-      // Failure (1037: timeout, 1: insufficient funds, etc.)
-      orderUpdate = {
-        paymentStatus: "Failed",
-        paymentFailureReason: resultDesc,
-      };
+      // PAYMENT FAILURE
+      console.warn("M-Pesa Payment Failed. Deleting Order ID:", order._id);
+
+      // FIX: Delete the order entirely on failure (if it's still in the processing state)
+      if (order.orderStatus === "Processing") {
+        await Order.deleteOne({ _id: order._id });
+      } else {
+        // If already moved past initial state, just mark as failed and log reason
+        await Order.findByIdAndUpdate(order._id, {
+          paymentStatus: "Failed",
+          paymentFailureReason: resultDesc,
+        });
+      }
     }
 
-    // 2. Update Order Status
-    await Order.findByIdAndUpdate(order._id, orderUpdate);
-
-    // 3. Notify Vendor
-    const notificationMessage =
-      resultCode === 0
-        ? `Payment confirmed! Order #${order._id
-            .toString()
-            .substring(18)
-            .toUpperCase()} is ready.`
-        : `Payment failed for Order #${order._id
-            .toString()
-            .substring(18)
-            .toUpperCase()}. Reason: ${resultDesc}`;
-
-    await createDbNotification(
-      order.items[0].vendor,
-      order._id,
-      notificationMessage
-    );
-
-    // 4. Return status 200 response (MANDATORY for Daraja API)
+    // 3. Return status 200 response (MANDATORY for Daraja API)
     return res
       .status(200)
       .json({ message: "Callback processed successfully." });
@@ -597,4 +678,6 @@ export {
   confirmDeliveryByRider,
   getTotalEscrowBalance,
   checkOrderStatus,
+  markNotificationAsReadDb,
+  deleteReadNotificationsDb,
 };
