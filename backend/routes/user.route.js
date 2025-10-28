@@ -8,7 +8,8 @@ import {
 import {
   getTotalEscrowBalance,
   listAllOrders,
-} from "../controllers/order.controller.js"; // IMPORT listAllOrders
+  listAllTransactions,
+} from "../controllers/order.controller.js";
 
 const router = express.Router();
 
@@ -27,11 +28,17 @@ router.patch(
 router.get("/orders", requireAuth, requireRole(["admin"]), listAllOrders);
 
 // ESCROW METRICS ROUTE (Existing)
+
+router.get(
+  "/transactions",
+  requireAuth,
+  requireRole(["admin"]),
+  listAllTransactions
+);
 router.get(
   "/escrow-balance",
   requireAuth,
   requireRole(["admin"]),
   getTotalEscrowBalance
 );
-
 export default router;

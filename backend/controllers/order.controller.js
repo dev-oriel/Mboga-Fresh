@@ -632,32 +632,44 @@ const handleMpesaCallback = async (req, res) => {
     }
 
     if (resultCode === 0) {
+      // CRITICAL FIX: Helper function to safely extract M-Pesa fields
+      const getCallbackValue = (name) =>
+        stkCallback.CallbackMetadata?.Item?.find((item) => item.Name === name)
+          ?.Value;
+
+      const mpesaReceiptNumber = getCallbackValue("MpesaReceiptNumber");
+      const mpesaTransactionDate = getCallbackValue("TransactionDate");
+      const mpesaPhoneNumber = getCallbackValue("PhoneNumber"); // The actual phone number that paid
+
       // PAYMENT SUCCESS: Update order status to PAID and next ORDER status to 'New Order'
       const orderUpdate = {
         paymentStatus: "Paid",
-        orderStatus: "New Order", // FIX: Ready for vendor action
-        mpesaReceiptNumber: stkCallback.CallbackMetadata.Item.find(
-          (i) => i.Name === "MpesaReceiptNumber"
-        )?.Value,
+        orderStatus: "New Order", // Ready for vendor action
+        mpesaReceiptNumber: mpesaReceiptNumber,
+        mpesaTransactionDate: mpesaTransactionDate,
+        mpesaPhoneNumber: mpesaPhoneNumber,
       };
       await Order.findByIdAndUpdate(order._id, orderUpdate);
 
       // Notify Vendor of confirmed payment
-      const notificationMessage = `Payment confirmed! New Order #${order._id
-        .toString()
-        .substring(18)
-        .toUpperCase()} is ready for your acceptance.`;
+      // Safety check added to prevent crash if order has no items (though it shouldn't)
+      if (order.items && order.items.length > 0) {
+        const notificationMessage = `Payment confirmed! New Order #${order._id
+          .toString()
+          .substring(18)
+          .toUpperCase()} is ready for your acceptance.`;
 
-      await createDbNotification(
-        order.items[0].vendor,
-        order._id,
-        notificationMessage
-      );
+        await createDbNotification(
+          order.items[0].vendor, // Assuming first item vendor is the primary recipient
+          order._id,
+          notificationMessage
+        );
+      }
     } else {
       // PAYMENT FAILURE
       console.warn("M-Pesa Payment Failed. Deleting Order ID:", order._id);
 
-      // FIX: Delete the order entirely on failure (if it's still in the processing state)
+      // Delete the order entirely on failure (if it's still in the processing state)
       if (order.orderStatus === "Processing") {
         await Order.deleteOne({ _id: order._id });
       } else {
@@ -680,6 +692,7 @@ const handleMpesaCallback = async (req, res) => {
       .json({ message: "Internal server error during processing." });
   }
 };
+
 const getRiderEarningsAndHistory = async (req, res) => {
   const riderId = req.user._id;
 
@@ -718,6 +731,7 @@ const getRiderEarningsAndHistory = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch rider earnings data." });
   }
 };
+
 const listAllOrders = async (req, res) => {
   try {
     const orders = await Order.find({})
@@ -733,37 +747,92 @@ const listAllOrders = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch all orders." });
   }
 };
+
 const listAllTransactions = async (req, res) => {
   try {
     const paidOrders = await Order.find({ paymentStatus: "Paid" })
-      .populate("user", "name") // Populate buyer name
+      .populate("user", "name")
       .sort({ createdAt: -1 })
-      .select("user totalAmount orderStatus mpesaReceiptNumber createdAt") // Include mpesaReceiptNumber
+      .select(
+        "user totalAmount orderStatus mpesaReceiptNumber mpesaTransactionDate mpesaPhoneNumber createdAt items"
+      )
       .lean();
 
     // Map data to create a flat transaction view
-    const transactions = paidOrders.map((order) => ({
-      id: order._id,
-      buyerName: order.user?.name || "N/A",
-      // Vendor name is simplified: often the first vendor in the item list.
-      // For true multi-vendor, this would require complex population or pre-aggregation.
-      sellerName: order.items[0]?.vendorName || "Multiple Vendors",
-      amount: order.totalAmount,
-      date: order.createdAt,
-      status: order.orderStatus,
-      // CRITICAL: Expose the Mpesa code as 'mpesaCode'
-      mpesaCode: order.mpesaReceiptNumber || "N/A",
-    }));
+    const transactions = paidOrders.map((order) => {
+      // CRITICAL FIX: Ensure order.items is an array before using it
+      const safeItems = Array.isArray(order.items) ? order.items : [];
+
+      // We use the safeItems array now. This fixes the Type Error.
+      const itemVendors = safeItems.map((item) => item.vendor).filter(Boolean);
+      const sellerDisplay =
+        itemVendors.length > 1
+          ? `${itemVendors.length} Vendors`
+          : itemVendors.length === 1
+          ? "Single Vendor"
+          : "N/A";
+
+      // Extract and format transaction date/time
+      const mpesaDateCode = String(order.mpesaTransactionDate || "");
+      let transactionDate = new Date(order.createdAt); // Fallback Date object
+
+      if (mpesaDateCode.length === 14) {
+        const year = mpesaDateCode.substring(0, 4);
+        const month = mpesaDateCode.substring(4, 6);
+        const day = mpesaDateCode.substring(6, 8);
+        const hour = mpesaDateCode.substring(8, 10);
+        const minute = mpesaDateCode.substring(10, 12);
+
+        // Create a reliable Date object using the M-Pesa time data
+        // We use 'T' and assume local time (if timezone data is missing, this is the best guess)
+        transactionDate = new Date(
+          `${year}-${month}-${day}T${hour}:${minute}:00`
+        );
+      }
+
+      // Format date and time using Date object properties
+      const formattedDate = transactionDate.toLocaleDateString("en-KE", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+      const formattedTime = transactionDate.toLocaleTimeString("en-KE", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+      return {
+        id: order._id,
+        buyerName: order.user?.name || "N/A",
+        amount: order.totalAmount,
+        transactionDate: formattedDate,
+        transactionTime: formattedTime,
+        mpesaCode: order.mpesaReceiptNumber || "N/A",
+        phone: order.mpesaPhoneNumber || order.user?.phone || "N/A",
+        status: order.orderStatus,
+      };
+    });
 
     res.json(transactions);
   } catch (error) {
-    console.error("Error fetching all transactions for admin:", error);
-    res.status(500).json({ message: "Failed to fetch transaction list." });
+    // Log the exact error causing the 500
+    console.error(
+      "Error fetching all transactions for admin: CRASH DETECTED",
+      error
+    );
+    res.status(500).json({
+      message:
+        "Internal Server Error during transaction processing. See server logs.",
+      details: error.message,
+    });
   }
 };
+
 // ---------------------------------------------------------------------
 // FINAL CONSOLIDATED EXPORTS
 // ---------------------------------------------------------------------
+
 export {
   placeOrder,
   handleMpesaCallback,

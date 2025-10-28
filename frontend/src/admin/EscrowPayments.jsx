@@ -1,136 +1,143 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Search, Landmark, X, Loader2 } from "lucide-react"; // Added Loader2
+import {
+  Search,
+  Landmark,
+  X,
+  Loader2,
+  AlertTriangle,
+  Phone,
+  Scale,
+} from "lucide-react";
 import Header from "../components/adminComponents/AdminHeader";
 import Sidebar from "../components/adminComponents/AdminSidebar";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
-// Helper function to format currency
-const formatKsh = (amount) =>
-  `Ksh ${Number(amount).toLocaleString("en-KE", { minimumFractionDigits: 2 })}`;
-
-// Dispute Modal Component (Unchanged)
-const DisputeModal = ({ transaction, onClose }) => {
-  // ... (DisputeModal content remains the same) ...
+// Helper function to format currency (Ensuring NaN is handled)
+const formatKsh = (amount) => {
+  // FIX: Convert to number and default to 0 if NaN/null/undefined
+  const safeAmount = Number(amount) || 0;
+  return `Ksh ${safeAmount.toLocaleString("en-KE", {
+    minimumFractionDigits: 2,
+  })}`;
 };
 
-// Main Escrow & Payments Component
 const EscrowPayments = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Statuses");
+  const [loadingTransactions, setLoadingTransactions] = useState(true);
+  const [loadingEscrow, setLoadingEscrow] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [selectedDispute, setSelectedDispute] = useState(null);
-  const [loading, setLoading] = useState(false); // New state for loading transactions
-  const [loadingEscrow, setLoadingEscrow] = useState(true); // New state for loading escrow total
 
-  // State for live escrow total
   const [totalEscrowBalance, setTotalEscrowBalance] = useState(0);
+  const [transactions, setTransactions] = useState([]);
 
-  // Dummy Transaction State (To be replaced by API in future steps)
-  const [transactions, setTransactions] = useState([
-    {
-      id: "#MBG-84321",
-      buyer: "Aisha Hassan",
-      seller: "Fresh Veggies Ltd.",
-      amount: 5200.0,
-      date: "2023-10-26",
-      status: "Released",
-    },
-    {
-      id: "#MBG-84320",
-      buyer: "James Omondi",
-      seller: "Mama Mboga Grace",
-      amount: 1850.0,
-      date: "2023-10-25",
-      status: "Pending",
-    },
-    {
-      id: "#MBG-84319",
-      buyer: "David Koech",
-      seller: "Kilimo Fresh Farm",
-      amount: 12500.0,
-      date: "2023-10-24",
-      status: "Disputed",
-    },
-    {
-      id: "#MBG-84318",
-      buyer: "Mary Wanjiru",
-      seller: "City Grocers",
-      amount: 3400.0,
-      date: "2023-10-23",
-      status: "Released",
-    },
-    {
-      id: "#MBG-84317",
-      buyer: "Peter Gitau",
-      seller: "Urban Farmers Co-op",
-      amount: 8900.0,
-      date: "2023-10-22",
-      status: "Pending",
-    },
-  ]);
-
-  // NEW: Function to fetch the total escrow amount
+  // Function to fetch the total escrow amount (Unchanged)
   const fetchEscrowBalance = useCallback(async () => {
     setLoadingEscrow(true);
     try {
       const endpoint = `${API_BASE}/api/admin/escrow-balance`;
       const response = await axios.get(endpoint, { withCredentials: true });
       setTotalEscrowBalance(response.data.totalEscrow || 0);
+      setFetchError(null);
     } catch (err) {
       console.error("Error fetching escrow balance:", err);
+      setTotalEscrowBalance("N/A");
+      setFetchError(err.message);
     } finally {
       setLoadingEscrow(false);
     }
   }, []);
 
+  // Function to fetch all transactions (Paid orders)
+  const fetchTransactions = useCallback(async () => {
+    setLoadingTransactions(true);
+    try {
+      const response = await axios.get(`${API_BASE}/api/admin/transactions`, {
+        withCredentials: true,
+      });
+      setTransactions(response.data);
+      setFetchError(null);
+    } catch (err) {
+      console.error("Error fetching transactions:", err);
+      setTransactions([]);
+      setFetchError(
+        err.response?.data?.message || "Failed to load transaction data."
+      );
+    } finally {
+      setLoadingTransactions(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchEscrowBalance();
-  }, [fetchEscrowBalance]);
+    fetchTransactions();
+  }, [fetchEscrowBalance, fetchTransactions]);
 
+  // Handlers (simplified for demonstration/future implementation)
   const handleRelease = (id) => {
-    setTransactions((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: "Released" } : t))
-    );
-    fetchEscrowBalance(); // Re-fetch balance on action
+    alert(`Simulating fund release for order ID: ${id}`);
+    fetchTransactions();
+    fetchEscrowBalance();
   };
 
   const handleHold = (id) => {
-    setTransactions((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: "Pending" } : t))
-    );
-    fetchEscrowBalance(); // Re-fetch balance on action
+    alert(`Simulating hold/dispute for order ID: ${id}`);
+    fetchTransactions();
+    fetchEscrowBalance();
   };
 
-  const handleViewDispute = (transaction) => {
-    setSelectedDispute(transaction);
+  const handleInitiateDispute = (id) => {
+    // Navigate to the dispute resolution tab, pre-filling the order ID
+    navigate(`/admindisputeresolution?orderId=${id}`);
   };
-
-  const filteredTransactions = transactions.filter((t) => {
-    const matchesSearch =
-      t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.buyer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.seller.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      statusFilter === "All Statuses" || t.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
 
   const getStatusBadge = (status) => {
+    const lowerStatus = status.toLowerCase();
     const styles = {
-      Released: "bg-green-100 text-green-700",
-      Pending: "bg-yellow-100 text-yellow-700",
-      Disputed: "bg-red-100 text-red-700",
+      delivered: "bg-green-100 text-green-700",
+      paid: "bg-green-100 text-green-700",
+      pending: "bg-yellow-100 text-yellow-700",
+      "new order": "bg-yellow-100 text-yellow-700",
+      "qr scanning": "bg-yellow-100 text-yellow-700",
+      "in delivery": "bg-blue-100 text-blue-700",
+      disputed: "bg-red-100 text-red-700",
     };
     return (
       <span
-        className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${styles[status]}`}
+        className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
+          styles[lowerStatus] || styles.pending
+        }`}
       >
         <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
         {status}
       </span>
     );
   };
+
+  const filteredTransactions = transactions.filter((t) => {
+    const orderIdShort = t.id.substring(18).toLowerCase();
+    const query = searchQuery.toLowerCase();
+
+    const matchesSearch =
+      orderIdShort.includes(query) ||
+      t.buyerName.toLowerCase().includes(query) ||
+      t.phone.includes(query) ||
+      t.mpesaCode?.toLowerCase().includes(query);
+
+    const statusMatch =
+      statusFilter === "All Statuses" ||
+      (statusFilter === "Released" && t.status === "Delivered") ||
+      (statusFilter === "Pending" &&
+        t.status !== "Delivered" &&
+        t.status !== "Cancelled");
+
+    return matchesSearch && statusMatch;
+  });
 
   return (
     <div className="flex min-h-screen bg-[#f7f8f6]">
@@ -139,12 +146,16 @@ const EscrowPayments = () => {
         <Header />
 
         <main className="p-6 space-y-6">
-          {/* Total Escrow Balance Card */}
+          <h1 className="text-3xl font-bold text-stone-900">
+            Financial Transactions (Audit)
+          </h1>
+
+          {/* Total Escrow Balance Card - Unchanged */}
           <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-2xl shadow-sm border border-green-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-medium mb-1">
-                  Total Escrow Balance
+                  Total Funds Held in Escrow
                 </p>
                 <h2 className="text-4xl font-bold text-[#63cf17] flex items-center gap-3">
                   {loadingEscrow ? (
@@ -154,20 +165,26 @@ const EscrowPayments = () => {
                   )}
                 </h2>
               </div>
-              <button className="p-3 bg-white rounded-lg hover:bg-green-50 transition-colors shadow-sm">
-                <Landmark className="w-6 h-6 text-[#63cf17]" />
-              </button>
+              <Landmark className="w-8 h-8 text-[#63cf17]" />
             </div>
           </div>
 
-          {/* Filters and Search */}
+          {/* Error Banner - Unchanged */}
+          {fetchError && (
+            <div className="p-3 bg-red-100 text-red-700 rounded-lg flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              <span className="font-medium">Error: {fetchError}</span>
+            </div>
+          )}
+
+          {/* Filters and Search - Unchanged */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
               <div className="relative flex-1 w-full md:max-w-md">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search transactions..."
+                  placeholder="Search ID, Buyer, or M-Pesa Code..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#63cf17] focus:border-transparent"
@@ -178,112 +195,102 @@ const EscrowPayments = () => {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#63cf17] focus:border-transparent"
               >
-                <option>All Statuses</option>
-                <option>Released</option>
-                <option>Pending</option>
-                <option>Disputed</option>
+                <option value="All Statuses">All Transactions</option>
+                <option value="Pending">In Escrow (Pending Delivery)</option>
+                <option value="Released">Released (Delivered)</option>
+                <option value="Disputed">Disputed</option>
               </select>
             </div>
           </div>
 
           {/* Transactions Table */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Transaction ID
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Buyer
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Seller
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Amount (KSH)
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredTransactions.map((transaction) => (
-                    <tr
-                      key={transaction.id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {transaction.id}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {transaction.buyer}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {transaction.seller}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                        {transaction.amount.toLocaleString("en-KE", {
-                          minimumFractionDigits: 2,
-                        })}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {transaction.date}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(transaction.status)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {transaction.status === "Pending" ? (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleRelease(transaction.id)}
-                              className="px-3 py-1 bg-[#63cf17] text-white rounded-lg hover:bg-[#52b012] transition-colors text-xs font-medium"
-                            >
-                              Release
-                            </button>
-                            <button
-                              onClick={() => handleHold(transaction.id)}
-                              className="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-xs font-medium"
-                            >
-                              Hold
-                            </button>
-                          </div>
-                        ) : transaction.status === "Disputed" ? (
-                          <button
-                            onClick={() => handleViewDispute(transaction)}
-                            className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium"
-                          >
-                            View Dispute
-                          </button>
-                        ) : (
-                          <span className="text-gray-400 text-xs">-</span>
-                        )}
-                      </td>
+            {loadingTransactions ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin mx-auto text-emerald-600 mb-2" />
+                Loading transactions...
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Order ID
+                      </th>
+
+                      {/* TRANSACTION DATE */}
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Date
+                      </th>
+
+                      {/* TRANSACTION TIME */}
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Time
+                      </th>
+
+                      {/* BUYER/PAYMENT PHONE */}
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Buyer (Phone)
+                      </th>
+
+                      {/* MPESA CODE */}
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        M-Pesa Code
+                      </th>
+
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Amount (KSH)
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Fulfillment Status
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredTransactions.map((t) => (
+                      <tr
+                        key={t.id}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                          #{t.id.substring(18).toUpperCase()}
+                        </td>
+                        {/* TRANSACTION DATE COLUMN */}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700">
+                          {t.transactionDate}
+                        </td>
+                        {/* TRANSACTION TIME COLUMN */}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-700">
+                          {t.transactionTime}
+                        </td>
+                        {/* BUYER/PHONE COLUMN */}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          <span className="font-medium">{t.buyerName}</span>
+                          <div className="text-xs text-gray-500 flex items-center">
+                            <Phone className="w-3 h-3 mr-1" /> {t.phone}
+                          </div>
+                        </td>
+                        {/* M-PESA CODE COLUMN */}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-emerald-600 font-semibold">
+                          {t.mpesaCode || "N/A"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                          {formatKsh(t.amount)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {/* Fulfillment Status is now in its own column */}
+                          {getStatusBadge(t.status)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </main>
       </div>
-
-      {/* Dispute Modal */}
-      {selectedDispute && (
-        <DisputeModal
-          transaction={selectedDispute}
-          onClose={() => setSelectedDispute(null)}
-        />
-      )}
     </div>
   );
 };

@@ -203,7 +203,10 @@ function App() {
                   path="/admin/ordermanagement"
                   element={<AdminOrderManagement />}
                 />
-                <Route path="/adminescrow" element={<EscrowPayments />} />
+                <Route
+                  path="/admin/transactions"
+                  element={<EscrowPayments />}
+                />
                 <Route
                   path="/admindisputeresolution"
                   element={<AdminDisputeResolution />}

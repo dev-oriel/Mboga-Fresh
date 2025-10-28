@@ -24,9 +24,9 @@ const AdminSidebar = () => {
       icon: ClipboardList,
       path: "/admin/ordermanagement",
     },
-    { name: "Escrow & Payments", icon: FileText, path: "/adminescrow" },
+    { name: "Transactions", icon: FileText, path: "/admin/transactions" },
     {
-      name: "Dispute Resolution",
+      name: "Escrow & Disputes",
       icon: Scale,
       path: "/admindisputeresolution",
     },
