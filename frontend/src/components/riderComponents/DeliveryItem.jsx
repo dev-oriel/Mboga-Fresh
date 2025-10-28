@@ -10,31 +10,40 @@ const DeliveryItem = ({
   vendor,
   status,
   onAccept,
-  onScan, // This now maps to handleViewConfirmation in the parent
+  // onScan: This parameter is indeed unused in the final component logic,
+  // as the actions are tied to internal navigation handlers.
   isTaskAvailable = false,
 }) => {
   const navigate = useNavigate();
 
-  // Handler to navigate and immediately activate manual input mode on the next page
+  // Handler to navigate and immediately activate manual input mode on the next page.
+  // This bypasses the default camera check in development.
   const handleManualClick = (orderId) => {
-    // Navigating to the detail page and passing state to force manual input on load
     navigate(`/riderdelivery/${orderId}`, { state: { forceManual: true } });
   };
 
-  // Determine the action button text/color
+  // Handler for a simple detail click (no forced state).
+  const handleDetailClick = (orderId) => {
+    navigate(`/riderdelivery/${orderId}`);
+  };
+
+  // Determine the action button text/color and its action handler
   const getTaskAction = () => {
     if (isTaskAvailable) {
       return {
         label: "Accept Task",
-        action: onAccept,
+        action: onAccept, // Action is the function passed from parent (RiderDeliveryQueue)
         style: "bg-red-600 hover:bg-red-700 text-white",
         showManualLink: false,
       };
     }
+
+    // For Accepted/In Transit tasks, the primary action must go to the confirmation screen.
     if (status === "Accepted/Awaiting Pickup") {
       return {
         label: "Scan Pickup QR",
-        action: onScan, // Routes to detail page
+        // CRITICAL FIX: Direct the main button to force manual input/scanner view
+        action: () => handleManualClick(id),
         style: "bg-emerald-600 hover:bg-emerald-700 text-white",
         showManualLink: true,
       };
@@ -42,14 +51,15 @@ const DeliveryItem = ({
     if (status === "In Transit") {
       return {
         label: "Scan Buyer QR",
-        action: onScan, // Routes to detail page
+        // CRITICAL FIX: Direct the main button to force manual input/scanner view
+        action: () => handleManualClick(id),
         style: "bg-amber-600 hover:bg-amber-700 text-white",
         showManualLink: true,
       };
     }
     return {
       label: "View Details",
-      action: onScan,
+      action: () => handleDetailClick(id),
       style: "border border-gray-300 text-gray-700 hover:bg-gray-100",
       showManualLink: false,
     };

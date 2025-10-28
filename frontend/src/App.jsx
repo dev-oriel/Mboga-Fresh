@@ -67,6 +67,7 @@ import AdminDisputeResolution from "./admin/AdminDisputeResolution.jsx";
 import ReportsAnalytics from "./admin/ReportsAnalytics.jsx";
 import ProductManagement from "./admin/ProductManagement.jsx";
 import DeliveryAndLogistics from "./admin/DeliveryAndLogistics.jsx";
+import AdminOrderManagement from "./admin/OrderManagement.jsx";
 // import ReportsAnalytics from "./admin/ReportsAnalytics.jsx";
 
 function App() {
@@ -198,6 +199,10 @@ function App() {
                 <Route path="/adminsettings" element={<AdminSettings />} />
                 <Route path="/usermanagement" element={<UserManagement />} />
                 <Route path="/adminproducts" element={<ProductManagement />} />
+                <Route
+                  path="/admin/ordermanagement"
+                  element={<AdminOrderManagement />}
+                />
                 <Route path="/adminescrow" element={<EscrowPayments />} />
                 <Route
                   path="/admindisputeresolution"

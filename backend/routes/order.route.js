@@ -16,6 +16,7 @@ import {
   confirmDeliveryByRider,
   markNotificationAsReadDb,
   deleteReadNotificationsDb,
+  getRiderEarningsAndHistory,
 } from "../controllers/order.controller.js";
 
 const router = express.Router();
@@ -84,6 +85,14 @@ router.delete(
 // ------------------------------------
 // 4. RIDER SPECIFIC ROUTES
 // ------------------------------------
+
+router.get(
+  "/rider/stats",
+  requireAuth,
+  requireRole(["rider"]),
+  getRiderEarningsAndHistory
+);
+
 router.get(
   "/rider/tasks/available",
   requireAuth,

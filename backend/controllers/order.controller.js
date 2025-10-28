@@ -234,52 +234,73 @@ const getOrderDetailsById = async (req, res) => {
   }
 
   try {
-    // 1. Attempt to find the order by ID
+    // 1. Find the order
     const order = await Order.findById(orderId).lean();
 
     if (!order) {
+      // Note: Since this is likely the failing path, this console.log will now confirm if the failure happens *before* or *during* this check.
+      console.warn(`[OrderAuth] 404: Order ID ${orderId} not found.`);
       return res.status(404).json({
         message: "Order not found.",
       });
     }
 
-    // 2. Check Authorization Logic
+    // --- 2. Authorization Logic (Robust Check) ---
 
-    // Condition A: User is the Buyer or Admin (highest authority)
+    let isAuthorized = false;
+
+    // Check A: Buyer or Admin
     if (String(order.user) === String(userId) || userRole === "admin") {
-      return res.json(order);
+      isAuthorized = true;
     }
 
-    // Condition B: User is the Rider assigned to the task for this order
+    // Check B: Rider access via DeliveryTask (CRITICAL PATH)
     if (userRole === "rider") {
+      // We only need to check if a task exists linking THIS user (rider) to THIS order
       const task = await DeliveryTask.findOne({
         order: orderId,
-        rider: userId, // Check if the current user is the assigned rider
+        rider: userId,
       }).lean();
 
       if (task) {
-        // Rider can see the order details (we might enhance this later to embed task details)
-        return res.json(order);
+        isAuthorized = true;
       }
     }
 
-    // Condition C: User is the Vendor for an item in the order
+    // Check C: Vendor access
     if (userRole === "vendor") {
       const isVendorForOrder = order.items.some(
         (item) => String(item.vendor) === String(userId)
       );
       if (isVendorForOrder) {
-        return res.json(order);
+        isAuthorized = true;
       }
     }
 
-    // 3. If none of the above are met, deny access
-    return res.status(403).json({
-      message: "Forbidden. You do not have permission to view this order.",
-    });
+    if (isAuthorized) {
+      console.log(
+        `[OrderAuth] Access granted for User ${userId} (Role: ${userRole}) to Order ${orderId}.`
+      );
+      // If the rider is authorized, send the order data.
+      return res.json(order);
+    } else {
+      console.warn(
+        `[OrderAuth] 403: Access denied for User ${userId} (Role: ${userRole}) to Order ${orderId}.`
+      );
+      return res.status(403).json({
+        message: "Forbidden. You do not have permission to view this order.",
+      });
+    }
   } catch (error) {
-    console.error("Error fetching order details:", error);
-    res.status(500).json({ message: "Failed to fetch order details." });
+    // Log unexpected server/database errors deeply
+    console.error(
+      `[OrderAuth] Critical Server Error for Order ${orderId}:`,
+      error
+    );
+    res.status(500).json({
+      message: "Failed to fetch order details due to an internal server error.",
+      details: error.message,
+    });
   }
 };
 
@@ -659,7 +680,87 @@ const handleMpesaCallback = async (req, res) => {
       .json({ message: "Internal server error during processing." });
   }
 };
+const getRiderEarningsAndHistory = async (req, res) => {
+  const riderId = req.user._id;
 
+  try {
+    // Find all tasks completed by the current rider
+    const completedTasks = await DeliveryTask.find({
+      rider: riderId,
+      status: "Delivered", // Tasks marked as delivered
+    })
+      .populate("order", "totalAmount") // Populate the order amount (or calculate fee)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Calculate total lifetime earnings
+    const totalEarnings = completedTasks.reduce((sum, task) => {
+      // Assuming deliveryFee is the rider's earning, if not zero.
+      const earning = task.deliveryFee || 0;
+      return sum + earning;
+    }, 0);
+
+    // Return summary stats and the list of recent tasks
+    res.json({
+      totalEarnings: totalEarnings,
+      completedCount: completedTasks.length,
+      recentDeliveries: completedTasks.slice(0, 5).map((task) => ({
+        id: task.order._id,
+        customer: task.deliveryAddress.street || task.order._id.substring(18),
+        location: task.deliveryAddress.city,
+        earnings: task.deliveryFee,
+        status: "Delivered",
+        date: task.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching rider earnings:", error);
+    res.status(500).json({ message: "Failed to fetch rider earnings data." });
+  }
+};
+const listAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({})
+      // Populate user (buyer) name for display and select only essential fields
+      .populate("user", "name phone")
+      .sort({ createdAt: -1 })
+      .select("-__v -updatedAt")
+      .lean(); // Use .lean() for faster read operations
+
+    res.json(orders);
+  } catch (error) {
+    console.error("Error fetching all orders for admin:", error);
+    res.status(500).json({ message: "Failed to fetch all orders." });
+  }
+};
+const listAllTransactions = async (req, res) => {
+  try {
+    const paidOrders = await Order.find({ paymentStatus: "Paid" })
+      .populate("user", "name") // Populate buyer name
+      .sort({ createdAt: -1 })
+      .select("user totalAmount orderStatus mpesaReceiptNumber createdAt") // Include mpesaReceiptNumber
+      .lean();
+
+    // Map data to create a flat transaction view
+    const transactions = paidOrders.map((order) => ({
+      id: order._id,
+      buyerName: order.user?.name || "N/A",
+      // Vendor name is simplified: often the first vendor in the item list.
+      // For true multi-vendor, this would require complex population or pre-aggregation.
+      sellerName: order.items[0]?.vendorName || "Multiple Vendors",
+      amount: order.totalAmount,
+      date: order.createdAt,
+      status: order.orderStatus,
+      // CRITICAL: Expose the Mpesa code as 'mpesaCode'
+      mpesaCode: order.mpesaReceiptNumber || "N/A",
+    }));
+
+    res.json(transactions);
+  } catch (error) {
+    console.error("Error fetching all transactions for admin:", error);
+    res.status(500).json({ message: "Failed to fetch transaction list." });
+  }
+};
 // ---------------------------------------------------------------------
 // FINAL CONSOLIDATED EXPORTS
 // ---------------------------------------------------------------------
@@ -680,4 +781,7 @@ export {
   checkOrderStatus,
   markNotificationAsReadDb,
   deleteReadNotificationsDb,
+  getRiderEarningsAndHistory,
+  listAllOrders,
+  listAllTransactions,
 };

@@ -5,6 +5,7 @@ import {
   fetchOrderDetails,
   confirmPickup,
   confirmDelivery,
+  fetchRiderAcceptedTasks, // Added for robust failover check
 } from "../api/orders";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -15,10 +16,12 @@ import {
   Package,
   Camera,
   AlertTriangle,
-  X, // Added X icon for dismiss
+  X,
+  DollarSign,
 } from "lucide-react";
 
-// --- Helper Functions (Remains Unchanged) ---
+const formatKsh = (amount) =>
+  `Ksh ${Number(amount).toLocaleString("en-KE", { minimumFractionDigits: 0 })}`;
 
 const getStatusBadgeProps = (status) => {
   const lowerStatus = status ? status.toLowerCase() : "";
@@ -62,35 +65,74 @@ const RiderDeliveryDetail = () => {
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(null); // New state to hold API error
+  const [fetchError, setFetchError] = useState(null);
   const [vendorCodeInput, setVendorCodeInput] = useState("");
   const [buyerCodeInput, setBuyerCodeInput] = useState("");
   const [apiMessage, setApiMessage] = useState(null);
   const [processing, setProcessing] = useState(false);
 
-  // State to manage the primary view mode (false = show scan placeholder, true = show manual input)
   const [showManualInput, setShowManualInput] = useState(
     location.state?.forceManual || false
   );
 
-  // Fetch the order details
+  // --- CRITICAL FIX: Load Order Details with Failover ---
   const loadOrderDetails = useCallback(async () => {
     if (!user || !orderId) {
       setLoading(false);
       return;
     }
     setLoading(true);
-    setFetchError(null); // Clear previous fetch error
+    setFetchError(null);
+
     try {
-      // NOTE: This endpoint should fetch the ORDER and implicitly link to the DeliveryTask
+      // Attempt 1: Direct Fetch (Relies on backend authorization check)
       const data = await fetchOrderDetails(orderId);
       setOrder(data);
     } catch (err) {
-      console.error("Error fetching order details:", err);
-      setOrder(null);
-      setFetchError(
-        err.response?.data?.message || "Failed to load order/task details."
+      const status = err.response?.status;
+      console.error(
+        `[RiderDetail] Direct fetch failed (Status: ${status}). Attempting Failover.`,
+        err
       );
+
+      // Attempt 2: Failover - Find order in accepted queue list (This succeeds if CORS/Auth is strict)
+      try {
+        const acceptedTasks = await fetchRiderAcceptedTasks();
+        const task = acceptedTasks.find(
+          (t) => String(t.orderId) === String(orderId)
+        );
+
+        if (task) {
+          // Construct a basic/fallback order object from the task metadata
+          setOrder({
+            _id: task.orderId,
+            orderStatus: task.status,
+            shippingAddress: { street: task.dropoff, city: "Kenya" },
+            items: [
+              { name: "Delivery Task", quantity: 1, vendor: task.vendorName },
+            ],
+            __isFallback: true,
+          });
+          setFetchError(
+            `(Warning: Code ${
+              status || "N/A"
+            }) Authorization issue. Displaying basic task info.`
+          );
+        } else {
+          // If not even in the list, the task doesn't exist or isn't assigned
+          setOrder(null);
+          setFetchError(
+            `(Code ${status || "N/A"}) The order or task could not be found.`
+          );
+        }
+      } catch (failoverError) {
+        setOrder(null);
+        setFetchError(
+          `FATAL ERROR. Cannot verify task status. Message: ${
+            failoverError.message || failoverError
+          }`
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -99,6 +141,7 @@ const RiderDeliveryDetail = () => {
   useEffect(() => {
     loadOrderDetails();
   }, [loadOrderDetails]);
+  // --- END CRITICAL FIX ---
 
   // Handler for Pickup (Vendor Code) and Delivery (Buyer Code) confirmation
   const handleStatusUpdate = async (actionType) => {
@@ -231,7 +274,12 @@ const RiderDeliveryDetail = () => {
               Error Loading Task
             </h1>
             <p className="text-sm text-gray-600 mb-4">
-              {fetchError || "The order or task could not be found."}
+              {/* Report the specific API error message if available */}
+              **{fetchError || "The order or task could not be found."}**
+              <br />
+              <span className="text-xs text-gray-400 mt-1 block">
+                Ensure the task is accepted and you are the assigned rider.
+              </span>
             </p>
             <button
               onClick={() => navigate("/riderdeliveryqueue")}
@@ -362,7 +410,7 @@ const RiderDeliveryDetail = () => {
   );
 };
 
-// Helper component for clean detail rows (kept for full component code structure)
+// Helper component for clean detail rows
 const DetailRow = ({ icon: Icon, label, value }) => (
   <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
     <Icon size={18} className="text-emerald-600 flex-shrink-0" />

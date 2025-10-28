@@ -9,6 +9,7 @@ import {
   Truck,
   BarChart3,
   Package,
+  ClipboardList,
 } from "lucide-react";
 
 const AdminSidebar = () => {
@@ -17,7 +18,12 @@ const AdminSidebar = () => {
   const links = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/admindashboard" },
     { name: "User Management", icon: Users, path: "/usermanagement" },
-    { name: "Product Management", icon: Package, path: "/adminproducts" }, // <-- NEW LINK
+    { name: "Product Management", icon: Package, path: "/adminproducts" },
+    {
+      name: "Order Management",
+      icon: ClipboardList,
+      path: "/admin/ordermanagement",
+    },
     { name: "Escrow & Payments", icon: FileText, path: "/adminescrow" },
     {
       name: "Dispute Resolution",
