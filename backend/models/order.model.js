@@ -1,5 +1,31 @@
 import mongoose from "mongoose";
 
+// --- Subdocument Schema for Order Items ---
+const orderItemSchema = new mongoose.Schema({
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    required: true,
+  },
+  name: { type: String, required: true },
+  quantity: { type: Number, required: true },
+  price: { type: Number, required: true },
+  image: { type: String },
+  vendor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+});
+
+// --- Subdocument Schema for Shipping Address ---
+const shippingAddressSchema = new mongoose.Schema({
+  street: { type: String, required: true },
+  city: { type: String, required: true },
+  postalCode: { type: String, required: true },
+  country: { type: String, required: true },
+});
+
 const orderSchema = new mongoose.Schema(
   {
     user: {
@@ -7,7 +33,19 @@ const orderSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    // ... (omitted items, shippingAddress, totalAmount fields - unchanged) ...
+
+    // --- MISSING FIELDS (NOW ADDED) ---
+    items: [orderItemSchema],
+    shippingAddress: {
+      type: shippingAddressSchema,
+      required: true,
+    },
+    totalAmount: {
+      type: Number,
+      required: true,
+    },
+    // --- END OF FIX ---
+
     paymentStatus: {
       type: String,
       enum: ["Pending", "Paid", "Failed", "Refunded"],
@@ -25,6 +63,9 @@ const orderSchema = new mongoose.Schema(
       ],
       default: "Processing",
     },
+    paymentFailureReason: {
+      type: String, // Store M-Pesa failure messages
+    },
     mpesaCheckoutRequestId: {
       type: String,
       unique: true,
@@ -35,7 +76,6 @@ const orderSchema = new mongoose.Schema(
       unique: true,
       sparse: true,
     },
-
     mpesaTransactionDate: {
       type: String,
       sparse: true,
@@ -49,6 +89,10 @@ const orderSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Indexing for common queries
+orderSchema.index({ user: 1, createdAt: -1 });
+orderSchema.index({ "items.vendor": 1, createdAt: -1 });
 
 const Order = mongoose.model("Order", orderSchema);
 

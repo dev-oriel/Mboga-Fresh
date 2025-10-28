@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   Search,
   Landmark,
-  X,
   Loader2,
   AlertTriangle,
   Phone,
@@ -11,13 +10,14 @@ import {
 import Header from "../components/adminComponents/AdminHeader";
 import Sidebar from "../components/adminComponents/AdminSidebar";
 import axios from "axios";
+// useNavigate is no longer strictly needed if we remove the action buttons,
+// but we'll keep the import for completeness of the file's history.
 import { useNavigate } from "react-router-dom";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
 // Helper function to format currency (Ensuring NaN is handled)
 const formatKsh = (amount) => {
-  // FIX: Convert to number and default to 0 if NaN/null/undefined
   const safeAmount = Number(amount) || 0;
   return `Ksh ${safeAmount.toLocaleString("en-KE", {
     minimumFractionDigits: 2,
@@ -31,7 +31,7 @@ const EscrowPayments = () => {
   const [loadingTransactions, setLoadingTransactions] = useState(true);
   const [loadingEscrow, setLoadingEscrow] = useState(true);
   const [fetchError, setFetchError] = useState(null);
-  const [selectedDispute, setSelectedDispute] = useState(null);
+  // Removed: setSelectedDispute state (no longer needed for this audit tab)
 
   const [totalEscrowBalance, setTotalEscrowBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
@@ -78,23 +78,7 @@ const EscrowPayments = () => {
     fetchTransactions();
   }, [fetchEscrowBalance, fetchTransactions]);
 
-  // Handlers (simplified for demonstration/future implementation)
-  const handleRelease = (id) => {
-    alert(`Simulating fund release for order ID: ${id}`);
-    fetchTransactions();
-    fetchEscrowBalance();
-  };
-
-  const handleHold = (id) => {
-    alert(`Simulating hold/dispute for order ID: ${id}`);
-    fetchTransactions();
-    fetchEscrowBalance();
-  };
-
-  const handleInitiateDispute = (id) => {
-    // Navigate to the dispute resolution tab, pre-filling the order ID
-    navigate(`/admindisputeresolution?orderId=${id}`);
-  };
+  // Removed: handleRelease, handleHold, handleInitiateDispute
 
   const getStatusBadge = (status) => {
     const lowerStatus = status.toLowerCase();
@@ -105,6 +89,7 @@ const EscrowPayments = () => {
       "new order": "bg-yellow-100 text-yellow-700",
       "qr scanning": "bg-yellow-100 text-yellow-700",
       "in delivery": "bg-blue-100 text-blue-700",
+      cancelled: "bg-red-100 text-red-700",
       disputed: "bg-red-100 text-red-700",
     };
     return (
@@ -169,7 +154,7 @@ const EscrowPayments = () => {
             </div>
           </div>
 
-          {/* Error Banner - Unchanged */}
+          {/* Error Banner */}
           {fetchError && (
             <div className="p-3 bg-red-100 text-red-700 rounded-lg flex items-center gap-2">
               <AlertTriangle className="w-5 h-5" />
@@ -279,8 +264,18 @@ const EscrowPayments = () => {
                           {formatKsh(t.amount)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {/* Fulfillment Status is now in its own column */}
-                          {getStatusBadge(t.status)}
+                          {/* Action: Send to Disputes Tab */}
+                          <button
+                            onClick={() =>
+                              navigate(
+                                `/admindisputeresolution?orderId=${t.id}`
+                              )
+                            }
+                            className="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-xs font-medium flex items-center gap-1"
+                            title="Initiate conflict resolution or view fulfillment status"
+                          >
+                            <Scale className="w-3 h-3" /> Resolve
+                          </button>
                         </td>
                       </tr>
                     ))}

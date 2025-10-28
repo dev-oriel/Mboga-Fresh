@@ -1,23 +1,31 @@
 import express from "express";
 import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
+
 import {
   placeOrder,
   getBuyerOrders,
   getOrderDetailsById,
   getVendorOrders,
-  getVendorNotifications,
   updateOrderStatusAndNotifyRider,
-  fetchAllAvailableTasks,
-  getTotalEscrowBalance,
-  acceptDeliveryTask,
-  fetchRiderAcceptedTasks,
   checkOrderStatus,
+} from "../controllers/order.controller.js";
+
+import {
+  fetchAllAvailableTasks,
+  fetchRiderAcceptedTasks,
+  acceptDeliveryTask,
   confirmPickupByRider,
   confirmDeliveryByRider,
+  getRiderEarningsAndHistory,
+} from "../controllers/rider.controller.js";
+
+import {
   markNotificationAsReadDb,
   deleteReadNotificationsDb,
-  getRiderEarningsAndHistory,
-} from "../controllers/order.controller.js";
+  getNotifications,
+} from "../controllers/notification.controller.js";
+
+import { getTotalEscrowBalance } from "../controllers/admin.controller.js";
 
 const router = express.Router();
 
@@ -34,7 +42,7 @@ router.get(
 router.get(
   "/:orderId",
   requireAuth,
-  requireRole(["buyer", "admin", "rider"]), // <--- FIX 2: ADDED 'rider' ROLE HERE
+  requireRole(["buyer", "admin", "rider"]),
   getOrderDetailsById
 );
 
@@ -47,12 +55,6 @@ router.get(
   requireRole(["vendor", "admin"]),
   getVendorOrders
 );
-router.get(
-  "/vendor/notifications",
-  requireAuth,
-  requireRole(["vendor", "admin"]),
-  getVendorNotifications
-);
 
 router.patch(
   "/vendor/order/:orderId/accept",
@@ -63,18 +65,22 @@ router.patch(
 
 // ------------------------------------
 // 3. NOTIFICATION MANAGEMENT ROUTES (NEW SECTION)
-// NOTE: These endpoints handle both vendor and admin notification actions.
 // ------------------------------------
 
-// Mark single notification as read
+router.get(
+  "/notifications",
+  requireAuth,
+  requireRole(["buyer", "vendor", "rider", "admin"]),
+  getNotifications
+);
+
 router.patch(
   "/notifications/:id/read",
   requireAuth,
-  requireRole(["vendor", "rider", "admin", "buyer"]), // Allowed for any logged-in user
+  requireRole(["vendor", "rider", "admin", "buyer"]),
   markNotificationAsReadDb
 );
 
-// Delete all read notifications for the current user
 router.delete(
   "/notifications/read",
   requireAuth,

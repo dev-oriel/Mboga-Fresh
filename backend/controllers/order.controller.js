@@ -5,7 +5,7 @@ import DeliveryTask from "../models/deliveryTask.model.js";
 import { initiateSTKPush } from "../services/daraja.service.js";
 import mongoose from "mongoose";
 
-// --- VENDOR NOTIFICATION HELPER ---
+// --- VENDOR NOTIFICATION HELPER (Shared Utility) ---
 const createDbNotification = async (recipientId, orderId, message) => {
   const newNotification = new Notification({
     recipient: recipientId,
@@ -16,7 +16,7 @@ const createDbNotification = async (recipientId, orderId, message) => {
   });
   await newNotification.save();
 };
-// ------------------------------------
+// ----------------------------------------------------
 
 const placeOrder = async (req, res) => {
   const { items, shippingAddress, mpesaPhone } = req.body;
@@ -93,17 +93,17 @@ const placeOrder = async (req, res) => {
     const newOrder = new Order({
       _id: newOrderId,
       user: userId,
-      items: processedItems,
-      shippingAddress: shippingAddress,
-      totalAmount: finalTotal,
-      paymentStatus: "Pending", // Payment is still pending confirmation
-      orderStatus: "Processing", // Initial state before payment confirmation
+      items: processedItems, // CRITICAL: Saved here
+      shippingAddress: shippingAddress, // CRITICAL: Saved here
+      totalAmount: finalTotal, // CRITICAL: Saved here
+      paymentStatus: "Pending",
+      orderStatus: "Processing",
       mpesaCheckoutRequestId: mpesaResult.checkoutRequestId,
     });
 
-    await newOrder.save();
+    await newOrder.save(); // CRITICAL: This commit must complete successfully.
 
-    // Send initial notifications (optional, but kept from original flow)
+    // 3. Notifications and Response
     uniqueVendorIds.forEach((vendorIdString) => {
       createDbNotification(
         new mongoose.Types.ObjectId(vendorIdString),
@@ -150,7 +150,7 @@ const updateOrderStatusAndNotifyRider = async (req, res) => {
         .json({ message: "Order not found or access denied." });
     }
 
-    // FIX 1: Check against the correct preceding status
+    // Check against the correct preceding status
     if (order.orderStatus !== "New Order") {
       return res.status(400).json({
         message: `Order status is already ${order.orderStatus}. Cannot accept.`,
@@ -162,7 +162,7 @@ const updateOrderStatusAndNotifyRider = async (req, res) => {
       100000 + Math.random() * 900000
     ).toString();
 
-    // FIX 2: Create the DeliveryTask with the Vendor's pickup code
+    // Create the DeliveryTask with the Vendor's pickup code
     const newTask = await DeliveryTask.create({
       order: orderId,
       vendor: vendorId,
@@ -172,9 +172,8 @@ const updateOrderStatusAndNotifyRider = async (req, res) => {
       deliveryAddress: order.shippingAddress,
     });
 
-    // FIX 3: Set new Order Status
-    const newStatus = "QR Scanning";
-    await Order.findByIdAndUpdate(orderId, { orderStatus: newStatus });
+    // Set new Order Status
+    await Order.findByIdAndUpdate(orderId, { orderStatus: "QR Scanning" });
 
     await createDbNotification(
       vendorId,
@@ -184,7 +183,7 @@ const updateOrderStatusAndNotifyRider = async (req, res) => {
 
     res.json({
       message: `Order accepted and Delivery Task created.`,
-      order: { ...order._doc, orderStatus: newStatus },
+      order: { ...order._doc, orderStatus: "QR Scanning" },
       task: newTask,
     });
   } catch (error) {
@@ -202,7 +201,12 @@ const getBuyerOrders = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
       .sort({ createdAt: -1 })
-      .select("-__v -updatedAt");
+      // CRITICAL: Ensure ALL fulfillment and payment fields needed by the frontend are selected.
+      .select(
+        "items totalAmount shippingAddress paymentStatus orderStatus createdAt mpesaReceiptNumber mpesaTransactionDate mpesaPhoneNumber"
+      )
+      .lean();
+
     res.json(orders);
   } catch (error) {
     console.error("Error fetching buyer orders:", error);
@@ -238,7 +242,6 @@ const getOrderDetailsById = async (req, res) => {
     const order = await Order.findById(orderId).lean();
 
     if (!order) {
-      // Note: Since this is likely the failing path, this console.log will now confirm if the failure happens *before* or *during* this check.
       console.warn(`[OrderAuth] 404: Order ID ${orderId} not found.`);
       return res.status(404).json({
         message: "Order not found.",
@@ -256,7 +259,6 @@ const getOrderDetailsById = async (req, res) => {
 
     // Check B: Rider access via DeliveryTask (CRITICAL PATH)
     if (userRole === "rider") {
-      // We only need to check if a task exists linking THIS user (rider) to THIS order
       const task = await DeliveryTask.findOne({
         order: orderId,
         rider: userId,
@@ -304,279 +306,6 @@ const getOrderDetailsById = async (req, res) => {
   }
 };
 
-const getVendorNotifications = async (req, res) => {
-  try {
-    const notifications = await Notification.find({ recipient: req.user._id })
-      .sort({ createdAt: -1 })
-      .limit(20);
-
-    res.json(
-      notifications.map((n) => ({
-        id: n._id,
-        type: n.type,
-        title: n.title,
-        message: n.message,
-        icon: "Package",
-        isRead: n.isRead,
-        timestamp: n.createdAt,
-        relatedId: n.relatedId,
-      }))
-    );
-  } catch (error) {
-    console.error("Error fetching DB notifications:", error);
-    res.status(500).json({ message: "Failed to fetch notifications." });
-  }
-};
-
-// --- NEW/MODIFIED NOTIFICATION MANAGEMENT ENDPOINTS ---
-
-const markNotificationAsReadDb = async (req, res) => {
-  try {
-    const { id } = req.params;
-    await Notification.findOneAndUpdate(
-      { _id: id, recipient: req.user._id },
-      { $set: { isRead: true } },
-      { new: true }
-    );
-    res.json({ success: true, message: "Notification marked as read." });
-  } catch (error) {
-    console.error("Mark read error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to mark notification as read.",
-    });
-  }
-};
-
-const deleteReadNotificationsDb = async (req, res) => {
-  try {
-    const result = await Notification.deleteMany({
-      recipient: req.user._id,
-      isRead: true,
-    });
-    res.json({
-      success: true,
-      message: `${result.deletedCount} notifications deleted.`,
-    });
-  } catch (error) {
-    console.error("Delete read error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete read notifications.",
-    });
-  }
-};
-
-// --- END NEW/MODIFIED NOTIFICATION MANAGEMENT ENDPOINTS ---
-
-const fetchAllAvailableTasks = async (req, res) => {
-  try {
-    const tasks = await DeliveryTask.find({ status: "Awaiting Acceptance" })
-      .populate("vendor", "name businessName")
-      .populate("order", "totalAmount")
-      .sort({ createdAt: 1 })
-      .lean();
-
-    res.json(
-      tasks.map((task) => ({
-        id: task._id,
-        orderId: task.order._id,
-        totalAmount: task.order.totalAmount,
-        vendorName: task.vendor.businessName || task.vendor.name,
-        pickupAddress:
-          task.deliveryAddress.street + ", " + task.deliveryAddress.city,
-        deliveryFee: task.deliveryFee,
-        createdAt: task.createdAt,
-      }))
-    );
-  } catch (error) {
-    console.error("Error fetching available tasks:", error);
-    res.status(500).json({ message: "Failed to fetch available tasks." });
-  }
-};
-
-const fetchRiderAcceptedTasks = async (req, res) => {
-  const riderId = req.user._id;
-
-  try {
-    const tasks = await DeliveryTask.find({
-      rider: riderId,
-      status: { $in: ["Accepted/Awaiting Pickup", "In Transit"] },
-    })
-      .populate("vendor", "name businessName")
-      .populate("order", "totalAmount")
-      .sort({ createdAt: 1 })
-      .lean();
-
-    res.json(
-      tasks.map((task) => ({
-        id: task._id,
-        orderId: task.order._id,
-        totalAmount: task.order.totalAmount,
-        vendorName: task.vendor.businessName || task.vendor.name,
-        pickupAddress:
-          task.deliveryAddress.street + ", " + task.deliveryAddress.city,
-        deliveryAddress:
-          task.deliveryAddress.street + ", " + task.deliveryAddress.city,
-        deliveryFee: task.deliveryFee,
-        createdAt: task.createdAt,
-        status: task.status,
-        pickupCode: task.pickupCode,
-        isAssigned: true,
-        buyerConfirmationCode: task.buyerConfirmationCode,
-      }))
-    );
-  } catch (error) {
-    console.error("Error fetching accepted tasks:", error);
-    res.status(500).json({ message: "Failed to fetch accepted tasks." });
-  }
-};
-
-const acceptDeliveryTask = async (req, res) => {
-  const { taskId } = req.params;
-  const riderId = req.user._id;
-
-  try {
-    if (!mongoose.Types.ObjectId.isValid(taskId)) {
-      return res.status(400).json({ message: "Invalid Task ID format." });
-    }
-
-    const task = await DeliveryTask.findOneAndUpdate(
-      { _id: taskId, status: "Awaiting Acceptance", rider: null },
-      { $set: { rider: riderId, status: "Accepted/Awaiting Pickup" } },
-      { new: true }
-    );
-
-    if (!task) {
-      return res
-        .status(409)
-        .json({ message: "Task already accepted or does not exist." });
-    }
-
-    await createDbNotification(
-      task.vendor,
-      task.order,
-      `Rider has accepted task for Order #${task.order
-        .toString()
-        .substring(18)
-        .toUpperCase()}.`
-    );
-
-    res.json({ message: "Task accepted successfully. Proceed to pickup." });
-  } catch (error) {
-    console.error("Rider task acceptance error:", error);
-    res.status(500).json({ message: "Failed to accept delivery task." });
-  }
-};
-
-const confirmPickupByRider = async (req, res) => {
-  const { orderId, pickupCode } = req.body;
-  const riderId = req.user._id;
-
-  try {
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ message: "Invalid Order ID format." });
-    }
-
-    const task = await DeliveryTask.findOne({
-      order: orderId,
-      rider: riderId,
-      pickupCode: pickupCode,
-      status: "Accepted/Awaiting Pickup",
-    });
-
-    if (!task) {
-      return res
-        .status(401)
-        .json({ message: "Invalid scan or task not ready for pickup." });
-    }
-
-    // FIX 1: Set Task Status
-    task.status = "In Transit";
-    await task.save();
-
-    // FIX 2: Set Order Status
-    await Order.findByIdAndUpdate(orderId, { orderStatus: "In Delivery" });
-
-    await createDbNotification(
-      task.vendor,
-      orderId,
-      `Order #${orderId
-        .toString()
-        .substring(18)
-        .toUpperCase()} has been picked up and is In Delivery.`
-    );
-
-    res.json({ message: "Pickup confirmed. Delivery is now in transit." });
-  } catch (error) {
-    console.error("Rider pickup confirmation error:", error);
-    res.status(500).json({ message: "Failed to confirm pickup." });
-  }
-};
-
-const confirmDeliveryByRider = async (req, res) => {
-  const { orderId, buyerCode } = req.body; // CRITICAL: Now expects buyerCode
-  const riderId = req.user._id;
-
-  try {
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ message: "Invalid Order ID format." });
-    }
-
-    const task = await DeliveryTask.findOneAndUpdate(
-      {
-        order: orderId,
-        rider: riderId,
-        buyerConfirmationCode: buyerCode, // CRITICAL: Use buyerCode for validation
-        status: "In Transit",
-      },
-      { $set: { status: "Delivered" } },
-      { new: true }
-    );
-
-    if (!task) {
-      return res
-        .status(401)
-        .json({ message: "Invalid Buyer Code or task not in transit." });
-    }
-
-    // FIX: Set Order Status to Delivered (Order Complete)
-    await Order.findByIdAndUpdate(orderId, { orderStatus: "Delivered" });
-
-    await createDbNotification(
-      task.vendor,
-      orderId,
-      `Order #${orderId
-        .toString()
-        .substring(18)
-        .toUpperCase()} has been successfully delivered and funds released from escrow.`
-    );
-
-    res.json({ message: "Delivery confirmed. Escrow funds released." });
-  } catch (error) {
-    console.error("Rider final delivery confirmation error:", error);
-    res.status(500).json({ message: "Failed to confirm final delivery." });
-  }
-};
-
-const getTotalEscrowBalance = async (req, res) => {
-  try {
-    const ordersInEscrow = await Order.find({
-      orderStatus: { $nin: ["Delivered", "Cancelled"] },
-    }).select("totalAmount");
-
-    const totalEscrow = ordersInEscrow.reduce(
-      (sum, order) => sum + order.totalAmount,
-      0
-    );
-
-    res.json({ totalEscrow: totalEscrow });
-  } catch (error) {
-    console.error("Error fetching total escrow balance:", error);
-    res.status(500).json({ message: "Failed to calculate escrow balance." });
-  }
-};
-
 const checkOrderStatus = async (req, res) => {
   const { orderId } = req.params;
 
@@ -604,253 +333,17 @@ const checkOrderStatus = async (req, res) => {
   }
 };
 
-const handleMpesaCallback = async (req, res) => {
-  const callbackData = req.body;
-  const {
-    Body: { stkCallback },
-  } = callbackData;
+// ====================================================================
+// FUNCTIONS TRANSFERRED TO OTHER CONTROLLERS (Removed from here)
+// ====================================================================
 
-  console.log("--- RECEIVED MPESA CALLBACK ---");
-  console.log(JSON.stringify(stkCallback, null, 2));
-
-  const checkoutRequestId = stkCallback?.CheckoutRequestID;
-  const resultCode = stkCallback?.ResultCode;
-  const resultDesc = stkCallback?.ResultDesc;
-
-  try {
-    // 1. Find Order by the unique CheckoutRequestID
-    const order = await Order.findOne({
-      mpesaCheckoutRequestId: checkoutRequestId,
-    });
-
-    if (!order) {
-      console.warn(
-        "Mpesa Callback: Order not found for CheckoutRequestID:",
-        checkoutRequestId
-      );
-      return res.status(404).json({ message: "Order not found." });
-    }
-
-    if (resultCode === 0) {
-      // CRITICAL FIX: Helper function to safely extract M-Pesa fields
-      const getCallbackValue = (name) =>
-        stkCallback.CallbackMetadata?.Item?.find((item) => item.Name === name)
-          ?.Value;
-
-      const mpesaReceiptNumber = getCallbackValue("MpesaReceiptNumber");
-      const mpesaTransactionDate = getCallbackValue("TransactionDate");
-      const mpesaPhoneNumber = getCallbackValue("PhoneNumber"); // The actual phone number that paid
-
-      // PAYMENT SUCCESS: Update order status to PAID and next ORDER status to 'New Order'
-      const orderUpdate = {
-        paymentStatus: "Paid",
-        orderStatus: "New Order", // Ready for vendor action
-        mpesaReceiptNumber: mpesaReceiptNumber,
-        mpesaTransactionDate: mpesaTransactionDate,
-        mpesaPhoneNumber: mpesaPhoneNumber,
-      };
-      await Order.findByIdAndUpdate(order._id, orderUpdate);
-
-      // Notify Vendor of confirmed payment
-      // Safety check added to prevent crash if order has no items (though it shouldn't)
-      if (order.items && order.items.length > 0) {
-        const notificationMessage = `Payment confirmed! New Order #${order._id
-          .toString()
-          .substring(18)
-          .toUpperCase()} is ready for your acceptance.`;
-
-        await createDbNotification(
-          order.items[0].vendor, // Assuming first item vendor is the primary recipient
-          order._id,
-          notificationMessage
-        );
-      }
-    } else {
-      // PAYMENT FAILURE
-      console.warn("M-Pesa Payment Failed. Deleting Order ID:", order._id);
-
-      // Delete the order entirely on failure (if it's still in the processing state)
-      if (order.orderStatus === "Processing") {
-        await Order.deleteOne({ _id: order._id });
-      } else {
-        // If already moved past initial state, just mark as failed and log reason
-        await Order.findByIdAndUpdate(order._id, {
-          paymentStatus: "Failed",
-          paymentFailureReason: resultDesc,
-        });
-      }
-    }
-
-    // 3. Return status 200 response (MANDATORY for Daraja API)
-    return res
-      .status(200)
-      .json({ message: "Callback processed successfully." });
-  } catch (error) {
-    console.error("Mpesa Callback Processing Error:", error);
-    return res
-      .status(200)
-      .json({ message: "Internal server error during processing." });
-  }
-};
-
-const getRiderEarningsAndHistory = async (req, res) => {
-  const riderId = req.user._id;
-
-  try {
-    // Find all tasks completed by the current rider
-    const completedTasks = await DeliveryTask.find({
-      rider: riderId,
-      status: "Delivered", // Tasks marked as delivered
-    })
-      .populate("order", "totalAmount") // Populate the order amount (or calculate fee)
-      .sort({ createdAt: -1 })
-      .lean();
-
-    // Calculate total lifetime earnings
-    const totalEarnings = completedTasks.reduce((sum, task) => {
-      // Assuming deliveryFee is the rider's earning, if not zero.
-      const earning = task.deliveryFee || 0;
-      return sum + earning;
-    }, 0);
-
-    // Return summary stats and the list of recent tasks
-    res.json({
-      totalEarnings: totalEarnings,
-      completedCount: completedTasks.length,
-      recentDeliveries: completedTasks.slice(0, 5).map((task) => ({
-        id: task.order._id,
-        customer: task.deliveryAddress.street || task.order._id.substring(18),
-        location: task.deliveryAddress.city,
-        earnings: task.deliveryFee,
-        status: "Delivered",
-        date: task.createdAt,
-      })),
-    });
-  } catch (error) {
-    console.error("Error fetching rider earnings:", error);
-    res.status(500).json({ message: "Failed to fetch rider earnings data." });
-  }
-};
-
-const listAllOrders = async (req, res) => {
-  try {
-    const orders = await Order.find({})
-      // Populate user (buyer) name for display and select only essential fields
-      .populate("user", "name phone")
-      .sort({ createdAt: -1 })
-      .select("-__v -updatedAt")
-      .lean(); // Use .lean() for faster read operations
-
-    res.json(orders);
-  } catch (error) {
-    console.error("Error fetching all orders for admin:", error);
-    res.status(500).json({ message: "Failed to fetch all orders." });
-  }
-};
-
-const listAllTransactions = async (req, res) => {
-  try {
-    const paidOrders = await Order.find({ paymentStatus: "Paid" })
-      .populate("user", "name")
-      .sort({ createdAt: -1 })
-      .select(
-        "user totalAmount orderStatus mpesaReceiptNumber mpesaTransactionDate mpesaPhoneNumber createdAt items"
-      )
-      .lean();
-
-    // Map data to create a flat transaction view
-    const transactions = paidOrders.map((order) => {
-      // CRITICAL FIX: Ensure order.items is an array before using it
-      const safeItems = Array.isArray(order.items) ? order.items : [];
-
-      // We use the safeItems array now. This fixes the Type Error.
-      const itemVendors = safeItems.map((item) => item.vendor).filter(Boolean);
-      const sellerDisplay =
-        itemVendors.length > 1
-          ? `${itemVendors.length} Vendors`
-          : itemVendors.length === 1
-          ? "Single Vendor"
-          : "N/A";
-
-      // Extract and format transaction date/time
-      const mpesaDateCode = String(order.mpesaTransactionDate || "");
-      let transactionDate = new Date(order.createdAt); // Fallback Date object
-
-      if (mpesaDateCode.length === 14) {
-        const year = mpesaDateCode.substring(0, 4);
-        const month = mpesaDateCode.substring(4, 6);
-        const day = mpesaDateCode.substring(6, 8);
-        const hour = mpesaDateCode.substring(8, 10);
-        const minute = mpesaDateCode.substring(10, 12);
-
-        // Create a reliable Date object using the M-Pesa time data
-        // We use 'T' and assume local time (if timezone data is missing, this is the best guess)
-        transactionDate = new Date(
-          `${year}-${month}-${day}T${hour}:${minute}:00`
-        );
-      }
-
-      // Format date and time using Date object properties
-      const formattedDate = transactionDate.toLocaleDateString("en-KE", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-      const formattedTime = transactionDate.toLocaleTimeString("en-KE", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
-
-      return {
-        id: order._id,
-        buyerName: order.user?.name || "N/A",
-        amount: order.totalAmount,
-        transactionDate: formattedDate,
-        transactionTime: formattedTime,
-        mpesaCode: order.mpesaReceiptNumber || "N/A",
-        phone: order.mpesaPhoneNumber || order.user?.phone || "N/A",
-        status: order.orderStatus,
-      };
-    });
-
-    res.json(transactions);
-  } catch (error) {
-    // Log the exact error causing the 500
-    console.error(
-      "Error fetching all transactions for admin: CRASH DETECTED",
-      error
-    );
-    res.status(500).json({
-      message:
-        "Internal Server Error during transaction processing. See server logs.",
-      details: error.message,
-    });
-  }
-};
-
-// ---------------------------------------------------------------------
-// FINAL CONSOLIDATED EXPORTS
-// ---------------------------------------------------------------------
+// --- FINAL EXPORTS (Core Functions ONLY) ---
 
 export {
   placeOrder,
-  handleMpesaCallback,
+  updateOrderStatusAndNotifyRider,
   getBuyerOrders,
   getVendorOrders,
   getOrderDetailsById,
-  getVendorNotifications,
-  updateOrderStatusAndNotifyRider,
-  fetchAllAvailableTasks,
-  fetchRiderAcceptedTasks,
-  acceptDeliveryTask,
-  confirmPickupByRider,
-  confirmDeliveryByRider,
-  getTotalEscrowBalance,
   checkOrderStatus,
-  markNotificationAsReadDb,
-  deleteReadNotificationsDb,
-  getRiderEarningsAndHistory,
-  listAllOrders,
-  listAllTransactions,
 };

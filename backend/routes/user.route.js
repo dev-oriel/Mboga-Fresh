@@ -9,11 +9,10 @@ import {
   getTotalEscrowBalance,
   listAllOrders,
   listAllTransactions,
-} from "../controllers/order.controller.js";
+} from "../controllers/admin.controller.js";
 
 const router = express.Router();
 
-// User and Product Management Routes (Existing)
 router.get("/users", requireAuth, requireRole(["admin"]), listUsers);
 router.get("/stats", requireAuth, requireRole(["admin"]), getUserStats);
 router.get("/products", requireAuth, requireRole(["admin"]), listAllProducts);
@@ -24,10 +23,7 @@ router.patch(
   updateProductStatus
 );
 
-// ORDER MANAGEMENT ROUTE (NEW)
 router.get("/orders", requireAuth, requireRole(["admin"]), listAllOrders);
-
-// ESCROW METRICS ROUTE (Existing)
 
 router.get(
   "/transactions",

@@ -1,5 +1,3 @@
-// frontend/src/pages/Orders.jsx - FINAL VERSION (INLINE IMAGE RESOLUTION)
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
@@ -24,14 +22,23 @@ const getStatusBadgeProps = (status) => {
       text: "text-emerald-700",
       icon: "check_circle",
     };
-  if (lowerStatus === "shipped")
+  if (
+    lowerStatus === "shipped" ||
+    lowerStatus === "in delivery" ||
+    lowerStatus === "in transit"
+  )
     return {
       label: "In Transit",
       bg: "bg-blue-100",
       text: "text-blue-700",
       icon: "local_shipping",
     };
-  if (lowerStatus === "processing" || lowerStatus === "confirmed")
+  if (
+    lowerStatus === "processing" ||
+    lowerStatus === "confirmed" ||
+    lowerStatus === "new order" ||
+    lowerStatus === "qr scanning"
+  )
     return {
       label: "Processing",
       bg: "bg-yellow-100",
@@ -164,14 +171,22 @@ const Orders = () => {
               </div>
             ) : (
               orders.map((o) => {
+                // Ensure items is always an array for safe processing
+                const safeItems = Array.isArray(o.items) ? o.items : [];
+
                 const badge = getStatusBadgeProps(o.orderStatus);
-                const itemNamesList = o.items.map((i) => i.name).join(", ");
-                const totalItems = o.items.reduce(
+
+                // FIX: Use safeItems for all mapping/reducing operations
+                const itemNamesList = safeItems.map((i) => i.name).join(", ");
+                const totalItems = safeItems.reduce(
                   (sum, i) => sum + i.quantity,
                   0
                 );
+
                 const totalItemsDisplay =
-                  o.items.length > 3 ? `3+ items` : `${o.items.length} items`;
+                  safeItems.length > 3
+                    ? `3+ items`
+                    : `${safeItems.length} items`;
 
                 return (
                   <div
@@ -204,14 +219,12 @@ const Orders = () => {
                     <div className="p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center">
                       {/* Item Images/Previews */}
                       <div className="flex items-center gap-2 mr-4 mb-4 sm:mb-0 w-full sm:w-auto">
-                        {o.items.slice(0, 3).map((item, index) => (
+                        {safeItems.slice(0, 3).map((item, index) => (
                           <img
                             key={item.product || index}
-                            // FIX: Use the new inline image resolver
                             src={resolveItemImageSrc(item)}
                             alt={item.name}
                             className="w-12 h-12 rounded-lg object-cover border border-gray-200"
-                            // OPTIONAL: Add onError fallback attribute for broken paths
                             onError={(e) => {
                               e.target.onerror = null;
                               e.target.src =
@@ -232,8 +245,8 @@ const Orders = () => {
                           {itemNamesList}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          Delivering to {o.shippingAddress.city} (
-                          {o.shippingAddress.street})
+                          Delivering to {o.shippingAddress?.city} (
+                          {o.shippingAddress?.street})
                         </p>
                       </div>
 

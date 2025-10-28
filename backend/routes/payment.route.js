@@ -1,7 +1,7 @@
 // backend/routes/payment.route.js (NEW FILE)
 
 import express from "express";
-import { handleMpesaCallback } from "../controllers/order.controller.js"; // Assuming handleMpesaCallback is moved here
+import { handleMpesaCallback } from "../controllers/payment.controller.js";
 import { requireAuth } from "../middleware/auth.middleware.js"; // Reusing auth for potential future routes
 
 const router = express.Router();
