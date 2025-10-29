@@ -248,7 +248,7 @@ const getVendorNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ recipient: req.user._id })
       .sort({ createdAt: -1 })
-      .limit(20);
+      .limit(20); // Note: We keep the limit low for vendor dashboard view
 
     res.json(
       notifications.map((n) => ({
@@ -263,7 +263,7 @@ const getVendorNotifications = async (req, res) => {
       }))
     );
   } catch (error) {
-    console.error("Error fetching DB notifications:", error);
+    console.error("Error fetching vendor notifications:", error);
     res.status(500).json({ message: "Failed to fetch notifications." });
   }
 };

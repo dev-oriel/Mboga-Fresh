@@ -17,6 +17,7 @@ import {
   confirmPickupByRider,
   confirmDeliveryByRider,
   getRiderEarningsAndHistory,
+  getVendorNotifications,
 } from "../controllers/rider.controller.js";
 
 import {
@@ -54,6 +55,12 @@ router.get(
   requireAuth,
   requireRole(["vendor", "admin"]),
   getVendorOrders
+);
+router.get(
+  "/vendor/notifications",
+  requireAuth,
+  requireRole(["vendor", "admin"]),
+  getVendorNotifications
 );
 
 router.patch(
