@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/vendorComponents/Header";
 import Sidebar from "../components/vendorComponents/Sidebar";
+import CheckoutProgress from "../components/CheckoutProgress";
 import { useBulkCart } from "../context/BulkCartContext";
 import { useAuth } from "../context/AuthContext";
 import { Trash2, Plus, Minus } from "lucide-react";
@@ -73,6 +74,8 @@ const VendorCartPage = () => {
       <div className="flex">
         <Sidebar />
         <main className="flex-1 p-8">
+          <CheckoutProgress step={1} />
+          
           <div className="max-w-6xl mx-auto">
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
