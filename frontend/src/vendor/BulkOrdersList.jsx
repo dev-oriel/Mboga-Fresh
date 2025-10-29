@@ -42,7 +42,7 @@ const BulkOrdersList = () => {
   }, [loadOutgoingBulkOrders]);
 
   const viewDetails = (id) => {
-    alert(`Viewing B2B Quote Details for ID: ${id}`);
+    navigate(`/bulkorderdetails/${id}`);
   };
 
   const statusStyles = {

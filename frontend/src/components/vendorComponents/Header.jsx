@@ -13,11 +13,25 @@ const Header = ({
     { label: "Farm-ily Market", to: "/farmily", icon: "agriculture" },
   ],
   userName = "Vendor",
-  unreadCount = 0, // FIX: Accept unreadCount prop
+  unreadCount = 0,
 }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+  // Get notifications from VendorDataContext
+  try {
+    // Dynamically import to avoid breaking SSR
+    // eslint-disable-next-line
+    var { useVendorData } = require("../../context/VendorDataContext");
+  } catch (e) {}
+  let notifications = [];
+  let unreadNotifications = 0;
+  try {
+    if (typeof useVendorData === "function") {
+      notifications = useVendorData().notifications || [];
+      unreadNotifications = notifications.filter((n) => !n.isRead).length;
+    }
+  } catch (e) {}
 
   const finalAvatarUrl =
     user?.avatar ||
@@ -93,12 +107,12 @@ const Header = ({
             <button
               onClick={handleViewNotifications}
               className="relative p-2 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-700/20 transition"
-              aria-label={`View ${unreadCount} new notifications`}
+              aria-label={`View ${unreadNotifications} new notifications`}
             >
               <Bell className="w-6 h-6 text-gray-700 dark:text-gray-300" />
-              {unreadCount > 0 && (
+              {unreadNotifications > 0 && (
                 <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                  {unreadCount} {/* FIX: Display the count */}
+                  {unreadNotifications}
                 </span>
               )}
             </button>

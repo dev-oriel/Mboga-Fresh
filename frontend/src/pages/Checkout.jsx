@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import Header from "../components/Header";
 import CheckoutProgress from "../components/CheckoutProgress";
 import { useCart } from "../context/CartContext";
-import { useNavigate } from "react-router-dom";
+import { useBulkCart } from "../context/BulkCartContext";
+import { useNavigate, useLocation } from "react-router-dom";
 import { placeOrderRequest, checkPaymentStatus } from "../api/orders";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
@@ -13,7 +14,21 @@ import MpesaPaymentBlock from "../components/buyerComponents/MpesaPaymentBlock";
 import CheckoutErrorBanner from "../components/buyerComponents/CheckoutErrorBanner";
 
 const Checkout = () => {
-  const { items, subtotal, clearCart } = useCart();
+  const location = useLocation();
+  const regularCart = useCart();
+  const bulkCart = useBulkCart();
+  
+  // Check if we're in bulk order mode (from vendor portal)
+  const isBulkOrder = location.state?.isBulkOrder || false;
+  
+  // Use the appropriate cart based on mode (prioritize location.state if provided)
+  const cartContext = isBulkOrder ? bulkCart : regularCart;
+  
+  // If items were passed via location.state (from VendorCart), use those instead of context
+  const items = location.state?.items || cartContext.items;
+  const subtotal = location.state?.subtotal || cartContext.subtotal;
+  const clearCart = cartContext.clearCart;
+  
   const { user, refresh } = useAuth();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -108,8 +123,13 @@ const Checkout = () => {
     setFormError(null);
     setLastMpesaError(null);
 
+    // Map items based on cart type (bulk cart has different structure)
+    const mappedItems = isBulkOrder
+      ? items.map((item) => ({ product: item.id, quantity: item.qty }))
+      : items.map((item) => ({ product: item.id, quantity: item.qty }));
+
     const payload = {
-      items: items.map((item) => ({ product: item.id, quantity: item.qty })),
+      items: mappedItems,
       shippingAddress: {
         street: addressForm.street,
         city: addressForm.city,
@@ -213,6 +233,29 @@ const Checkout = () => {
     }
   };
 
+  // If cart is empty, show message instead of redirecting
+  if (!items || items.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <Header />
+        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
+          <div className="max-w-2xl mx-auto text-center py-16">
+            <h2 className="text-3xl font-bold mb-4">Your cart is empty</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-8">
+              Add some items to your cart before proceeding to checkout.
+            </p>
+            <button
+              onClick={() => navigate(isBulkOrder ? "/farmily" : "/")}
+              className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
+            >
+              Continue Shopping
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <Header />
@@ -254,31 +297,40 @@ const Checkout = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 sticky top-24">
               <h3 className="text-xl font-bold mb-4">Order Summary</h3>
               <div className="space-y-2 text-sm">
-                {items.map((it) => (
-                  <div
-                    key={it.id}
-                    className="flex justify-between items-center py-2"
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={it.img}
-                        alt={it.title}
-                        className="w-12 h-12 rounded-lg object-cover"
-                      />
-                      <div>
-                        <p className="font-semibold">
-                          {it.title}{" "}
-                          <span className="font-normal text-gray-500 dark:text-gray-400">
-                            x{it.qty}
-                          </span>
-                        </p>
+                {items.map((it) => {
+                  // Handle both regular cart (name, img) and bulk cart (title, image)
+                  const itemName = it.title || it.name || "Unknown Item";
+                  const itemImage = it.image || it.img || "https://via.placeholder.com/48";
+                  const itemPrice = typeof it.price === 'string' 
+                    ? Number(it.price.match(/(\d+(\.\d+)?)/)?.[0] || 0)
+                    : Number(it.price);
+                  
+                  return (
+                    <div
+                      key={it.id}
+                      className="flex justify-between items-center py-2"
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={itemImage}
+                          alt={itemName}
+                          className="w-12 h-12 rounded-lg object-cover"
+                        />
+                        <div>
+                          <p className="font-semibold">
+                            {itemName}{" "}
+                            <span className="font-normal text-gray-500 dark:text-gray-400">
+                              x{it.qty}
+                            </span>
+                          </p>
+                        </div>
                       </div>
+                      <span className="font-semibold">
+                        KSh {(itemPrice * it.qty).toLocaleString()}
+                      </span>
                     </div>
-                    <span className="font-semibold">
-                      KSh {(Number(it.price) * it.qty).toLocaleString()}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="border-t border-gray-200 dark:border-gray-700 my-4"></div>

@@ -151,8 +151,11 @@ const VendorDashboard = () => {
   };
 
   // FIX: Notification Click Handler
-  const handleNotificationClick = (notification) => {
-    markNotificationAsRead(notification.id);
+  const handleNotificationClick = async (notification) => {
+    console.log("Notification clicked:", notification);
+    
+    // Mark as read
+    await markNotificationAsRead(notification.id);
 
     if (notification.type === "order" && notification.relatedId) {
       // Navigate to the OrderManagement page, optionally passing the relatedId to highlight the order.
@@ -341,9 +344,10 @@ const VendorDashboard = () => {
 
                     {!notification.isRead ? (
                       <button
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
-                          markNotificationAsRead(notification.id);
+                          console.log("Mark as read clicked for notification:", notification.id);
+                          await markNotificationAsRead(notification.id);
                         }}
                         className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 ml-4 flex items-center space-x-1 flex-shrink-0"
                         title="Mark as Read"
