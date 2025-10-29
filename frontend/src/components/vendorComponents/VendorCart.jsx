@@ -18,13 +18,10 @@ const VendorCart = ({ onClose }) => {
     removeItem(id);
   };
 
-  const handleProceedToQuote = () => {
-    // Logic for submitting the bulk order quote
-    alert("Simulating Bulk Quote Submission/Checkout!");
-    // In a real system, navigate to /bulkorders/checkout
-    clearCart();
+  const handleProceedToCheckout = () => {
+    // Navigate to vendor checkout page for payment
     onClose();
-    navigate("/bulkorders");
+    navigate("/vendor-checkout");
   };
 
   return (
@@ -99,20 +96,19 @@ const VendorCart = ({ onClose }) => {
                 <div className="flex gap-3 mt-4">
                   <button
                     onClick={() => {
-                      alert("Navigating to bulk cart full view/checkout...");
                       onClose();
-                      // navigate("/bulkcart-full"); // Or a dedicated route
+                      navigate("/vendor-cart");
                     }}
-                    className="flex-1 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-semibold"
+                    className="flex-1 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                   >
                     View Cart
                   </button>
 
                   <button
-                    onClick={handleProceedToQuote}
-                    className="flex-1 py-2 rounded-lg bg-emerald-600 text-white text-sm font-bold"
+                    onClick={handleProceedToCheckout}
+                    className="flex-1 py-2 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition"
                   >
-                    Submit Quote
+                    Checkout
                   </button>
                 </div>
 
