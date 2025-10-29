@@ -1,19 +1,4 @@
-// frontend/src/api/auth.js
-
-// Dynamic Base URL Resolver (Pasted into each file for independence)
-const getBaseUrl = () => {
-  const currentHost = window.location.hostname;
-  const API_PORT = 5000;
-
-  if (currentHost === "localhost" || currentHost === "127.0.0.1") {
-    return `http://localhost:${API_PORT}`;
-  } else {
-    return `http://${currentHost}:${API_PORT}`;
-  }
-};
-
-const BASE = getBaseUrl();
-const API_URL_BASE = `${BASE}/api/auth`;
+const API_URL_BASE = "/api/auth";
 
 async function handleResponse(res) {
   const text = await res.text();

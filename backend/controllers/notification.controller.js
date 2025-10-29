@@ -1,6 +1,6 @@
 import Notification from "../models/notification.model.js";
 
-export const getNotifications = async (req, res) => {
+const getNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({
       recipient: req.user._id,
@@ -19,7 +19,7 @@ export const getNotifications = async (req, res) => {
   }
 };
 
-export const markNotificationAsReadDb = async (req, res) => {
+const markNotificationAsReadDb = async (req, res) => {
   try {
     const { id } = req.params;
     await Notification.findOneAndUpdate(
@@ -37,7 +37,7 @@ export const markNotificationAsReadDb = async (req, res) => {
   }
 };
 
-export const deleteReadNotificationsDb = async (req, res) => {
+const deleteReadNotificationsDb = async (req, res) => {
   try {
     const result = await Notification.deleteMany({
       recipient: req.user._id,
@@ -54,4 +54,11 @@ export const deleteReadNotificationsDb = async (req, res) => {
       message: "Failed to delete read notifications.",
     });
   }
+};
+
+// --- FINAL EXPORTS ---
+export {
+  getNotifications,
+  markNotificationAsReadDb,
+  deleteReadNotificationsDb,
 };

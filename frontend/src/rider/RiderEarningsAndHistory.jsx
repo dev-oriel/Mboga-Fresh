@@ -1,22 +1,20 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import RiderHeader from "../components/riderComponents/RiderHeader";
-import { useVendorData } from "../context/VendorDataContext"; // Reusing VendorContext model for Wallet logic
-import axios from "axios";
+import { useVendorData } from "../context/VendorDataContext";
+// FIX: Import the API function
+import { fetchRiderStats } from "../api/orders";
 import { Loader2, DollarSign } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
+// FIX: Removed the hard-coded API_BASE
+// const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
 const formatCurrency = (amount) =>
   `Ksh ${Number(amount).toLocaleString("en-KE", { minimumFractionDigits: 0 })}`;
 
 const RiderEarningsAndHistory = () => {
   const navigate = useNavigate();
-  const {
-    balances, // Fetches available, escrow, etc.
-    handleWithdraw, // Function to simulate/process withdrawal
-    updateDashboardData, // Used to mock update state on fetch failure
-  } = useVendorData(); // Assuming Rider also uses the general VendorDataContext model
+  const { balances, handleWithdraw, updateDashboardData } = useVendorData();
 
   const [earningsData, setEarningsData] = useState({
     totalEarnings: 0,
@@ -34,12 +32,8 @@ const RiderEarningsAndHistory = () => {
     setLoading(true);
     setError(null);
     try {
-      // Calls the aggregated endpoint we created previously
-      const response = await axios.get(`${API_BASE}/api/orders/rider/stats`, {
-        withCredentials: true,
-      });
-
-      const data = response.data;
+      // FIX: Use the imported API function
+      const data = await fetchRiderStats();
 
       setEarningsData({
         totalEarnings: data.totalEarnings,
@@ -49,7 +43,6 @@ const RiderEarningsAndHistory = () => {
         bonuses: 1500,
       });
 
-      // Important: Update the context balance using the live fetched data
       updateDashboardData({
         earningsReleased: data.totalEarnings,
         ordersReceived: data.completedCount,
@@ -94,7 +87,6 @@ const RiderEarningsAndHistory = () => {
       return;
     }
 
-    // This calls the context function which updates local state and simulates the transaction
     const success = handleWithdraw(amountNum, mpesaNumber);
 
     if (success) {

@@ -42,8 +42,11 @@ const DeliveryItem = ({
     if (status === "Accepted/Awaiting Pickup") {
       return {
         label: "Scan Pickup QR",
-        // CRITICAL FIX: Direct the main button to force manual input/scanner view
-        action: () => handleManualClick(id),
+        // --- THIS IS THE FIX ---
+        // Was: action: () => handleManualClick(id),
+        // Now:
+        action: () => handleDetailClick(id),
+        // --- END OF FIX ---
         style: "bg-emerald-600 hover:bg-emerald-700 text-white",
         showManualLink: true,
       };
@@ -51,8 +54,11 @@ const DeliveryItem = ({
     if (status === "In Transit") {
       return {
         label: "Scan Buyer QR",
-        // CRITICAL FIX: Direct the main button to force manual input/scanner view
-        action: () => handleManualClick(id),
+        // --- THIS IS THE FIX ---
+        // Was: action: () => handleManualClick(id),
+        // Now:
+        action: () => handleDetailClick(id),
+        // --- END OF FIX ---
         style: "bg-amber-600 hover:bg-amber-700 text-white",
         showManualLink: true,
       };

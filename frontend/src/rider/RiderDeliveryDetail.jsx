@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import RiderHeader from "../components/riderComponents/RiderHeader";
 import {
   fetchOrderDetails,
   confirmPickup,
   confirmDelivery,
-  fetchRiderAcceptedTasks, // Added for robust failover check
+  fetchRiderAcceptedTasks,
 } from "../api/orders";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -19,6 +19,7 @@ import {
   X,
   DollarSign,
 } from "lucide-react";
+import QrScanner from "qr-scanner"; // 1. IMPORT THE SCANNER
 
 const formatKsh = (amount) =>
   `Ksh ${Number(amount).toLocaleString("en-KE", { minimumFractionDigits: 0 })}`;
@@ -75,10 +76,14 @@ const RiderDeliveryDetail = () => {
     location.state?.forceManual || false
   );
 
-  // --- CRITICAL FIX: Load Order Details with Failover ---
+  // 2. ADD REFS FOR SCANNER
+  const videoRef = useRef(null);
+  const qrScannerRef = useRef(null);
+
   const loadOrderDetails = useCallback(async () => {
     if (!user || !orderId) {
       setLoading(false);
+      setFetchError("Invalid Order ID provided in URL.");
       return;
     }
     setLoading(true);
@@ -95,7 +100,7 @@ const RiderDeliveryDetail = () => {
         err
       );
 
-      // Attempt 2: Failover - Find order in accepted queue list (This succeeds if CORS/Auth is strict)
+      // Attempt 2: Failover - Find order in accepted queue list
       try {
         const acceptedTasks = await fetchRiderAcceptedTasks();
         const task = acceptedTasks.find(
@@ -103,14 +108,17 @@ const RiderDeliveryDetail = () => {
         );
 
         if (task) {
-          // Construct a basic/fallback order object from the task metadata
           setOrder({
             _id: task.orderId,
             orderStatus: task.status,
-            shippingAddress: { street: task.dropoff, city: "Kenya" },
+            shippingAddress: { street: task.deliveryAddress, city: "" },
             items: [
               { name: "Delivery Task", quantity: 1, vendor: task.vendorName },
             ],
+            task: {
+              pickupCode: task.pickupCode,
+              buyerConfirmationCode: task.buyerConfirmationCode,
+            },
             __isFallback: true,
           });
           setFetchError(
@@ -119,7 +127,6 @@ const RiderDeliveryDetail = () => {
             }) Authorization issue. Displaying basic task info.`
           );
         } else {
-          // If not even in the list, the task doesn't exist or isn't assigned
           setOrder(null);
           setFetchError(
             `(Code ${status || "N/A"}) The order or task could not be found.`
@@ -141,50 +148,120 @@ const RiderDeliveryDetail = () => {
   useEffect(() => {
     loadOrderDetails();
   }, [loadOrderDetails]);
-  // --- END CRITICAL FIX ---
 
-  // Handler for Pickup (Vendor Code) and Delivery (Buyer Code) confirmation
-  const handleStatusUpdate = async (actionType) => {
-    if (!order) return;
-    setProcessing(true);
-    setApiMessage(null);
+  // This function is now wrapped in useCallback
+  const handleStatusUpdate = useCallback(
+    async (actionType, scannedCode) => {
+      if (!order) return;
+      setProcessing(true);
+      setApiMessage(null);
 
-    try {
-      if (actionType === "PICKUP") {
-        if (vendorCodeInput.length !== 6)
-          throw new Error("Pickup code must be 6 characters.");
+      // Use the scanned code if provided, otherwise use the state input
+      const codeToUse = scannedCode
+        ? scannedCode.toUpperCase()
+        : actionType === "PICKUP"
+        ? vendorCodeInput
+        : buyerCodeInput;
 
-        // API Call: Vendor Confirmation (QR Scanning -> In Delivery)
-        await confirmPickup(orderId, vendorCodeInput);
+      try {
+        if (actionType === "PICKUP") {
+          if (!codeToUse || codeToUse.length < 6)
+            throw new Error("Pickup code must be 6 characters.");
 
-        setApiMessage({
-          type: "success",
-          text: "Pickup confirmed! Order status updated to In Delivery.",
-        });
-        setVendorCodeInput("");
-      } else if (actionType === "DELIVERY") {
-        if (buyerCodeInput.length !== 6)
-          throw new Error("Buyer confirmation code must be 6 digits.");
+          await confirmPickup(orderId, codeToUse);
 
-        // API Call: Buyer Confirmation (In Delivery -> Delivered, Escrow Released)
-        await confirmDelivery(orderId, buyerCodeInput);
+          setApiMessage({
+            type: "success",
+            text: "Pickup confirmed! Order status updated to In Delivery.",
+          });
+          setVendorCodeInput("");
+        } else if (actionType === "DELIVERY") {
+          if (!codeToUse || codeToUse.length < 6)
+            throw new Error("Buyer confirmation code must be 6 digits.");
 
-        setApiMessage({
-          type: "success",
-          text: "Delivery complete! Earnings secured.",
-        });
-        setBuyerCodeInput(""); // Clear code on success
+          await confirmDelivery(orderId, codeToUse);
+
+          setApiMessage({
+            type: "success",
+            text: "Delivery complete! Earnings secured.",
+          });
+          setBuyerCodeInput("");
+        }
+
+        await loadOrderDetails(); // Refresh data to show new status
+      } catch (err) {
+        const msg =
+          err.response?.data?.message || err.message || "Confirmation failed.";
+        setApiMessage({ type: "error", text: msg });
+        // If the scan failed, restart the camera
+        setShowManualInput(false);
+      } finally {
+        setProcessing(false);
       }
+    },
+    [order, orderId, vendorCodeInput, buyerCodeInput, loadOrderDetails]
+  ); // Dependencies
 
-      await loadOrderDetails(); // Refresh data to show new status
-    } catch (err) {
-      const msg =
-        err.response?.data?.message || err.message || "Confirmation failed.";
-      setApiMessage({ type: "error", text: msg });
-    } finally {
-      setProcessing(false);
+  // 3. ADD useEffect FOR CAMERA LIFECYCLE
+  useEffect(() => {
+    // Only run this logic if we are NOT in manual mode and the video ref is ready
+    if (!showManualInput && videoRef.current && !processing) {
+      qrScannerRef.current = new QrScanner(
+        videoRef.current,
+        (result) => {
+          console.log("Decoded QR code:", result.data);
+
+          if (qrScannerRef.current) {
+            qrScannerRef.current.stop(); // Stop the camera
+          }
+
+          const scannedCode = result.data.trim().toUpperCase();
+
+          // Determine if we are in pickup or delivery phase
+          const currentStatus = order?.orderStatus?.toLowerCase() || "";
+          const isPickup =
+            currentStatus === "qr scanning" ||
+            currentStatus === "accepted/awaiting pickup";
+          const isDelivery =
+            currentStatus === "in delivery" || currentStatus === "in transit";
+
+          if (isPickup) {
+            setVendorCodeInput(scannedCode); // Set state just in case
+            handleStatusUpdate("PICKUP", scannedCode); // Pass scanned code directly
+          } else if (isDelivery) {
+            setBuyerCodeInput(scannedCode); // Set state just in case
+            handleStatusUpdate("DELIVERY", scannedCode); // Pass scanned code directly
+          }
+        },
+        {
+          onDecodeError: (error) => {
+            // This fires constantly, only log if needed for debug
+            // console.warn("QR Scan Error:", error);
+          },
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
+        }
+      );
+
+      qrScannerRef.current.start().catch((err) => {
+        console.error("Failed to start QR scanner", err);
+        setApiMessage({
+          type: "error",
+          text: "Could not start camera. Check permissions and use manual input.",
+        });
+        setShowManualInput(true); // Force manual input if camera fails
+      });
     }
-  };
+
+    // Cleanup function:
+    return () => {
+      if (qrScannerRef.current) {
+        qrScannerRef.current.stop();
+        qrScannerRef.current.destroy();
+        qrScannerRef.current = null;
+      }
+    };
+  }, [showManualInput, order, processing, handleStatusUpdate]); // Re-run if manual mode/processing changes
 
   // RENDER HELPER: Renders the Manual Input Form
   const renderManualForm = (type) => {
@@ -234,13 +311,20 @@ const RiderDeliveryDetail = () => {
     );
   };
 
-  // RENDER HELPER: Renders the Camera Placeholder View
+  // Renders the Camera Placeholder View
   const renderScanView = (type) => (
     <div className="space-y-4 pt-2">
-      <div className="w-full max-w-sm h-32 mx-auto mb-3 rounded-xl border-4 border-gray-300 flex flex-col items-center justify-center bg-gray-100 text-gray-500">
-        <Camera size={40} />
-        <p className="mt-2 text-sm font-semibold">Camera Scan Placeholder</p>
+      <div className="relative w-full max-w-sm h-64 mx-auto mb-3 rounded-xl overflow-hidden border-4 border-gray-300 bg-black">
+        <video
+          ref={videoRef}
+          className="w-full h-full object-cover"
+          style={{ transform: "scaleX(-1)" }} // Flip horizontally for a mirror effect
+        />
+        <div className="absolute inset-0 shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] flex items-center justify-center">
+          <div className="w-48 h-48 border-4 border-emerald-500 rounded-lg" />
+        </div>
       </div>
+
       <button
         onClick={() => setShowManualInput(true)}
         className="w-full py-3 rounded-lg font-bold text-white transition bg-red-600 hover:bg-red-700"
@@ -274,8 +358,9 @@ const RiderDeliveryDetail = () => {
               Error Loading Task
             </h1>
             <p className="text-sm text-gray-600 mb-4">
-              {/* Report the specific API error message if available */}
-              **{fetchError || "The order or task could not be found."}**
+              <strong>
+                {fetchError || "The order or task could not be found."}
+              </strong>
               <br />
               <span className="text-xs text-gray-400 mt-1 block">
                 Ensure the task is accepted and you are the assigned rider.
@@ -293,6 +378,8 @@ const RiderDeliveryDetail = () => {
     );
   }
 
+  // ----- CODE RESUMES FROM YOUR SCREENSHOT -----
+
   const badge = getStatusBadgeProps(order.orderStatus);
   const currentStatus = order.orderStatus.toLowerCase();
   const isReadyForPickup =
@@ -302,12 +389,17 @@ const RiderDeliveryDetail = () => {
     currentStatus === "in delivery" || currentStatus === "in transit";
   const isCompleted = currentStatus === "delivered";
 
+  const vendorName =
+    order.items?.[0]?.vendor?.businessName ||
+    order.items?.[0]?.vendor?.name ||
+    order.items?.[0]?.vendor ||
+    "Vendor";
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <RiderHeader />
       <main className="flex-grow p-4 sm:p-8 max-w-lg mx-auto w-full">
         <div className="bg-white rounded-xl shadow-xl p-6 border border-gray-200 space-y-6">
-          {/* Header */}
           <div className="pb-4 border-b">
             <h1 className="text-2xl font-bold text-gray-900">
               Task: Order #{orderId.substring(18).toUpperCase()}
@@ -322,7 +414,6 @@ const RiderDeliveryDetail = () => {
             </p>
           </div>
 
-          {/* API Message */}
           {apiMessage && (
             <div
               className={`p-3 rounded-lg text-sm font-medium ${
@@ -335,21 +426,20 @@ const RiderDeliveryDetail = () => {
             </div>
           )}
 
-          {/* Task Information (Details Section) */}
           <div className="space-y-4">
             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
               <Zap size={20} className="text-red-600" />
               <span className="text-sm font-medium text-gray-700">
-                Pickup: {order.shippingAddress.city} (Vendor)
+                Pickup: {vendorName}
               </span>
               <span className="text-xs text-gray-400">
-                Code: {order.items[0]?.vendor.substring(18)}
+                {order.shippingAddress.city}
               </span>
             </div>
             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
               <MapPin size={20} className="text-blue-600" />
               <span className="text-sm font-medium text-gray-700">
-                Dropoff: {order.shippingAddress.street} (Buyer)
+                Dropoff: {order.shippingAddress.street}
               </span>
             </div>
             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
@@ -360,7 +450,6 @@ const RiderDeliveryDetail = () => {
             </div>
           </div>
 
-          {/* 1. PICKUP PHASE */}
           {isReadyForPickup && !isCompleted && (
             <div className="pt-4 border-t border-gray-200">
               <h3 className="text-xl font-bold text-gray-900 mb-3">
@@ -372,18 +461,17 @@ const RiderDeliveryDetail = () => {
             </div>
           )}
 
-          {/* 2. DELIVERY PHASE */}
           {isReadyForDeliveryConfirmation && !isCompleted && (
             <div className="pt-4 border-t border-gray-200">
               <h3 className="text-xl font-bold text-gray-900 mb-3">
                 Buyer Confirmation (Dropoff)
               </h3>
-              {/* For dropoff, we default to the manual form */}
-              {renderManualForm("DELIVERY")}
+              {showManualInput
+                ? renderManualForm("DELIVERY")
+                : renderScanView("DELIVERY")}
             </div>
           )}
 
-          {/* 3. COMPLETED STATE */}
           {isCompleted && (
             <div className="pt-4 border-t border-gray-200">
               <div className="text-center p-4 bg-emerald-50 rounded-lg border border-emerald-200">
@@ -409,16 +497,5 @@ const RiderDeliveryDetail = () => {
     </div>
   );
 };
-
-// Helper component for clean detail rows
-const DetailRow = ({ icon: Icon, label, value }) => (
-  <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
-    <Icon size={18} className="text-emerald-600 flex-shrink-0" />
-    <div className="text-sm">
-      <span className="font-medium text-gray-700">{label}:</span>
-      <span className="font-semibold text-gray-900 ml-1">{value}</span>
-    </div>
-  </div>
-);
 
 export default RiderDeliveryDetail;

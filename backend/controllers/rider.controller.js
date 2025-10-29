@@ -1,10 +1,10 @@
 import Order from "../models/order.model.js";
 import DeliveryTask from "../models/deliveryTask.model.js";
 import Notification from "../models/notification.model.js";
+import { User } from "../models/user.model.js";
 import mongoose from "mongoose";
 
-// --- VENDOR NOTIFICATION HELPER (RE-DEFINED/IMPORTED) ---
-// NOTE: Must match the helper function in your main controller file.
+// --- NOTIFICATION HELPER ---
 const createDbNotification = async (recipientId, orderId, message) => {
   const newNotification = new Notification({
     recipient: recipientId,
@@ -17,10 +17,33 @@ const createDbNotification = async (recipientId, orderId, message) => {
 };
 // -----------------------------------------------------------------
 
-// ALL FUNCTIONS BELOW ARE TRANSFERRED FROM order.controller.js
+// --- HELPER: Notifies all Riders of a new task ---
+const notifyAllAvailableRiders = async (taskId, vendorInfo) => {
+  try {
+    // Fetch all riders regardless of status
+    const riders = await User.find({ role: "rider" }).select("_id");
+
+    if (riders.length === 0)
+      return console.log("No riders found in the User collection.");
+
+    const notificationPromises = riders.map((rider) => {
+      return createDbNotification(
+        rider._id, // Recipient is the Rider's ID
+        taskId, // Pass Task ID
+        `New Delivery Task available! Pickup from ${vendorInfo}.`
+      );
+    });
+    await Promise.all(notificationPromises);
+    console.log(`Notified ${riders.length} riders of new task ${taskId}.`);
+  } catch (error) {
+    console.error("Error notifying riders:", error);
+  }
+};
+// ------------------------------------------------------------------
 
 const fetchAllAvailableTasks = async (req, res) => {
   try {
+    // CRITICAL FIX: Status must be "Awaiting Acceptance"
     const tasks = await DeliveryTask.find({ status: "Awaiting Acceptance" })
       .populate("vendor", "name businessName")
       .populate("order", "totalAmount")
@@ -128,31 +151,30 @@ const confirmPickupByRider = async (req, res) => {
       return res.status(400).json({ message: "Invalid Order ID format." });
     }
 
-    const task = await DeliveryTask.findOne({
-      order: orderId,
-      rider: riderId,
-      pickupCode: pickupCode,
-      status: "Accepted/Awaiting Pickup",
-    });
+    // Verification via Pickup Code and Rider ID
+    const task = await DeliveryTask.findOneAndUpdate(
+      {
+        order: orderId,
+        rider: riderId,
+        pickupCode: pickupCode,
+        status: "Accepted/Awaiting Pickup",
+      },
+      { $set: { status: "In Transit" } },
+      { new: true }
+    );
 
     if (!task) {
-      return res
-        .status(401)
-        .json({ message: "Invalid scan or task not ready for pickup." });
+      return res.status(401).json({
+        message: "Invalid scan, code, or task is not ready for pickup.",
+      });
     }
-
-    task.status = "In Transit";
-    await task.save();
 
     await Order.findByIdAndUpdate(orderId, { orderStatus: "In Delivery" });
 
     await createDbNotification(
       task.vendor,
       orderId,
-      `Order #${orderId
-        .toString()
-        .substring(18)
-        .toUpperCase()} has been picked up and is In Delivery.`
+      `Order picked up! Status: In Delivery.`
     );
 
     res.json({ message: "Pickup confirmed. Delivery is now in transit." });
@@ -171,6 +193,7 @@ const confirmDeliveryByRider = async (req, res) => {
       return res.status(400).json({ message: "Invalid Order ID format." });
     }
 
+    // Verification via Buyer Code and Rider ID
     const task = await DeliveryTask.findOneAndUpdate(
       {
         order: orderId,
@@ -193,10 +216,10 @@ const confirmDeliveryByRider = async (req, res) => {
     await createDbNotification(
       task.vendor,
       orderId,
-      `Order #${orderId
+      `Order completed! Escrow funds released for order #${orderId
         .toString()
         .substring(18)
-        .toUpperCase()} has been successfully delivered and funds released from escrow.`
+        .toUpperCase()}.`
     );
 
     res.json({ message: "Delivery confirmed. Escrow funds released." });
@@ -213,15 +236,14 @@ const getRiderEarningsAndHistory = async (req, res) => {
     // Find all tasks completed by the current rider
     const completedTasks = await DeliveryTask.find({
       rider: riderId,
-      status: "Delivered", // Tasks marked as delivered
+      status: "Delivered",
     })
-      .populate("order", "totalAmount") // Populate the order amount (or calculate fee)
+      .populate("order", "totalAmount")
       .sort({ createdAt: -1 })
       .lean();
 
     // Calculate total lifetime earnings
     const totalEarnings = completedTasks.reduce((sum, task) => {
-      // Assuming deliveryFee is the rider's earning, if not zero.
       const earning = task.deliveryFee || 0;
       return sum + earning;
     }, 0);
@@ -244,11 +266,12 @@ const getRiderEarningsAndHistory = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch rider earnings data." });
   }
 };
+
 const getVendorNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ recipient: req.user._id })
       .sort({ createdAt: -1 })
-      .limit(20); // Note: We keep the limit low for vendor dashboard view
+      .limit(20);
 
     res.json(
       notifications.map((n) => ({
@@ -268,7 +291,7 @@ const getVendorNotifications = async (req, res) => {
   }
 };
 
-// --- FINAL EXPORTS ---
+// --- FINAL EXPORTS (Must match function names above) ---
 export {
   fetchAllAvailableTasks,
   fetchRiderAcceptedTasks,
@@ -277,4 +300,5 @@ export {
   confirmDeliveryByRider,
   getRiderEarningsAndHistory,
   getVendorNotifications,
+  notifyAllAvailableRiders,
 };

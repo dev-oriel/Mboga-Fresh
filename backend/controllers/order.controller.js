@@ -3,9 +3,11 @@ import Product from "../models/product.model.js";
 import Notification from "../models/notification.model.js";
 import DeliveryTask from "../models/deliveryTask.model.js";
 import { initiateSTKPush } from "../services/daraja.service.js";
+// FIX: Import the notification function from the correct controller
+import { notifyAllAvailableRiders } from "./rider.controller.js";
 import mongoose from "mongoose";
 
-// --- VENDOR NOTIFICATION HELPER (Shared Utility) ---
+// --- VENDOR NOTIFICATION HELPER ---
 const createDbNotification = async (recipientId, orderId, message) => {
   const newNotification = new Notification({
     recipient: recipientId,
@@ -16,7 +18,7 @@ const createDbNotification = async (recipientId, orderId, message) => {
   });
   await newNotification.save();
 };
-// ----------------------------------------------------
+// ------------------------------------
 
 const placeOrder = async (req, res) => {
   const { items, shippingAddress, mpesaPhone } = req.body;
@@ -75,7 +77,6 @@ const placeOrder = async (req, res) => {
 
     const newOrderId = new mongoose.Types.ObjectId();
 
-    // 1. Initiate M-Pesa STK Push
     const mpesaResult = await initiateSTKPush(
       finalTotal,
       mpesaPhone,
@@ -89,21 +90,19 @@ const placeOrder = async (req, res) => {
       });
     }
 
-    // 2. ONLY CREATE THE ORDER TEMPORARILY WITH PENDING STATUS
     const newOrder = new Order({
       _id: newOrderId,
       user: userId,
-      items: processedItems, // CRITICAL: Saved here
-      shippingAddress: shippingAddress, // CRITICAL: Saved here
-      totalAmount: finalTotal, // CRITICAL: Saved here
+      items: processedItems,
+      shippingAddress: shippingAddress,
+      totalAmount: finalTotal,
       paymentStatus: "Pending",
       orderStatus: "Processing",
       mpesaCheckoutRequestId: mpesaResult.checkoutRequestId,
     });
 
-    await newOrder.save(); // CRITICAL: This commit must complete successfully.
+    await newOrder.save();
 
-    // 3. Notifications and Response
     uniqueVendorIds.forEach((vendorIdString) => {
       createDbNotification(
         new mongoose.Types.ObjectId(vendorIdString),
@@ -150,7 +149,6 @@ const updateOrderStatusAndNotifyRider = async (req, res) => {
         .json({ message: "Order not found or access denied." });
     }
 
-    // Check against the correct preceding status
     if (order.orderStatus !== "New Order") {
       return res.status(400).json({
         message: `Order status is already ${order.orderStatus}. Cannot accept.`,
@@ -162,7 +160,6 @@ const updateOrderStatusAndNotifyRider = async (req, res) => {
       100000 + Math.random() * 900000
     ).toString();
 
-    // Create the DeliveryTask with the Vendor's pickup code
     const newTask = await DeliveryTask.create({
       order: orderId,
       vendor: vendorId,
@@ -172,7 +169,6 @@ const updateOrderStatusAndNotifyRider = async (req, res) => {
       deliveryAddress: order.shippingAddress,
     });
 
-    // Set new Order Status
     await Order.findByIdAndUpdate(orderId, { orderStatus: "QR Scanning" });
 
     await createDbNotification(
@@ -180,6 +176,11 @@ const updateOrderStatusAndNotifyRider = async (req, res) => {
       orderId,
       `Order accepted. Status: Awaiting Rider Pickup (Code: ${pickupCode}).`
     );
+
+    const vendorInfo =
+      order.items && order.items.length > 0 ? order.items[0].vendor : vendorId;
+
+    await notifyAllAvailableRiders(newTask._id, vendorInfo);
 
     res.json({
       message: `Order accepted and Delivery Task created.`,
@@ -201,7 +202,6 @@ const getBuyerOrders = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
       .sort({ createdAt: -1 })
-      // CRITICAL: Ensure ALL fulfillment and payment fields needed by the frontend are selected.
       .select(
         "items totalAmount shippingAddress paymentStatus orderStatus createdAt mpesaReceiptNumber mpesaTransactionDate mpesaPhoneNumber"
       )
@@ -238,8 +238,9 @@ const getOrderDetailsById = async (req, res) => {
   }
 
   try {
-    // 1. Find the order
-    const order = await Order.findById(orderId).lean();
+    const order = await Order.findById(orderId)
+      .populate("items.vendor", "name businessName")
+      .lean();
 
     if (!order) {
       console.warn(`[OrderAuth] 404: Order ID ${orderId} not found.`);
@@ -248,31 +249,27 @@ const getOrderDetailsById = async (req, res) => {
       });
     }
 
-    // --- 2. Authorization Logic (Robust Check) ---
-
     let isAuthorized = false;
+    let taskDetails = null;
 
-    // Check A: Buyer or Admin
     if (String(order.user) === String(userId) || userRole === "admin") {
       isAuthorized = true;
     }
 
-    // Check B: Rider access via DeliveryTask (CRITICAL PATH)
     if (userRole === "rider") {
-      const task = await DeliveryTask.findOne({
+      taskDetails = await DeliveryTask.findOne({
         order: orderId,
         rider: userId,
       }).lean();
 
-      if (task) {
+      if (taskDetails) {
         isAuthorized = true;
       }
     }
 
-    // Check C: Vendor access
     if (userRole === "vendor") {
       const isVendorForOrder = order.items.some(
-        (item) => String(item.vendor) === String(userId)
+        (item) => String(item.vendor._id) === String(userId)
       );
       if (isVendorForOrder) {
         isAuthorized = true;
@@ -283,8 +280,7 @@ const getOrderDetailsById = async (req, res) => {
       console.log(
         `[OrderAuth] Access granted for User ${userId} (Role: ${userRole}) to Order ${orderId}.`
       );
-      // If the rider is authorized, send the order data.
-      return res.json(order);
+      return res.json({ ...order, task: taskDetails });
     } else {
       console.warn(
         `[OrderAuth] 403: Access denied for User ${userId} (Role: ${userRole}) to Order ${orderId}.`
@@ -294,7 +290,6 @@ const getOrderDetailsById = async (req, res) => {
       });
     }
   } catch (error) {
-    // Log unexpected server/database errors deeply
     console.error(
       `[OrderAuth] Critical Server Error for Order ${orderId}:`,
       error
@@ -333,9 +328,33 @@ const checkOrderStatus = async (req, res) => {
   }
 };
 
-// ====================================================================
-// FUNCTIONS TRANSFERRED TO OTHER CONTROLLERS (Removed from here)
-// ====================================================================
+// --- NEW FUNCTION TO GET PICKUP CODE ---
+const getTaskForVendor = async (req, res) => {
+  const { orderId } = req.params;
+  const vendorId = req.user._id;
+
+  if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    return res.status(400).json({ message: "Invalid Order ID format." });
+  }
+
+  try {
+    const task = await DeliveryTask.findOne({
+      order: orderId,
+      vendor: vendorId,
+    }).select("pickupCode status"); // Only send what's needed
+
+    if (!task) {
+      return res
+        .status(404)
+        .json({ message: "Task not found for this order." });
+    }
+
+    res.json(task);
+  } catch (error) {
+    console.error("Error fetching task for vendor:", error);
+    res.status(500).json({ message: "Failed to fetch task." });
+  }
+};
 
 // --- FINAL EXPORTS (Core Functions ONLY) ---
 
@@ -346,4 +365,5 @@ export {
   getVendorOrders,
   getOrderDetailsById,
   checkOrderStatus,
+  getTaskForVendor,
 };

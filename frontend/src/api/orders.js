@@ -1,19 +1,6 @@
 import axios from "axios";
 
-// Dynamic Base URL Resolver
-const getBaseUrl = () => {
-  const currentHost = window.location.hostname;
-  const API_PORT = 5000;
-
-  if (currentHost === "localhost" || currentHost === "127.0.0.1") {
-    return `http://localhost:${API_PORT}`;
-  } else {
-    return `http://${currentHost}:${API_PORT}`;
-  }
-};
-
-const BASE = getBaseUrl();
-const API_URL_BASE = `${BASE}/api/orders`;
+const API_URL_BASE = "/api/orders";
 
 // --- BUYER / VENDOR FUNCTIONS (Remains Unchanged) ---
 
@@ -72,6 +59,19 @@ export const fetchOrderDetails = async (orderId) => {
   return response.data;
 };
 
+// --- NEW VENDOR FUNCTION ---
+/**
+ * Fetches the delivery task (for pickupCode) for a specific order.
+ * (Vendor-only)
+ */
+export async function fetchVendorTask(orderId) {
+  const res = await axios.get(`${API_URL_BASE}/vendor/task/${orderId}`, {
+    withCredentials: true,
+  });
+  return res.data; // Returns { pickupCode, status }
+}
+// --- END NEW FUNCTION ---
+
 // --- RIDER FUNCTIONS (Finalizing the confirmation logic) ---
 
 export async function fetchAllAvailableTasks() {
@@ -118,5 +118,23 @@ export async function confirmDelivery(orderId, buyerCode) {
     { orderId, buyerCode }, // CRITICAL: Pass buyerCode
     { withCredentials: true }
   );
+  return res.data;
+}
+export async function markNotificationAsRead(notificationId) {
+  // Hitting the PATCH /api/orders/notifications/:id/read endpoint
+  const url = `${API_URL_BASE}/notifications/${notificationId}/read`;
+  const res = await axios.patch(url, {}, { withCredentials: true });
+  return res.data;
+}
+export async function fetchRiderStats() {
+  const res = await axios.get(`${API_URL_BASE}/rider/stats`, {
+    withCredentials: true,
+  });
+  return res.data;
+}
+export async function deleteReadNotifications() {
+  // Hitting the DELETE /api/orders/notifications/read endpoint
+  const url = `${API_URL_BASE}/notifications/read`;
+  const res = await axios.delete(url, { withCredentials: true });
   return res.data;
 }

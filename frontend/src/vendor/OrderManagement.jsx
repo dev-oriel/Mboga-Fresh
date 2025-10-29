@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import Header from "../components/vendorComponents/Header";
 import { useAuth } from "../context/AuthContext";
-import { fetchVendorOrders } from "../api/orders";
+import { fetchVendorOrders, fetchVendorTask } from "../api/orders"; // <-- IMPORT fetchVendorTask
 import { Loader2 } from "lucide-react";
 import axios from "axios";
-import { useLocation } from "react-router-dom"; // Import useLocation to check for notification clicks
+import { useLocation } from "react-router-dom";
 
 const formatCurrency = (amount) =>
   `Ksh ${Number(amount).toLocaleString("en-KE", { minimumFractionDigits: 0 })}`;
@@ -13,7 +13,7 @@ const formatCurrency = (amount) =>
 const getStatusColor = (status) => {
   switch (status) {
     case "New Order":
-    case "Processing": // Fallback for Processing status if payment is still pending
+    case "Processing":
       return "bg-yellow-100 text-yellow-700";
     case "QR Scanning":
       return "bg-emerald-100 text-emerald-700";
@@ -63,10 +63,8 @@ export default function OrderManagement() {
   const [showQrCodeModal, setShowQrCodeModal] = useState(false);
   const [qrCodeOrder, setQrCodeOrder] = useState(null);
 
-  // Default active tab to 'new' or override if a notification click forces focus
   const [activeTab, setActiveTab] = useState("new");
 
-  // 1. Fetch Live Orders for this Vendor
   const loadVendorOrders = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -76,27 +74,24 @@ export default function OrderManagement() {
 
       const mappedOrders = data.map((order) => {
         const totalAmount = order.totalAmount;
-
-        // NOTE: The backend's response already contains the final orderStatus.
-        // We base the frontend action on that status.
         const currentStatus = order.orderStatus;
 
         let action = "View Details";
         if (currentStatus === "New Order") action = "Accept Order";
         else if (currentStatus === "QR Scanning") action = "Show QR Code";
 
-        const itemsList = order.items
-          .map((i) => `${i.quantity}x ${i.name}`)
-          .join(", ");
+        const itemsList =
+          order.items?.map((i) => `${i.quantity}x ${i.name}`).join(", ") ||
+          "Items missing";
 
         return {
           id: order._id,
-          buyer: `Buyer #${order.user.substring(18).toUpperCase()}`, // Mock buyer name
+          buyer: `Buyer #${order.user.substring(18).toUpperCase()}`,
           items: itemsList,
           amount: formatCurrency(totalAmount),
           status: currentStatus,
           payment: order.paymentStatus === "Paid" ? "Escrow" : "Unpaid",
-          action: action, // Dynamic Action
+          action: action,
           __raw: order,
         };
       });
@@ -114,23 +109,19 @@ export default function OrderManagement() {
     loadVendorOrders();
   }, [loadVendorOrders]);
 
-  // Effect to handle notification click navigation
   useEffect(() => {
     if (location.state?.autoFocus && orders.length > 0) {
-      // When autoFocus is true (from notification click), find the status of the order.
       const targetOrder = orders.find(
         (o) => String(o.id) === String(location.state.highlightId)
       );
 
       if (targetOrder) {
-        // Map DB status to the corresponding tab (New Order -> new, QR Scanning -> qr, etc.)
         let targetTab = "new";
         if (targetOrder.status === "QR Scanning") targetTab = "qr";
         else if (targetOrder.status === "In Delivery") targetTab = "delivery";
         else if (targetOrder.status === "Delivered") targetTab = "completed";
 
         setActiveTab(targetTab);
-        // Clear state to prevent repeat auto-focus on future navigations/refreshes
         window.history.replaceState({}, document.title, location.pathname);
       }
     }
@@ -153,21 +144,29 @@ export default function OrderManagement() {
 
       setLoading(true);
       try {
-        // CRITICAL API CALL: Vendor accepts the order and creates the Delivery Task
         const endpoint = `${API_BASE}/api/orders/vendor/order/${order.id}/accept`;
-        await axios.patch(endpoint, {}, { withCredentials: true });
+        // --- FIX: Capture the response ---
+        const response = await axios.patch(
+          endpoint,
+          {},
+          { withCredentials: true }
+        );
 
-        // On successful acceptance, refresh the entire list
+        // Extract pickupCode from the API response
+        const pickupCode = response.data?.task?.pickupCode;
+        if (!pickupCode) {
+          throw new Error("API did not return a pickup code.");
+        }
+
         await loadVendorOrders();
-
-        // Switch tab to QR Scanning and show the QR code immediately
         setActiveTab("qr");
 
-        // NOTE: We re-find the order in the updated state to ensure latest status/codes are used
-        // For the simulation, we use the old object since loadVendorOrders() updates the state correctly.
-        const acceptedOrder = { ...order, status: "QR Scanning" };
-
-        setQrCodeOrder(acceptedOrder);
+        // --- FIX: Set the qrCodeOrder with the new pickupCode ---
+        setQrCodeOrder({
+          ...order,
+          status: "QR Scanning",
+          pickupCode: pickupCode,
+        });
         setShowQrCodeModal(true);
       } catch (err) {
         console.error("Order Acceptance Failed:", err);
@@ -179,15 +178,31 @@ export default function OrderManagement() {
         setLoading(false);
       }
     } else if (order.action === "Show QR Code") {
-      setQrCodeOrder(order);
-      setShowQrCodeModal(true);
+      // --- FIX: Fetch the task to get the pickup code ---
+      setApiError(null);
+      setLoading(true);
+      try {
+        const task = await fetchVendorTask(order.id);
+        if (!task.pickupCode) {
+          throw new Error("Could not find pickup code for this task.");
+        }
+
+        setQrCodeOrder({ ...order, pickupCode: task.pickupCode });
+        setShowQrCodeModal(true);
+      } catch (err) {
+        console.error("Failed to fetch task for QR Code:", err);
+        setApiError(
+          err.response?.data?.message || "Failed to retrieve QR Code data."
+        );
+      } finally {
+        setLoading(false);
+      }
     } else if (order.action === "View Details") {
       setSelectedOrder(order);
     }
   };
 
   const filteredOrders = orders.filter((order) => {
-    // FIX: Filter on new statuses
     if (activeTab === "new") return order.status === "New Order";
     if (activeTab === "qr") return order.status === "QR Scanning";
     if (activeTab === "delivery") return order.status === "In Delivery";
@@ -196,7 +211,6 @@ export default function OrderManagement() {
   });
 
   const getTabCount = (tab) => {
-    // FIX: Count based on new statuses
     if (tab === "new")
       return orders.filter((o) => o.status === "New Order").length;
     if (tab === "qr")
@@ -244,9 +258,9 @@ export default function OrderManagement() {
                   {tab === "new"
                     ? "New Orders"
                     : tab === "qr"
-                    ? "QR Scanning"
-                      ? "In Delivery"
-                      : tab === "delivery"
+                    ? "Awaiting Pickup"
+                    : tab === "delivery"
+                    ? "In Delivery"
                     : "Completed"}
                 </span>
                 <span className="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -330,19 +344,16 @@ export default function OrderManagement() {
                       </span>
                     </td>
                     <td className="py-4 px-6 text-right">
-                      {
-                        // Only show action button if not completed
-                        order.status !== "Delivered" && (
-                          <button
-                            onClick={() => handleAction(order)}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${getActionButton(
-                              order.action
-                            )}`}
-                          >
-                            {order.action}
-                          </button>
-                        )
-                      }
+                      {order.status !== "Delivered" && (
+                        <button
+                          onClick={() => handleAction(order)}
+                          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${getActionButton(
+                            order.action
+                          )}`}
+                        >
+                          {order.action}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -362,12 +373,9 @@ export default function OrderManagement() {
                 The rider scans this QR code to confirm pickup.
               </p>
               <div className="flex justify-center mb-6 bg-gray-50 p-4 rounded">
+                {/* --- FIX: Encode *only* the pickupCode --- */}
                 <QRCodeCanvas
-                  value={JSON.stringify({
-                    orderId: qrCodeOrder.id,
-                    vendorId: user._id,
-                    amount: qrCodeOrder.amount,
-                  })}
+                  value={qrCodeOrder.pickupCode || "NO-CODE"}
                   size={256}
                   level="H"
                   includeMargin={true}
@@ -376,6 +384,10 @@ export default function OrderManagement() {
               <div className="text-center mb-4">
                 <p className="text-sm font-medium text-gray-700">
                   Order: #{qrCodeOrder.id.substring(18).toUpperCase()}
+                </p>
+                {/* --- ADD: Show the code for manual entry --- */}
+                <p className="text-4xl font-bold text-gray-900 tracking-widest my-2">
+                  {qrCodeOrder.pickupCode}
                 </p>
               </div>
               <div className="flex gap-2">

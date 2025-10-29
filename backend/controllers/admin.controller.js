@@ -1,8 +1,7 @@
 import Order from "../models/order.model.js";
-import mongoose from "mongoose"; // Needed for ObjectId functions if any were here
+import mongoose from "mongoose";
 
-// TRANSFERRED from order.controller.js
-export const getTotalEscrowBalance = async (req, res) => {
+const getTotalEscrowBalance = async (req, res) => {
   try {
     const ordersInEscrow = await Order.find({
       orderStatus: { $nin: ["Delivered", "Cancelled"] },
@@ -20,15 +19,14 @@ export const getTotalEscrowBalance = async (req, res) => {
   }
 };
 
-// TRANSFERRED from order.controller.js
-export const listAllOrders = async (req, res) => {
+const listAllOrders = async (req, res) => {
   try {
     const orders = await Order.find({})
       // Populate user (buyer) name for display and select only essential fields
       .populate("user", "name phone")
       .sort({ createdAt: -1 })
       .select("-__v -updatedAt")
-      .lean(); // Use .lean() for faster read operations
+      .lean();
 
     res.json(orders);
   } catch (error) {
@@ -37,13 +35,11 @@ export const listAllOrders = async (req, res) => {
   }
 };
 
-// TRANSFERRED from order.controller.js
-export const listAllTransactions = async (req, res) => {
+const listAllTransactions = async (req, res) => {
   try {
     const paidOrders = await Order.find({ paymentStatus: "Paid" })
-      .populate("user", "name")
+      .populate("user", "name phone")
       .sort({ createdAt: -1 })
-      // Ensure all necessary fields are selected
       .select(
         "user totalAmount orderStatus mpesaReceiptNumber mpesaTransactionDate mpesaPhoneNumber createdAt items"
       )
@@ -68,12 +64,10 @@ export const listAllTransactions = async (req, res) => {
         const hour = mpesaDateCode.substring(8, 10);
         const minute = mpesaDateCode.substring(10, 12);
 
-        // Construct Date object using M-Pesa time data
         transactionDate = new Date(
           `${year}-${month}-${day}T${hour}:${minute}:00`
         );
       } else {
-        // Fallback to Mongoose creation date
         transactionDate = new Date(order.createdAt);
       }
 
@@ -92,7 +86,7 @@ export const listAllTransactions = async (req, res) => {
       return {
         id: order._id,
         buyerName: order.user?.name || "N/A",
-        amount: safeAmount, // Use the fixed numeric amount
+        amount: safeAmount,
         transactionDate: formattedDate,
         transactionTime: formattedTime,
         mpesaCode: order.mpesaReceiptNumber || "N/A",
@@ -114,3 +108,6 @@ export const listAllTransactions = async (req, res) => {
     });
   }
 };
+
+// --- FINAL EXPORTS ---
+export { getTotalEscrowBalance, listAllOrders, listAllTransactions };

@@ -1,18 +1,7 @@
 // frontend/src/api/products.js
 
 // Dynamic Base URL Resolver (Pasted into each file for independence)
-const getBaseUrl = () => {
-  const currentHost = window.location.hostname;
-  const API_PORT = 5000;
-
-  if (currentHost === "localhost" || currentHost === "127.0.0.1") {
-    return `http://localhost:${API_PORT}`;
-  } else {
-    return `http://${currentHost}:${API_PORT}`;
-  }
-};
-
-const BASE = getBaseUrl();
+const BASE = "";
 
 function buildQueryString(params = {}) {
   const entries = Object.entries(params).filter(
