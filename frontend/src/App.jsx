@@ -40,6 +40,8 @@ import VendorProducts from "./vendor/VendorProducts.jsx";
 import Farmily from "./vendor/Farmily.jsx";
 import VendorWallet from "./vendor/VendorWallet.jsx";
 import BulkOrdersList from "./vendor/BulkOrdersList.jsx";
+import VendorCartPage from "./vendor/VendorCartPage.jsx";
+import VendorCheckout from "./vendor/VendorCheckout.jsx";
 
 // Rider pages
 import RiderDashboard from "./rider/RiderDashboard.jsx";
@@ -141,6 +143,8 @@ function App() {
                 <Route path="/vendorwallet" element={<VendorWallet />} />
                 <Route path="/vendorprofile" element={<Vendorprofile />} />
                 <Route path="/bulkorders" element={<BulkOrdersList />} />
+                <Route path="/vendor-cart" element={<VendorCartPage />} />
+                <Route path="/vendor-checkout" element={<VendorCheckout />} />
               </Route>
 
               {/* Farmer (Supplier) (ONLY accessible by Farmer/Admin) */}
