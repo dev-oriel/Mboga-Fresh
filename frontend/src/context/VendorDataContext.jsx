@@ -5,14 +5,13 @@ import axios from "axios";
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
 const markNotificationAsReadRequest = async (notificationId) => {
-  const url = `${API_BASE}/api/notifications/${notificationId}/read`;
-  // Assuming a simple PATCH endpoint exists under /api/notifications (you'll need to add this route/controller)
+  const url = `${API_BASE}/api/orders/notifications/${notificationId}/read`;
   const res = await axios.patch(url, {}, { withCredentials: true });
   return res.data;
 };
 
 const deleteReadNotificationsRequest = async () => {
-  const url = `${API_BASE}/api/notifications/read`;
+  const url = `${API_BASE}/api/orders/notifications/read`;
   const res = await axios.delete(url, { withCredentials: true });
   return res.data;
 };

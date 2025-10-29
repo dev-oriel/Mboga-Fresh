@@ -58,35 +58,33 @@ const Sidebar = ({ className = "" }) => {
           Farm-ily Marketplace
         </h1>
 
-        {/* ✅ Only show categories when on /farmily */}
-        {isFarmily && (
-          <nav className="flex flex-col gap-2" aria-label="Product categories">
-            <span className="text-xs font-semibold text-gray-500 mb-1">
-              PRODUCT CATEGORIES
-            </span>
-            {vendorCategories.map((c) => {
-              const slug = c.to.split("/").pop();
-              return (
-                <button
-                  key={c.to}
-                  onClick={() => goToCategory(slug)}
-                  className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded-lg transition-colors font-medium ${
-                    isCategoryActive(slug)
-                      ? "bg-emerald-100 dark:bg-emerald-700/20 text-emerald-600"
-                      : "text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-700/10"
-                  }`}
-                >
-                  {c.icon && (
-                    <span className="material-symbols-outlined" aria-hidden>
-                      {c.icon}
-                    </span>
-                  )}
-                  <span>{c.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-        )}
+        {/* Product Categories - Always visible */}
+        <nav className="flex flex-col gap-2" aria-label="Product categories">
+          <span className="text-xs font-semibold text-gray-500 mb-1">
+            PRODUCT CATEGORIES
+          </span>
+          {vendorCategories.map((c) => {
+            const slug = c.to.split("/").pop();
+            return (
+              <button
+                key={c.to}
+                onClick={() => goToCategory(slug)}
+                className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded-lg transition-colors font-medium ${
+                  isCategoryActive(slug)
+                    ? "bg-emerald-100 dark:bg-emerald-700/20 text-emerald-600"
+                    : "text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-700/10"
+                }`}
+              >
+                {c.icon && (
+                  <span className="material-symbols-outlined" aria-hidden>
+                    {c.icon}
+                  </span>
+                )}
+                <span>{c.label}</span>
+              </button>
+            );
+          })}
+        </nav>
 
         <div className="border-t border-emerald-200/60 dark:border-emerald-700/40 my-4" />
 
