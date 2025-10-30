@@ -184,7 +184,7 @@ function App() {
                   element={<RiderEarningsAndHistory />}
                 />
                 <Route
-                  path="/riderdelivery/:orderid"
+                  path="/riderdelivery/:orderId"
                   element={<RiderDeliveryDetail />}
                 />
                 <Route

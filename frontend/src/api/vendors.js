@@ -1,19 +1,6 @@
 import axios from "axios"; // Added axios import
 
-// Dynamic Base URL Resolver (Pasted into each file for independence)
-const getBaseUrl = () => {
-  const currentHost = window.location.hostname;
-  const API_PORT = 5000;
-
-  if (currentHost === "localhost" || currentHost === "127.0.0.1") {
-    return `http://localhost:${API_PORT}`;
-  } else {
-    return `http://${currentHost}:${API_PORT}`;
-  }
-};
-
-const BASE = getBaseUrl();
-const API_URL_BASE = `${BASE}/api`; // Base URL for notifications, profiles, etc.
+const API_URL_BASE = "/api";
 
 async function handleResponse(res) {
   if (res.ok) return res.json();
@@ -26,17 +13,19 @@ async function handleResponse(res) {
 }
 
 export async function fetchVendors() {
-  const res = await fetch(`${BASE}/api/vendors`);
+  const res = await fetch(`${API_URL_BASE}/api/vendors`);
   return handleResponse(res);
 }
 
 export async function fetchVendor(id) {
-  const res = await fetch(`${BASE}/api/vendors/${encodeURIComponent(id)}`);
+  const res = await fetch(
+    `${API_URL_BASE}/api/vendors/${encodeURIComponent(id)}`
+  );
   return handleResponse(res);
 }
 
 export async function fetchCategories() {
-  const res = await fetch(`${BASE}/api/categories`);
+  const res = await fetch(`${API_URL_BASE}/api/categories`);
   return handleResponse(res);
 }
 

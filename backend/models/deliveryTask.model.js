@@ -33,8 +33,14 @@ const DeliveryTaskSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+
+    buyerConfirmationCode: {
+      type: String,
+      required: true,
+    },
+
     deliveryAddress: {
-      type: Object, // Stores a copy of the final delivery location
+      type: Object,
       required: true,
     },
     deliveryFee: {

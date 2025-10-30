@@ -8,6 +8,7 @@ import {
   getVendorOrders,
   updateOrderStatusAndNotifyRider,
   checkOrderStatus,
+  getTaskForVendor, // <-- IMPORT NEW FUNCTION
 } from "../controllers/order.controller.js";
 
 import {
@@ -68,6 +69,13 @@ router.patch(
   requireAuth,
   requireRole(["vendor"]),
   updateOrderStatusAndNotifyRider
+);
+
+router.get(
+  "/vendor/task/:orderId",
+  requireAuth,
+  requireRole(["vendor"]),
+  getTaskForVendor
 );
 
 // ------------------------------------

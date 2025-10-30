@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { Loader2 } from "lucide-react";
-
-// Imports from existing components and files
 import StatsCard from "../components/riderComponents/StatsCard";
 import RecentDeliveriesTable from "../components/riderComponents/RecentDeliveriesTable";
 import RiderHeader from "../components/riderComponents/RiderHeader";
-import { fetchRiderAcceptedTasks } from "../api/orders"; // Used for Active Deliveries count
+// FIX: Import the API functions
+import { fetchRiderAcceptedTasks, fetchRiderStats } from "../api/orders";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
+// FIX: Removed the hard-coded API_BASE
+// const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
 const formatCurrency = (amount) =>
   `Ksh ${Number(amount).toLocaleString("en-KE", { minimumFractionDigits: 0 })}`;
@@ -25,21 +24,11 @@ const RiderDashboard = () => {
     error: null,
   });
 
-  // 1. Fetch Dashboard Metrics
   const fetchDashboardData = useCallback(async () => {
     try {
-      // Fetch Earnings and History (New Endpoint)
-      const earningsResponse = await axios.get(
-        `${API_BASE}/api/orders/rider/stats`,
-        {
-          withCredentials: true,
-        }
-      );
-
-      // Fetch Active Tasks (Existing Endpoint)
+      // FIX: Use the imported API functions
+      const earningsData = await fetchRiderStats();
       const activeTasks = await fetchRiderAcceptedTasks();
-
-      const earningsData = earningsResponse.data;
 
       setStats((prev) => ({
         ...prev,
@@ -58,14 +47,13 @@ const RiderDashboard = () => {
         error: "Failed to load dashboard data. Check server logs.",
       }));
     }
-  }, [navigate]);
+  }, []); // FIX: Removed 'navigate' dependency
 
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // We will keep the performance rating as static for now since it requires complex calculations
-  const performanceRating = 4.8;
+  const performanceRating = 4.8; // Static as before
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100">
