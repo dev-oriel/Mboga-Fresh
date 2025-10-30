@@ -204,20 +204,32 @@ const RiderDeliveryDetail = () => {
 
   // 3. ADD useEffect FOR CAMERA LIFECYCLE
   useEffect(() => {
-    // Only run this logic if we are NOT in manual mode and the video ref is ready
+    // Only run if not in manual mode, ref is ready, and not already processing
     if (!showManualInput && videoRef.current && !processing) {
       qrScannerRef.current = new QrScanner(
         videoRef.current,
         (result) => {
+          if (processing) return; // Don't allow multiple scans if one is processing
+
           console.log("Decoded QR code:", result.data);
+          qrScannerRef.current.stop(); // Stop the camera immediately
 
-          if (qrScannerRef.current) {
-            qrScannerRef.current.stop(); // Stop the camera
+          let scannedCode;
+          let scannedType;
+
+          // --- NEW VALIDATION LOGIC ---
+          try {
+            // Try to parse the code as JSON
+            const parsedData = JSON.parse(result.data);
+            scannedCode = parsedData.code.trim().toUpperCase();
+            scannedType = parsedData.type.trim().toUpperCase();
+          } catch (e) {
+            // If it's not JSON, it's an old or simple code (like "H3FG7D")
+            scannedCode = result.data.trim().toUpperCase();
+            scannedType = "SIMPLE"; // A simple code
           }
+          // --- END NEW LOGIC ---
 
-          const scannedCode = result.data.trim().toUpperCase();
-
-          // Determine if we are in pickup or delivery phase
           const currentStatus = order?.orderStatus?.toLowerCase() || "";
           const isPickup =
             currentStatus === "qr scanning" ||
@@ -226,16 +238,37 @@ const RiderDeliveryDetail = () => {
             currentStatus === "in delivery" || currentStatus === "in transit";
 
           if (isPickup) {
-            setVendorCodeInput(scannedCode); // Set state just in case
-            handleStatusUpdate("PICKUP", scannedCode); // Pass scanned code directly
+            // We are in PICKUP phase. We expect a PICKUP code (or a SIMPLE code for fallback)
+            if (scannedType === "PICKUP" || scannedType === "SIMPLE") {
+              setVendorCodeInput(scannedCode);
+              handleStatusUpdate("PICKUP", scannedCode);
+            } else {
+              // Scanned a DELIVERY code at the vendor
+              setApiMessage({
+                type: "error",
+                text: "Wrong QR Code. Please scan the VENDOR's code.",
+              });
+              // Restart camera after a delay
+              setTimeout(() => qrScannerRef.current?.start(), 2000);
+            }
           } else if (isDelivery) {
-            setBuyerCodeInput(scannedCode); // Set state just in case
-            handleStatusUpdate("DELIVERY", scannedCode); // Pass scanned code directly
+            // We are in DELIVERY phase. We only expect a DELIVERY code.
+            if (scannedType === "DELIVERY" || scannedType === "SIMPLE") {
+              setBuyerCodeInput(scannedCode);
+              handleStatusUpdate("DELIVERY", scannedCode);
+            } else {
+              // Scanned a VENDOR code at the buyer
+              setApiMessage({
+                type: "error",
+                text: "Wrong QR Code. Please scan the BUYER's code.",
+              });
+              // Restart camera after a delay
+              setTimeout(() => qrScannerRef.current?.start(), 2000);
+            }
           }
         },
         {
           onDecodeError: (error) => {
-            // This fires constantly, only log if needed for debug
             // console.warn("QR Scan Error:", error);
           },
           highlightScanRegion: true,
@@ -249,11 +282,11 @@ const RiderDeliveryDetail = () => {
           type: "error",
           text: "Could not start camera. Check permissions and use manual input.",
         });
-        setShowManualInput(true); // Force manual input if camera fails
+        setShowManualInput(true);
       });
     }
 
-    // Cleanup function:
+    // Cleanup
     return () => {
       if (qrScannerRef.current) {
         qrScannerRef.current.stop();
@@ -261,7 +294,7 @@ const RiderDeliveryDetail = () => {
         qrScannerRef.current = null;
       }
     };
-  }, [showManualInput, order, processing, handleStatusUpdate]); // Re-run if manual mode/processing changes
+  }, [showManualInput, order, processing, handleStatusUpdate]);
 
   // RENDER HELPER: Renders the Manual Input Form
   const renderManualForm = (type) => {

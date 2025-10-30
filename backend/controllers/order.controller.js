@@ -252,26 +252,39 @@ const getOrderDetailsById = async (req, res) => {
     let isAuthorized = false;
     let taskDetails = null;
 
+    // --- FIX: Fetch task details for ANY role associated with the order ---
+    if (
+      userRole === "rider" ||
+      userRole === "buyer" ||
+      userRole === "vendor" ||
+      userRole === "admin"
+    ) {
+      taskDetails = await DeliveryTask.findOne({
+        order: orderId,
+      }).lean();
+    }
+    // --- END OF FIX ---
+
+    // Check A: Buyer or Admin
     if (String(order.user) === String(userId) || userRole === "admin") {
       isAuthorized = true;
     }
 
+    // Check B: Rider access via DeliveryTask
     if (userRole === "rider") {
-      taskDetails = await DeliveryTask.findOne({
-        order: orderId,
-        rider: userId,
-      }).lean();
-
-      if (taskDetails) {
+      // We check taskDetails.rider *after* fetching the task
+      if (taskDetails && String(taskDetails.rider) === String(userId)) {
         isAuthorized = true;
       }
     }
 
+    // Check C: Vendor access
     if (userRole === "vendor") {
       const isVendorForOrder = order.items.some(
         (item) => String(item.vendor._id) === String(userId)
       );
       if (isVendorForOrder) {
+        // Vendor is authorized if they are part of the order
         isAuthorized = true;
       }
     }
@@ -280,6 +293,7 @@ const getOrderDetailsById = async (req, res) => {
       console.log(
         `[OrderAuth] Access granted for User ${userId} (Role: ${userRole}) to Order ${orderId}.`
       );
+      // Attach task details (if they exist) for all authorized roles
       return res.json({ ...order, task: taskDetails });
     } else {
       console.warn(

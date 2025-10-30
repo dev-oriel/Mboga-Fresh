@@ -375,7 +375,10 @@ export default function OrderManagement() {
               <div className="flex justify-center mb-6 bg-gray-50 p-4 rounded">
                 {/* --- FIX: Encode *only* the pickupCode --- */}
                 <QRCodeCanvas
-                  value={qrCodeOrder.pickupCode || "NO-CODE"}
+                  value={JSON.stringify({
+                    type: "PICKUP",
+                    code: qrCodeOrder.pickupCode || "NO-CODE",
+                  })}
                   size={256}
                   level="H"
                   includeMargin={true}
