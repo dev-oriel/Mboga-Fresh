@@ -1,21 +1,10 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
 import axios from "axios";
 
-// Define the assumed API calls for notifications
-const API_BASE = import.meta.env.VITE_API_BASE || "https://localhost:5000";
-
-const markNotificationAsReadRequest = async (notificationId) => {
-  const url = `${API_BASE}/api/notifications/${notificationId}/read`;
-  // Assuming a simple PATCH endpoint exists under /api/notifications (you'll need to add this route/controller)
-  const res = await axios.patch(url, {}, { withCredentials: true });
-  return res.data;
-};
-
-const deleteReadNotificationsRequest = async () => {
-  const url = `${API_BASE}/api/notifications/read`;
-  const res = await axios.delete(url, { withCredentials: true });
-  return res.data;
-};
+// --- THIS IS THE FIX ---
+// Import from api/orders.js, not api/vendors.js
+import { markNotificationAsRead, deleteReadNotifications } from "../api/orders";
+// --- END OF FIX ---
 
 const VendorDataContext = createContext();
 
@@ -28,24 +17,17 @@ export const useVendorData = () => {
 };
 
 export const VendorDataProvider = ({ children }) => {
-  // Shared dashboard data - Initialized to 0/empty, ready for API fetch
   const [dashboardData, setDashboardData] = useState({
     ordersReceived: 0,
-    pendingAcceptance: 0, // FIX: Added missing property
+    pendingAcceptance: 0,
     pendingDeliveries: 0,
     salesInEscrow: 0,
     earningsReleased: 0,
   });
-
-  // Shared notifications - Initialized as empty array, ready for API fetch
   const [notifications, setNotifications] = useState([]);
-
-  // Shared transaction history - Initialized as empty array, ready for API fetch
   const [transactions, setTransactions] = useState([]);
 
-  // Calculate balances from transactions and dashboard data
   const calculateBalances = useCallback(() => {
-    // NOTE: This logic assumes 'transactions' and 'dashboardData' are eventually populated by API fetches.
     const totalEarnings = transactions
       .filter(
         (t) =>
@@ -60,15 +42,12 @@ export const VendorDataProvider = ({ children }) => {
     };
   }, [transactions, dashboardData]);
 
-  // Update dashboard data
   const updateDashboardData = useCallback((updates) => {
     setDashboardData((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  // Handle withdrawal
   const handleWithdraw = useCallback(
     (amount, mpesaNumber) => {
-      // Dummy withdrawal logic remains the same for now
       if (amount <= 0 || amount > dashboardData.earningsReleased) return false;
 
       setDashboardData((prev) => ({
@@ -103,30 +82,30 @@ export const VendorDataProvider = ({ children }) => {
   );
 
   // FIX: Mark notification as read (with DB update)
-  const markNotificationAsRead = useCallback(async (id) => {
+  const markNotificationAsReadCallback = useCallback(async (id) => {
     try {
-      await markNotificationAsReadRequest(id); // API Call
+      // --- FIX: Call the correct imported function ---
+      await markNotificationAsRead(id); // API Call
       setNotifications((prev) =>
         prev.map((n) =>
-          String(n.id) === String(id) ? { ...n, isRead: true } : n
+          String(n._id) === String(id) ? { ...n, isRead: true } : n
         )
       );
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
-      // Optionally show a local failure message
     }
-  }, []);
+  }, []); // Dependency array is intentionally empty
 
   // FIX: Delete read notifications (with DB update)
-  const deleteReadNotifications = useCallback(async () => {
+  const deleteReadNotificationsCallback = useCallback(async () => {
     try {
-      await deleteReadNotificationsRequest(); // API Call
+      // --- FIX: Call the correct imported function ---
+      await deleteReadNotifications(); // API Call
       setNotifications((prev) => prev.filter((n) => !n.isRead));
     } catch (error) {
       console.error("Failed to delete read notifications:", error);
-      // Optionally show a local failure message
     }
-  }, []);
+  }, []); // Dependency array is intentionally empty
 
   const value = {
     dashboardData,
@@ -135,8 +114,9 @@ export const VendorDataProvider = ({ children }) => {
     balances: calculateBalances(),
     updateDashboardData,
     handleWithdraw,
-    markNotificationAsRead,
-    deleteReadNotifications,
+    // --- FIX: Expose the correctly named functions ---
+    markNotificationAsRead: markNotificationAsReadCallback,
+    deleteReadNotifications: deleteReadNotificationsCallback,
     setNotifications,
   };
 

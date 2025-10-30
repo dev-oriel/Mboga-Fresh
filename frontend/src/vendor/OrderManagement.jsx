@@ -2,11 +2,13 @@ import React, { useState, useEffect, useCallback } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import Header from "../components/vendorComponents/Header";
 import { useAuth } from "../context/AuthContext";
+import { useVendorData } from "../context/VendorDataContext"; // <-- 1. IMPORT CONTEXT
 import { fetchVendorOrders, fetchVendorTask } from "../api/orders";
 import { Loader2 } from "lucide-react";
 import axios from "axios";
-import { useLocation } from "react-router-dom"; // Import useLocation to check for notification clicks
+import { useLocation } from "react-router-dom";
 
+// ... (keep formatCurrency, getStatusColor, getPaymentColor, getActionButton, API_BASE)
 const formatCurrency = (amount) =>
   `Ksh ${Number(amount).toLocaleString("en-KE", { minimumFractionDigits: 0 })}`;
 
@@ -50,11 +52,11 @@ const getActionButton = (action) => {
 };
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
-
 // -----------------------------------------------------------
 
 export default function OrderManagement() {
   const { user } = useAuth();
+  const { unreadCount } = useVendorData(); // <-- 2. GET THE COUNT
   const location = useLocation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,10 +65,9 @@ export default function OrderManagement() {
   const [showQrCodeModal, setShowQrCodeModal] = useState(false);
   const [qrCodeOrder, setQrCodeOrder] = useState(null);
 
-  // Default active tab to 'new' or override if a notification click forces focus
   const [activeTab, setActiveTab] = useState("new");
 
-  // 1. Fetch Live Orders for this Vendor
+  // ... (keep loadVendorOrders, useEffects, handleAction, filteredOrders, getTabCount)
   const loadVendorOrders = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -86,22 +87,19 @@ export default function OrderManagement() {
           order.items?.map((i) => `${i.quantity}x ${i.name}`).join(", ") ||
           "Items missing";
 
-        // --- THIS IS THE FIX ---
         let paymentStatus = "Unpaid";
         if (order.paymentStatus === "Paid") {
-          // If payment is "Paid" check if it's delivered or still in escrow
           paymentStatus = currentStatus === "Delivered" ? "Paid" : "Escrow";
         }
-        // --- END OF FIX ---
 
         return {
           id: order._id,
-          buyer: `Buyer #${order.user.substring(18).toUpperCase()}`, // Mock buyer name
+          buyer: `Buyer #${order.user.substring(18).toUpperCase()}`,
           items: itemsList,
           amount: formatCurrency(totalAmount),
           status: currentStatus,
-          payment: paymentStatus, // Use the new dynamic variable
-          action: action, // Dynamic Action
+          payment: paymentStatus,
+          action: action,
           __raw: order,
         };
       });
@@ -119,29 +117,24 @@ export default function OrderManagement() {
     loadVendorOrders();
   }, [loadVendorOrders]);
 
-  // Effect to handle notification click navigation
   useEffect(() => {
     if (location.state?.autoFocus && orders.length > 0) {
-      // When autoFocus is true (from notification click), find the status of the order.
       const targetOrder = orders.find(
         (o) => String(o.id) === String(location.state.highlightId)
       );
 
       if (targetOrder) {
-        // Map DB status to the corresponding tab (New Order -> new, QR Scanning -> qr, etc.)
         let targetTab = "new";
         if (targetOrder.status === "QR Scanning") targetTab = "qr";
         else if (targetOrder.status === "In Delivery") targetTab = "delivery";
         else if (targetOrder.status === "Delivered") targetTab = "completed";
 
         setActiveTab(targetTab);
-        // Clear state to prevent repeat auto-focus on future navigations/refreshes
         window.history.replaceState({}, document.title, location.pathname);
       }
     }
   }, [orders, location]);
 
-  // 2. Handle Actions (Accept, Show QR)
   const handleAction = async (order) => {
     if (order.action === "Accept Order") {
       setApiError(null);
@@ -158,7 +151,6 @@ export default function OrderManagement() {
 
       setLoading(true);
       try {
-        // CRITICAL API CALL: Vendor accepts the order and creates the Delivery Task
         const endpoint = `${API_BASE}/api/orders/vendor/order/${order.id}/accept`;
         const response = await axios.patch(
           endpoint,
@@ -215,7 +207,6 @@ export default function OrderManagement() {
   };
 
   const filteredOrders = orders.filter((order) => {
-    // FIX: Filter on new statuses
     if (activeTab === "new") return order.status === "New Order";
     if (activeTab === "qr") return order.status === "QR Scanning";
     if (activeTab === "delivery") return order.status === "In Delivery";
@@ -224,7 +215,6 @@ export default function OrderManagement() {
   });
 
   const getTabCount = (tab) => {
-    // FIX: Count based on new statuses
     if (tab === "new")
       return orders.filter((o) => o.status === "New Order").length;
     if (tab === "qr")
@@ -238,9 +228,14 @@ export default function OrderManagement() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header avatarUrl={user?.avatar} userName={user?.name || "Vendor"} />
+      <Header
+        avatarUrl={user?.avatar}
+        userName={user?.name || "Vendor"}
+        unreadCount={unreadCount} // <-- 3. PASS THE COUNT
+      />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* ... (rest of the file is identical) ... */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Order Management
