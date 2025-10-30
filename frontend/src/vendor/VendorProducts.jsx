@@ -1,8 +1,6 @@
-// frontend/src/vendor/VendorProductManagement.jsx
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Edit2, Trash2, Plus, X } from "lucide-react";
 import Header from "../components/vendorComponents/Header";
-import Footer from "../components/vendorComponents/Footer";
 import { vendorCategories } from "../constants";
 import {
   fetchProducts,
@@ -11,8 +9,9 @@ import {
   deleteProduct,
 } from "../api/products";
 import { useAuth } from "../context/AuthContext";
+import { useVendorData } from "../context/VendorDataContext"; // <-- 1. IMPORT CONTEXT
 
-/* same constants as before */
+/* ... (keep constants) ... */
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_PLACEHOLDER =
@@ -20,10 +19,11 @@ const DEFAULT_PLACEHOLDER =
 
 export default function VendorProductManagement() {
   const { user } = useAuth();
+  const { unreadCount } = useVendorData(); // <-- 2. GET THE COUNT
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // modal/form state
+  // ... (keep all states and functions: open, editingId, formErrors, refs, form, load, resetForm, openAdd, openEdit, handleDelete, fileToPreview, handleFileChange, handleDrop, preventDefault, handlePriceChange, validateForm, handleSubmit, resolveImageUrl) ...
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formErrors, setFormErrors] = useState({});
@@ -42,18 +42,15 @@ export default function VendorProductManagement() {
     description: "",
   });
 
-  // load products for current user only
   const load = useCallback(
     async (opts = {}) => {
       setLoading(true);
       try {
-        // if user is not logged in, show empty list (safer)
         if (!user || !(user._id || user.id)) {
           setProducts([]);
           return;
         }
 
-        // pass vendorId so backend filters to that vendor's products
         const params = { vendorId: String(user._id || user.id), ...opts };
         const data = await fetchProducts(params);
         setProducts(Array.isArray(data) ? data : []);
@@ -206,7 +203,6 @@ export default function VendorProductManagement() {
 
     if (form.file) fd.append("image", form.file);
 
-    // also append vendorId explicitly as fallback if we have user
     if (user && (user._id || user.id)) {
       fd.append("vendorId", String(user._id || user.id));
     }
@@ -244,8 +240,10 @@ export default function VendorProductManagement() {
       <Header
         avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDeL7radWSj-FEteEjqLpufXII3-tc_o7GMvLvB07AaD_bYBkfAcIOnNbOXkTdMOHRgJQwLZE-Z_iw72Bd8bpHzfXP_m0pIvteSw7FKZ1qV9GD1KfgyDVG90bCO7OGe6JyYIkm9DBo2ArC60uEqSfDvnnYWeo6IqVEjWxsVX6dUoxjm9ozyVlriiMdVLc_jU9ZxS01QcxNa8hn-ePNbB6IcXSwExf2U61R-epab8nsOkbq95E7z6b-fH4zOt0j2MPt20nrqtPM1NHI"
         userName={user?.name || "Vendor"}
+        unreadCount={unreadCount} // <-- 3. PASS THE COUNT
       />
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* ... (rest of the file is identical) ... */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-3xl font-bold">My Products</h2>
@@ -401,9 +399,6 @@ export default function VendorProductManagement() {
             onSubmit={handleSubmit}
             className="relative z-10 w-full max-w-3xl bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6"
           >
-            {/* form content (unchanged from above) */}
-            {/* ... copy the same modal content from earlier; omitted here for brevity in paste */}
-            {/* but when you paste into your project use the whole modal code from above */}
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold">
                 {editingId ? "Edit Product" : "Add Product"}

@@ -2,18 +2,20 @@ import React, { useState, useEffect, useCallback } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import Header from "../components/vendorComponents/Header";
 import { useAuth } from "../context/AuthContext";
-import { fetchVendorOrders, fetchVendorTask } from "../api/orders"; // <-- IMPORT fetchVendorTask
+import { useVendorData } from "../context/VendorDataContext"; // <-- 1. IMPORT CONTEXT
+import { fetchVendorOrders, fetchVendorTask } from "../api/orders";
 import { Loader2 } from "lucide-react";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
 
+// ... (keep formatCurrency, getStatusColor, getPaymentColor, getActionButton, API_BASE)
 const formatCurrency = (amount) =>
   `Ksh ${Number(amount).toLocaleString("en-KE", { minimumFractionDigits: 0 })}`;
 
 const getStatusColor = (status) => {
   switch (status) {
     case "New Order":
-    case "Processing":
+    case "Processing": // Fallback for Processing status if payment is still pending
       return "bg-yellow-100 text-yellow-700";
     case "QR Scanning":
       return "bg-emerald-100 text-emerald-700";
@@ -50,11 +52,11 @@ const getActionButton = (action) => {
 };
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
-
 // -----------------------------------------------------------
 
 export default function OrderManagement() {
   const { user } = useAuth();
+  const { unreadCount } = useVendorData(); // <-- 2. GET THE COUNT
   const location = useLocation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +67,7 @@ export default function OrderManagement() {
 
   const [activeTab, setActiveTab] = useState("new");
 
+  // ... (keep loadVendorOrders, useEffects, handleAction, filteredOrders, getTabCount)
   const loadVendorOrders = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -84,13 +87,18 @@ export default function OrderManagement() {
           order.items?.map((i) => `${i.quantity}x ${i.name}`).join(", ") ||
           "Items missing";
 
+        let paymentStatus = "Unpaid";
+        if (order.paymentStatus === "Paid") {
+          paymentStatus = currentStatus === "Delivered" ? "Paid" : "Escrow";
+        }
+
         return {
           id: order._id,
           buyer: `Buyer #${order.user.substring(18).toUpperCase()}`,
           items: itemsList,
           amount: formatCurrency(totalAmount),
           status: currentStatus,
-          payment: order.paymentStatus === "Paid" ? "Escrow" : "Unpaid",
+          payment: paymentStatus,
           action: action,
           __raw: order,
         };
@@ -127,7 +135,6 @@ export default function OrderManagement() {
     }
   }, [orders, location]);
 
-  // 2. Handle Actions (Accept, Show QR)
   const handleAction = async (order) => {
     if (order.action === "Accept Order") {
       setApiError(null);
@@ -145,23 +152,21 @@ export default function OrderManagement() {
       setLoading(true);
       try {
         const endpoint = `${API_BASE}/api/orders/vendor/order/${order.id}/accept`;
-        // --- FIX: Capture the response ---
         const response = await axios.patch(
           endpoint,
           {},
           { withCredentials: true }
         );
 
-        // Extract pickupCode from the API response
         const pickupCode = response.data?.task?.pickupCode;
         if (!pickupCode) {
           throw new Error("API did not return a pickup code.");
         }
 
         await loadVendorOrders();
+
         setActiveTab("qr");
 
-        // --- FIX: Set the qrCodeOrder with the new pickupCode ---
         setQrCodeOrder({
           ...order,
           status: "QR Scanning",
@@ -178,7 +183,6 @@ export default function OrderManagement() {
         setLoading(false);
       }
     } else if (order.action === "Show QR Code") {
-      // --- FIX: Fetch the task to get the pickup code ---
       setApiError(null);
       setLoading(true);
       try {
@@ -224,9 +228,14 @@ export default function OrderManagement() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header avatarUrl={user?.avatar} userName={user?.name || "Vendor"} />
+      <Header
+        avatarUrl={user?.avatar}
+        userName={user?.name || "Vendor"}
+        unreadCount={unreadCount} // <-- 3. PASS THE COUNT
+      />
 
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* ... (rest of the file is identical) ... */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Order Management
@@ -373,9 +382,11 @@ export default function OrderManagement() {
                 The rider scans this QR code to confirm pickup.
               </p>
               <div className="flex justify-center mb-6 bg-gray-50 p-4 rounded">
-                {/* --- FIX: Encode *only* the pickupCode --- */}
                 <QRCodeCanvas
-                  value={qrCodeOrder.pickupCode || "NO-CODE"}
+                  value={JSON.stringify({
+                    type: "PICKUP",
+                    code: qrCodeOrder.pickupCode || "NO-CODE",
+                  })}
                   size={256}
                   level="H"
                   includeMargin={true}
@@ -385,7 +396,6 @@ export default function OrderManagement() {
                 <p className="text-sm font-medium text-gray-700">
                   Order: #{qrCodeOrder.id.substring(18).toUpperCase()}
                 </p>
-                {/* --- ADD: Show the code for manual entry --- */}
                 <p className="text-4xl font-bold text-gray-900 tracking-widest my-2">
                   {qrCodeOrder.pickupCode}
                 </p>

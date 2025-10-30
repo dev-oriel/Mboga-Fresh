@@ -1,12 +1,10 @@
-// frontend/src/pages/OrderDetails.jsx (NEW FILE)
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/FooterSection";
 import { fetchOrderDetails } from "../api/orders";
 import { Loader2, Zap, AlertTriangle } from "lucide-react";
-import { QRCodeCanvas } from "qrcode.react"; // <-- QR Code Generator
+import { QRCodeCanvas } from "qrcode.react";
 
 const formatCurrency = (amount) =>
   `Ksh ${Number(amount).toLocaleString("en-KE", { minimumFractionDigits: 0 })}`;
@@ -20,14 +18,23 @@ const getStatusBadgeProps = (status) => {
       text: "text-emerald-700",
       icon: "check_circle",
     };
-  if (lowerStatus === "shipped")
+  if (
+    lowerStatus === "in delivery" ||
+    lowerStatus === "shipped" ||
+    lowerStatus === "in transit"
+  )
     return {
       label: "In Transit",
       bg: "bg-blue-100",
       text: "text-blue-700",
       icon: "local_shipping",
     };
-  if (lowerStatus === "processing" || lowerStatus === "confirmed")
+  if (
+    lowerStatus === "processing" ||
+    lowerStatus === "confirmed" ||
+    lowerStatus === "new order" ||
+    lowerStatus === "qr scanning"
+  )
     return {
       label: "Processing",
       bg: "bg-yellow-100",
@@ -59,9 +66,9 @@ const OrderDetails = () => {
   const loadOrderDetails = useCallback(async () => {
     setLoading(true);
     try {
-      // Assumes backend endpoint GET /api/orders/:orderId works
       const data = await fetchOrderDetails(orderId);
       setOrder(data);
+      console.log("Order details loaded:", data); // Log to see if 'task' is present
       setError(null);
     } catch (err) {
       console.error("Error fetching order details:", err);
@@ -78,16 +85,13 @@ const OrderDetails = () => {
     loadOrderDetails();
   }, [loadOrderDetails]);
 
-  // Data encoded in QR code (Used by rider's scanning app to confirm delivery)
-  const qrData = order
-    ? JSON.stringify({
-        id: order._id,
-        status: order.orderStatus,
-        total: order.totalAmount,
-        user: order.user,
-        timestamp: Date.now(),
-      })
-    : "";
+  // --- FIX: QR Code now uses the buyerConfirmationCode from the task ---
+  const buyerCode = order?.task?.buyerConfirmationCode || "NO-CODE";
+  const qrData = JSON.stringify({
+    type: "DELIVERY",
+    code: buyerCode,
+  });
+  // --- END OF FIX ---
 
   if (loading) {
     return (
@@ -127,8 +131,17 @@ const OrderDetails = () => {
   const badge = getStatusBadgeProps(order.orderStatus);
   const shippingFee =
     order.totalAmount -
-    order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    (order.items || []).reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
   const itemSubtotal = order.totalAmount - shippingFee;
+
+  // --- FIX: Show QR section only if the task exists and order is not delivered ---
+  const showQrSection =
+    order.task &&
+    order.orderStatus !== "Delivered" &&
+    order.orderStatus !== "Cancelled";
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f6f8f6]">
@@ -136,35 +149,47 @@ const OrderDetails = () => {
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: QR Code & Status */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 text-center sticky top-20">
-              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center justify-center">
-                <Zap size={20} className="mr-2 text-emerald-600" /> Delivery
-                Confirmation
-              </h2>
+          {showQrSection && (
+            <div className="lg:col-span-1 space-y-6">
+              <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 text-center sticky top-20">
+                <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center justify-center">
+                  <Zap size={20} className="mr-2 text-emerald-600" /> Delivery
+                  Confirmation
+                </h2>
 
-              <div className="flex justify-center mb-4 p-2 bg-gray-100 rounded-lg">
-                <QRCodeCanvas
-                  value={qrData}
-                  size={200}
-                  level="H"
-                  includeMargin={false}
-                />
+                <div className="flex justify-center mb-4 p-2 bg-gray-100 rounded-lg">
+                  <QRCodeCanvas
+                    value={qrData}
+                    size={200}
+                    level="H"
+                    includeMargin={false}
+                  />
+                </div>
+
+                {/* --- FIX: Show the manual code --- */}
+                <p className="text-sm font-medium text-gray-700">
+                  Or show the rider this manual code:
+                </p>
+                <p className="text-4xl font-bold text-gray-900 tracking-widest my-2">
+                  {buyerCode}
+                </p>
+
+                <p className="text-xs text-gray-500 mt-2">
+                  Order ID:{" "}
+                  <span className="font-mono font-semibold">{order._id}</span>
+                </p>
               </div>
-
-              <p className="text-sm font-medium text-gray-700">
-                Scan this code to the rider to confirm transfer and initiate
-                escrow release.
-              </p>
-              <p className="text-xs text-gray-500 mt-2">
-                Order ID:{" "}
-                <span className="font-mono font-semibold">{order._id}</span>
-              </p>
             </div>
-          </div>
+          )}
 
           {/* Right Column: Order Details, Items, and Totals */}
-          <div className="lg:col-span-2 space-y-6">
+          <div
+            className={
+              showQrSection
+                ? "lg:col-span-2 space-y-6"
+                : "lg:col-span-3 space-y-6"
+            }
+          >
             {/* Order Header/Status */}
             <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
               <div className="flex justify-between items-center mb-4">
@@ -174,9 +199,6 @@ const OrderDetails = () => {
                 <span
                   className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${badge.bg} ${badge.text}`}
                 >
-                  <span className={`material-symbols-outlined text-base mr-1`}>
-                    {badge.icon}
-                  </span>
                   {badge.label}
                 </span>
               </div>
@@ -192,12 +214,11 @@ const OrderDetails = () => {
                 Items Summary
               </h2>
               <div className="divide-y divide-gray-100">
-                {order.items.map((item, index) => (
+                {(order.items || []).map((item, index) => (
                   <div
                     key={item.product || index}
                     className="flex items-center justify-between py-3"
                   >
-                    {/* Image is removed as requested, replaced by strong text */}
                     <div className="flex-grow">
                       <p className="font-medium text-gray-900">{item.name}</p>
                       <p className="text-xs text-gray-500">x{item.quantity}</p>

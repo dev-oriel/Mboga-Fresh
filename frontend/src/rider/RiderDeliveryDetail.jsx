@@ -76,7 +76,6 @@ const RiderDeliveryDetail = () => {
     location.state?.forceManual || false
   );
 
-  // 2. ADD REFS FOR SCANNER
   const videoRef = useRef(null);
   const qrScannerRef = useRef(null);
 
@@ -90,7 +89,6 @@ const RiderDeliveryDetail = () => {
     setFetchError(null);
 
     try {
-      // Attempt 1: Direct Fetch (Relies on backend authorization check)
       const data = await fetchOrderDetails(orderId);
       setOrder(data);
     } catch (err) {
@@ -100,7 +98,6 @@ const RiderDeliveryDetail = () => {
         err
       );
 
-      // Attempt 2: Failover - Find order in accepted queue list
       try {
         const acceptedTasks = await fetchRiderAcceptedTasks();
         const task = acceptedTasks.find(
@@ -149,14 +146,18 @@ const RiderDeliveryDetail = () => {
     loadOrderDetails();
   }, [loadOrderDetails]);
 
-  // This function is now wrapped in useCallback
   const handleStatusUpdate = useCallback(
     async (actionType, scannedCode) => {
       if (!order) return;
       setProcessing(true);
       setApiMessage(null);
 
-      // Use the scanned code if provided, otherwise use the state input
+      // --- FIX 1: Stop the camera scanner as soon as we start processing ---
+      if (qrScannerRef.current) {
+        qrScannerRef.current.stop();
+      }
+      // --- END OF FIX 1 ---
+
       const codeToUse = scannedCode
         ? scannedCode.toUpperCase()
         : actionType === "PICKUP"
@@ -172,9 +173,14 @@ const RiderDeliveryDetail = () => {
 
           setApiMessage({
             type: "success",
-            text: "Pickup confirmed! Order status updated to In Delivery.",
+            text: "Pickup confirmed! Navigating back to queue...",
           });
           setVendorCodeInput("");
+
+          // --- FIX 2: Navigate away after success ---
+          setTimeout(() => {
+            navigate("/riderdeliveryqueue");
+          }, 2000); // 2-second delay
         } else if (actionType === "DELIVERY") {
           if (!codeToUse || codeToUse.length < 6)
             throw new Error("Buyer confirmation code must be 6 digits.");
@@ -183,41 +189,55 @@ const RiderDeliveryDetail = () => {
 
           setApiMessage({
             type: "success",
-            text: "Delivery complete! Earnings secured.",
+            text: "Delivery complete! Earnings secured. Navigating back...",
           });
           setBuyerCodeInput("");
+
+          // --- FIX 2: Navigate away after success ---
+          setTimeout(() => {
+            navigate("/riderdeliveryqueue");
+          }, 2000); // 2-second delay
         }
 
-        await loadOrderDetails(); // Refresh data to show new status
+        // --- FIX 3: DO NOT RELOAD. We are navigating away. ---
+        // await loadOrderDetails(); // <-- REMOVED
       } catch (err) {
         const msg =
           err.response?.data?.message || err.message || "Confirmation failed.";
         setApiMessage({ type: "error", text: msg });
-        // If the scan failed, restart the camera
-        setShowManualInput(false);
+
+        // --- FIX 3: Do not restart camera on error. Let user retry. ---
+        // setShowManualInput(false); // <-- REMOVED
       } finally {
         setProcessing(false);
       }
     },
-    [order, orderId, vendorCodeInput, buyerCodeInput, loadOrderDetails]
-  ); // Dependencies
+    [order, orderId, vendorCodeInput, buyerCodeInput, navigate] // Removed loadOrderDetails
+  );
 
-  // 3. ADD useEffect FOR CAMERA LIFECYCLE
   useEffect(() => {
-    // Only run this logic if we are NOT in manual mode and the video ref is ready
-    if (!showManualInput && videoRef.current && !processing) {
+    // --- FIX 3: Add !apiMessage to prevent re-scan after success/error ---
+    if (!showManualInput && videoRef.current && !processing && !apiMessage) {
       qrScannerRef.current = new QrScanner(
         videoRef.current,
         (result) => {
-          console.log("Decoded QR code:", result.data);
+          if (processing) return; // Don't allow multiple scans if one is processing
 
-          if (qrScannerRef.current) {
-            qrScannerRef.current.stop(); // Stop the camera
+          console.log("Decoded QR code:", result.data);
+          qrScannerRef.current.stop();
+
+          let scannedCode;
+          let scannedType;
+
+          try {
+            const parsedData = JSON.parse(result.data);
+            scannedCode = parsedData.code.trim().toUpperCase();
+            scannedType = parsedData.type.trim().toUpperCase();
+          } catch (e) {
+            scannedCode = result.data.trim().toUpperCase();
+            scannedType = "SIMPLE";
           }
 
-          const scannedCode = result.data.trim().toUpperCase();
-
-          // Determine if we are in pickup or delivery phase
           const currentStatus = order?.orderStatus?.toLowerCase() || "";
           const isPickup =
             currentStatus === "qr scanning" ||
@@ -226,16 +246,31 @@ const RiderDeliveryDetail = () => {
             currentStatus === "in delivery" || currentStatus === "in transit";
 
           if (isPickup) {
-            setVendorCodeInput(scannedCode); // Set state just in case
-            handleStatusUpdate("PICKUP", scannedCode); // Pass scanned code directly
+            if (scannedType === "PICKUP" || scannedType === "SIMPLE") {
+              setVendorCodeInput(scannedCode);
+              handleStatusUpdate("PICKUP", scannedCode);
+            } else {
+              setApiMessage({
+                type: "error",
+                text: "Wrong QR Code. Please scan the VENDOR's code.",
+              });
+              setTimeout(() => qrScannerRef.current?.start(), 2000);
+            }
           } else if (isDelivery) {
-            setBuyerCodeInput(scannedCode); // Set state just in case
-            handleStatusUpdate("DELIVERY", scannedCode); // Pass scanned code directly
+            if (scannedType === "DELIVERY" || scannedType === "SIMPLE") {
+              setBuyerCodeInput(scannedCode);
+              handleStatusUpdate("DELIVERY", scannedCode);
+            } else {
+              setApiMessage({
+                type: "error",
+                text: "Wrong QR Code. Please scan the BUYER's code.",
+              });
+              setTimeout(() => qrScannerRef.current?.start(), 2000);
+            }
           }
         },
         {
           onDecodeError: (error) => {
-            // This fires constantly, only log if needed for debug
             // console.warn("QR Scan Error:", error);
           },
           highlightScanRegion: true,
@@ -249,11 +284,11 @@ const RiderDeliveryDetail = () => {
           type: "error",
           text: "Could not start camera. Check permissions and use manual input.",
         });
-        setShowManualInput(true); // Force manual input if camera fails
+        setShowManualInput(true);
       });
     }
 
-    // Cleanup function:
+    // Cleanup
     return () => {
       if (qrScannerRef.current) {
         qrScannerRef.current.stop();
@@ -261,7 +296,7 @@ const RiderDeliveryDetail = () => {
         qrScannerRef.current = null;
       }
     };
-  }, [showManualInput, order, processing, handleStatusUpdate]); // Re-run if manual mode/processing changes
+  }, [showManualInput, order, processing, handleStatusUpdate, apiMessage]); // <-- Added apiMessage dependency
 
   // RENDER HELPER: Renders the Manual Input Form
   const renderManualForm = (type) => {
@@ -302,7 +337,10 @@ const RiderDeliveryDetail = () => {
           {processing ? "Verifying..." : buttonLabel}
         </button>
         <button
-          onClick={() => setShowManualInput(false)}
+          onClick={() => {
+            setApiMessage(null); // Clear any errors
+            setShowManualInput(false); // Switch to camera
+          }}
           className="w-full py-1 text-sm text-blue-600 hover:underline transition"
         >
           Switch to Camera Scan
@@ -318,7 +356,7 @@ const RiderDeliveryDetail = () => {
         <video
           ref={videoRef}
           className="w-full h-full object-cover"
-          style={{ transform: "scaleX(-1)" }} // Flip horizontally for a mirror effect
+          style={{ transform: "scaleX(-1)" }}
         />
         <div className="absolute inset-0 shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] flex items-center justify-center">
           <div className="w-48 h-48 border-4 border-emerald-500 rounded-lg" />
@@ -326,7 +364,10 @@ const RiderDeliveryDetail = () => {
       </div>
 
       <button
-        onClick={() => setShowManualInput(true)}
+        onClick={() => {
+          setApiMessage(null); // Clear any errors
+          setShowManualInput(true); // Switch to manual
+        }}
         className="w-full py-3 rounded-lg font-bold text-white transition bg-red-600 hover:bg-red-700"
       >
         Use Manual Code Input
@@ -377,8 +418,6 @@ const RiderDeliveryDetail = () => {
       </div>
     );
   }
-
-  // ----- CODE RESUMES FROM YOUR SCREENSHOT -----
 
   const badge = getStatusBadgeProps(order.orderStatus);
   const currentStatus = order.orderStatus.toLowerCase();
