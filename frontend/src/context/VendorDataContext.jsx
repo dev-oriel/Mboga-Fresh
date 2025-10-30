@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback } from "react";
 import axios from "axios";
 
 // Define the assumed API calls for notifications
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_BASE || "https://localhost:5000";
 
 const markNotificationAsReadRequest = async (notificationId) => {
   const url = `${API_BASE}/api/notifications/${notificationId}/read`;

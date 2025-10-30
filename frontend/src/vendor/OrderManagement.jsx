@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import Header from "../components/vendorComponents/Header";
 import { useAuth } from "../context/AuthContext";
-import { fetchVendorOrders, fetchVendorTask } from "../api/orders"; // <-- IMPORT fetchVendorTask
+import { fetchVendorOrders, fetchVendorTask } from "../api/orders";
 import { Loader2 } from "lucide-react";
 import axios from "axios";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom"; // Import useLocation to check for notification clicks
 
 const formatCurrency = (amount) =>
   `Ksh ${Number(amount).toLocaleString("en-KE", { minimumFractionDigits: 0 })}`;
@@ -13,7 +13,7 @@ const formatCurrency = (amount) =>
 const getStatusColor = (status) => {
   switch (status) {
     case "New Order":
-    case "Processing":
+    case "Processing": // Fallback for Processing status if payment is still pending
       return "bg-yellow-100 text-yellow-700";
     case "QR Scanning":
       return "bg-emerald-100 text-emerald-700";
@@ -63,8 +63,10 @@ export default function OrderManagement() {
   const [showQrCodeModal, setShowQrCodeModal] = useState(false);
   const [qrCodeOrder, setQrCodeOrder] = useState(null);
 
+  // Default active tab to 'new' or override if a notification click forces focus
   const [activeTab, setActiveTab] = useState("new");
 
+  // 1. Fetch Live Orders for this Vendor
   const loadVendorOrders = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -84,14 +86,22 @@ export default function OrderManagement() {
           order.items?.map((i) => `${i.quantity}x ${i.name}`).join(", ") ||
           "Items missing";
 
+        // --- THIS IS THE FIX ---
+        let paymentStatus = "Unpaid";
+        if (order.paymentStatus === "Paid") {
+          // If payment is "Paid" check if it's delivered or still in escrow
+          paymentStatus = currentStatus === "Delivered" ? "Paid" : "Escrow";
+        }
+        // --- END OF FIX ---
+
         return {
           id: order._id,
-          buyer: `Buyer #${order.user.substring(18).toUpperCase()}`,
+          buyer: `Buyer #${order.user.substring(18).toUpperCase()}`, // Mock buyer name
           items: itemsList,
           amount: formatCurrency(totalAmount),
           status: currentStatus,
-          payment: order.paymentStatus === "Paid" ? "Escrow" : "Unpaid",
-          action: action,
+          payment: paymentStatus, // Use the new dynamic variable
+          action: action, // Dynamic Action
           __raw: order,
         };
       });
@@ -109,19 +119,23 @@ export default function OrderManagement() {
     loadVendorOrders();
   }, [loadVendorOrders]);
 
+  // Effect to handle notification click navigation
   useEffect(() => {
     if (location.state?.autoFocus && orders.length > 0) {
+      // When autoFocus is true (from notification click), find the status of the order.
       const targetOrder = orders.find(
         (o) => String(o.id) === String(location.state.highlightId)
       );
 
       if (targetOrder) {
+        // Map DB status to the corresponding tab (New Order -> new, QR Scanning -> qr, etc.)
         let targetTab = "new";
         if (targetOrder.status === "QR Scanning") targetTab = "qr";
         else if (targetOrder.status === "In Delivery") targetTab = "delivery";
         else if (targetOrder.status === "Delivered") targetTab = "completed";
 
         setActiveTab(targetTab);
+        // Clear state to prevent repeat auto-focus on future navigations/refreshes
         window.history.replaceState({}, document.title, location.pathname);
       }
     }
@@ -144,24 +158,23 @@ export default function OrderManagement() {
 
       setLoading(true);
       try {
+        // CRITICAL API CALL: Vendor accepts the order and creates the Delivery Task
         const endpoint = `${API_BASE}/api/orders/vendor/order/${order.id}/accept`;
-        // --- FIX: Capture the response ---
         const response = await axios.patch(
           endpoint,
           {},
           { withCredentials: true }
         );
 
-        // Extract pickupCode from the API response
         const pickupCode = response.data?.task?.pickupCode;
         if (!pickupCode) {
           throw new Error("API did not return a pickup code.");
         }
 
         await loadVendorOrders();
+
         setActiveTab("qr");
 
-        // --- FIX: Set the qrCodeOrder with the new pickupCode ---
         setQrCodeOrder({
           ...order,
           status: "QR Scanning",
@@ -178,7 +191,6 @@ export default function OrderManagement() {
         setLoading(false);
       }
     } else if (order.action === "Show QR Code") {
-      // --- FIX: Fetch the task to get the pickup code ---
       setApiError(null);
       setLoading(true);
       try {
@@ -203,6 +215,7 @@ export default function OrderManagement() {
   };
 
   const filteredOrders = orders.filter((order) => {
+    // FIX: Filter on new statuses
     if (activeTab === "new") return order.status === "New Order";
     if (activeTab === "qr") return order.status === "QR Scanning";
     if (activeTab === "delivery") return order.status === "In Delivery";
@@ -211,6 +224,7 @@ export default function OrderManagement() {
   });
 
   const getTabCount = (tab) => {
+    // FIX: Count based on new statuses
     if (tab === "new")
       return orders.filter((o) => o.status === "New Order").length;
     if (tab === "qr")
@@ -373,7 +387,6 @@ export default function OrderManagement() {
                 The rider scans this QR code to confirm pickup.
               </p>
               <div className="flex justify-center mb-6 bg-gray-50 p-4 rounded">
-                {/* --- FIX: Encode *only* the pickupCode --- */}
                 <QRCodeCanvas
                   value={JSON.stringify({
                     type: "PICKUP",
@@ -388,7 +401,6 @@ export default function OrderManagement() {
                 <p className="text-sm font-medium text-gray-700">
                   Order: #{qrCodeOrder.id.substring(18).toUpperCase()}
                 </p>
-                {/* --- ADD: Show the code for manual entry --- */}
                 <p className="text-4xl font-bold text-gray-900 tracking-widest my-2">
                   {qrCodeOrder.pickupCode}
                 </p>
