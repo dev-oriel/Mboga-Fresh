@@ -439,12 +439,38 @@ export const vendorCategories = [
     to: "/products",
     icon: "grid_view",
     highlight: true,
+    id: "all", // Added an ID for consistency
   },
-  { label: "Vegetables", to: "/category/vegetables", icon: "eco" },
-  { label: "Fruits", to: "/category/fruits", icon: "ios" },
-  { label: "Grains & Cereals", to: "/category/grains", icon: "grain" },
-  { label: "Dairy", to: "/category/dairy", icon: "egg" },
-  { label: "Herbs & Spices", to: "/category/herbs", icon: "spa" },
+  {
+    id: "vegetables", // <<< MODIFICATION ADDED
+    label: "Vegetables",
+    to: "/category/vegetables",
+    icon: "eco",
+  },
+  {
+    id: "fruits", // <<< MODIFICATION ADDED
+    label: "Fruits",
+    to: "/category/fruits",
+    icon: "ios",
+  },
+  {
+    id: "grains", // <<< MODIFICATION ADDED
+    label: "Grains & Cereals",
+    to: "/category/grains",
+    icon: "grain",
+  },
+  {
+    id: "dairy", // <<< MODIFICATION ADDED
+    label: "Dairy",
+    to: "/category/dairy",
+    icon: "egg",
+  },
+  {
+    id: "herbs", // <<< MODIFICATION ADDTD
+    label: "Herbs & Spices",
+    to: "/category/herbs",
+    icon: "spa",
+  },
 ];
 
 // quick links (My Cart, Orders)
@@ -526,5 +552,3 @@ export const DEFAULT_AVATAR_MAP = {
 };
 
 export const DEFAULT_AVATAR = DEFAULT_AVATAR_MAP.unknown;
-
-// ... (rest of the file remains the same) ...

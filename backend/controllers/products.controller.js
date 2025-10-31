@@ -137,7 +137,6 @@ async function buildFilterSafe({
 } = {}) {
   const clauses = [];
 
-  // MODIFIED: Made category filter case-insensitive
   if (category) {
     clauses.push({ category: new RegExp(`^${escapeRegex(category)}$`, "i") });
   }
@@ -183,6 +182,7 @@ async function buildFilterSafe({
     const raw = String(vendorId).trim();
     const vendorOrClause = [];
 
+    // MODIFIED: Check against user.id OR user._id
     if (mongoose.Types.ObjectId.isValid(raw)) {
       vendorOrClause.push({ vendorId: raw });
       vendorOrClause.push({ vendorId: new mongoose.Types.ObjectId(raw) });
@@ -216,10 +216,12 @@ async function buildFilterSafe({
 
 export const list = async (req, res) => {
   try {
+    // MODIFIED: Added page and limit
     const {
       q,
-      limit = 100,
-      skip = 0,
+      limit = 12, // Default to 12 products per page
+      page = 1, // Default to page 1
+      skip, // We will let 'page' override 'skip'
       category,
       vendorId,
       minPrice,
@@ -228,6 +230,11 @@ export const list = async (req, res) => {
       location,
       sortBy,
     } = req.query;
+
+    const limitNum = Number(limit);
+    const pageNum = Number(page);
+    // Calculate skip based on page and limit
+    const skipNum = skip ? Number(skip) : (pageNum - 1) * limitNum;
 
     const filter = await buildFilterSafe({
       q,
@@ -249,12 +256,17 @@ export const list = async (req, res) => {
     }
 
     let products;
+    let totalProducts = 0;
     try {
-      products = await Product.find(filter)
-        .sort(sort)
-        .skip(Number(skip))
-        .limit(Math.min(1000, Number(limit)))
-        .lean();
+      // MODIFIED: Run two queries in parallel
+      [totalProducts, products] = await Promise.all([
+        Product.countDocuments(filter), // 1. Get total count
+        Product.find(filter) // 2. Get paginated products
+          .sort(sort)
+          .skip(skipNum)
+          .limit(limitNum)
+          .lean(),
+      ]);
     } catch (dbErr) {
       console.error(
         "DB query failed in products.list. Filter:",
@@ -267,8 +279,16 @@ export const list = async (req, res) => {
       });
     }
 
+    const totalPages = Math.ceil(totalProducts / limitNum) || 1;
     const enriched = await enrichVendorDisplay(products);
-    res.json(enriched);
+
+    // MODIFIED: Return a pagination object
+    res.json({
+      products: enriched,
+      totalPages,
+      currentPage: pageNum,
+      totalProducts,
+    });
   } catch (err) {
     console.error("products list error:", err && err.stack ? err.stack : err);
     res.status(500).json({ message: "Failed to fetch products" });

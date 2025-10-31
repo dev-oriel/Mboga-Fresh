@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Edit2, Trash2, Plus, X } from "lucide-react";
 import Header from "../components/vendorComponents/Header";
-import { vendorCategories } from "../constants";
+import { vendorCategories } from "../constants"; // This now imports the version with IDs
 import {
   fetchProducts,
   createProduct,
@@ -28,14 +28,13 @@ export default function VendorProductManagement() {
   const fileInputRef = useRef(null);
   const firstInputRef = useRef(null);
 
-  // MODIFIED: Updated form state
   const [form, setForm] = useState({
     file: null,
     imagePreview: "",
     name: "",
-    category: vendorCategories?.[0]?.label ?? "",
+    category: vendorCategories?.[0]?.id ?? "", // FIX: Uses ID
     price: 0,
-    unit: "", // Replaced stock
+    unit: "",
     status: "In Stock",
     description: "",
   });
@@ -48,10 +47,19 @@ export default function VendorProductManagement() {
           setProducts([]);
           return;
         }
+        const params = {
+          vendorId: String(user._id || user.id),
+          limit: 1000,
+          ...opts,
+        };
 
-        const params = { vendorId: String(user._id || user.id), ...opts };
         const data = await fetchProducts(params);
-        setProducts(Array.isArray(data) ? data : []);
+
+        if (data && Array.isArray(data.products)) {
+          setProducts(data.products);
+        } else {
+          setProducts(Array.isArray(data) ? data : []);
+        }
       } catch (err) {
         console.error("Failed to load products:", err);
         setProducts([]);
@@ -66,13 +74,13 @@ export default function VendorProductManagement() {
     load();
   }, [load]);
 
-  // MODIFIED: Updated reset function
+  // FIX: Uses ID
   function resetForm() {
     setForm({
       file: null,
       imagePreview: "",
       name: "",
-      category: vendorCategories?.[0]?.label ?? "",
+      category: vendorCategories?.[0]?.id ?? "",
       price: 0,
       unit: "",
       status: "In Stock",
@@ -90,13 +98,19 @@ export default function VendorProductManagement() {
     requestAnimationFrame(() => firstInputRef.current?.focus());
   }
 
-  // MODIFIED: Updated to populate new fields
+  // FIX: Handles finding category by ID or old Label
   function openEdit(product) {
+    const currentCategory = vendorCategories.find(
+      (c) => c.label === product.category || c.id === product.category
+    );
+
     setForm({
       file: null,
       imagePreview: product.imagePath || product.image || "",
       name: product.name || "",
-      category: product.category || vendorCategories?.[0]?.label,
+      category: currentCategory
+        ? currentCategory.id
+        : vendorCategories?.[0]?.id,
       price: product.price || 0,
       unit: product.unit || "",
       status: product.status || "In Stock",
@@ -168,7 +182,6 @@ export default function VendorProductManagement() {
     e.stopPropagation();
   }
 
-  // MODIFIED: Simplified price handler
   function handlePriceChange(val) {
     const n = Number(val) || 0;
     setForm((s) => ({ ...s, price: n }));
@@ -182,24 +195,22 @@ export default function VendorProductManagement() {
     if (!form.price || Number(form.price) <= 0)
       errors.price = "Enter a valid price (> 0)";
     if (!form.unit || String(form.unit).trim().length === 0)
-      errors.unit = "Unit is required (e.g. /kg, per piece)"; // Added unit validation
+      errors.unit = "Unit is required (e.g. /kg, per piece)";
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   }
 
-  // MODIFIED: Updated FormData submission
   async function handleSubmit(e) {
     e.preventDefault();
     if (!validateForm()) return;
 
     const fd = new FormData();
     fd.append("name", form.name.trim());
-    fd.append("category", form.category);
+    fd.append("category", form.category); // This is now an ID (e.g., "herbs")
     fd.append("price", String(form.price));
-    fd.append("unit", form.unit.trim()); // Changed from stock
+    fd.append("unit", form.unit.trim());
     fd.append("status", form.status);
     fd.append("description", form.description || "");
-    // Removed priceLabel and stock
 
     if (form.file) fd.append("image", form.file);
 
@@ -261,7 +272,6 @@ export default function VendorProductManagement() {
           </button>
         </div>
 
-        {/* MODIFIED: Table headers adjusted */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <table className="w-full">
             <thead className="bg-emerald-50">
@@ -276,7 +286,7 @@ export default function VendorProductManagement() {
                   Category
                 </th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
-                  Price
+                  Price/Unit
                 </th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
                   Status
@@ -307,6 +317,14 @@ export default function VendorProductManagement() {
               {!loading &&
                 products.map((product, idx) => {
                   const id = product._id || product.id;
+                  // FIX: Find the category label to display, even if ID is stored
+                  const categoryLabel =
+                    vendorCategories.find(
+                      (c) =>
+                        c.id === product.category ||
+                        c.label === product.category
+                    )?.label || product.category;
+
                   return (
                     <tr
                       key={id}
@@ -335,9 +353,8 @@ export default function VendorProductManagement() {
                         {product.name}
                       </td>
                       <td className="py-4 px-6 text-sm text-gray-600">
-                        {product.category}
+                        {categoryLabel}
                       </td>
-                      {/* MODIFIED: Display price and unit correctly */}
                       <td className="py-4 px-6 text-sm text-gray-900">
                         KES {product.price} {product.unit}
                       </td>
@@ -379,7 +396,6 @@ export default function VendorProductManagement() {
         </div>
       </div>
 
-      {/* MODIFIED: Modal Form */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 md:items-center">
           <div
@@ -510,8 +526,9 @@ export default function VendorProductManagement() {
                     className="w-full rounded-md border px-3 py-2"
                     required
                   >
+                    {/* FIX: Value is c.id, label is c.label */}
                     {vendorCategories?.map((c) => (
-                      <option key={c.label} value={c.label}>
+                      <option key={c.id} value={c.id}>
                         {c.label}
                       </option>
                     ))}
@@ -523,7 +540,6 @@ export default function VendorProductManagement() {
                   )}
                 </div>
 
-                {/* MODIFIED: Price input */}
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Price (KES)
@@ -543,7 +559,6 @@ export default function VendorProductManagement() {
                   )}
                 </div>
 
-                {/* MODIFIED: Unit input */}
                 <div>
                   <label className="block text-sm font-medium mb-1">Unit</label>
                   <input
