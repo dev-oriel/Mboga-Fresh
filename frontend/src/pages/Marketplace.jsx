@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect, useCallback } from "react";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import CategoryCard from "../components/CategoryCard";
@@ -20,8 +20,7 @@ const DefaultProductGrid = ({ onAddToCart, onProductClick }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch default products (In Stock)
-    apiFetchProducts({ status: "In Stock", limit: 8 }) // Fetch 8 by default
+    apiFetchProducts({ status: "In Stock", limit: 8 })
       .then((data) => {
         if (Array.isArray(data)) setDefaultProducts(data);
       })
@@ -68,20 +67,24 @@ const Marketplace = () => {
 
   const [query, setQuery] = useState(searchParams.get("q") || "");
 
-  const updateQuery = (key, value) => {
-    setSearchParams(
-      (prev) => {
-        const newParams = new URLSearchParams(prev);
-        if (value) {
-          newParams.set(key, value);
-        } else {
-          newParams.delete(key);
-        }
-        return newParams;
-      },
-      { replace: true }
-    );
-  };
+  // MODIFIED: Wrapped in useCallback to fix dependency array warning
+  const updateQuery = useCallback(
+    (key, value) => {
+      setSearchParams(
+        (prev) => {
+          const newParams = new URLSearchParams(prev);
+          if (value) {
+            newParams.set(key, value);
+          } else {
+            newParams.delete(key);
+          }
+          return newParams;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
 
   useEffect(() => {
     fetchVendorFilters()
@@ -90,27 +93,26 @@ const Marketplace = () => {
   }, []);
 
   useEffect(() => {
-    // Only fetch products if we are in a filtering state
+    setLoading(true);
+    setFetchError(null);
+
+    const params = {};
+    for (const [key, value] of searchParams.entries()) {
+      params[key] = value;
+    }
+
+    if (!params.status && searchParams.size > 0) {
+      params.status = "In Stock";
+    }
+
+    if (params.status === "Any") {
+      delete params.status;
+    }
+    if (params.maxPrice === "10000") {
+      delete params.maxPrice;
+    }
+
     if (searchParams.size > 0) {
-      setLoading(true);
-      setFetchError(null);
-
-      const params = {};
-      for (const [key, value] of searchParams.entries()) {
-        params[key] = value;
-      }
-
-      if (!params.status) {
-        params.status = "In Stock";
-      }
-      if (params.status === "Any") {
-        delete params.status;
-      }
-      // MODIFIED: Do not send maxPrice if it's the max (no limit)
-      if (params.maxPrice === "10000") {
-        delete params.maxPrice;
-      }
-
       apiFetchProducts(params)
         .then((data) => {
           if (Array.isArray(data)) setProducts(data);
@@ -125,11 +127,22 @@ const Marketplace = () => {
           setLoading(false);
         });
     } else {
-      // Not filtering, set products to empty (default view will handle it)
       setProducts([]);
       setLoading(false);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (query !== (searchParams.get("q") || "")) {
+        updateQuery("q", query);
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [query, searchParams, updateQuery]);
 
   const goToProduct = useCallback(
     (id) => navigate(`/product/${id}`),
@@ -161,6 +174,10 @@ const Marketplace = () => {
     updateQuery("q", q);
   };
 
+  const onSearchChange = (q) => {
+    setQuery(q);
+  };
+
   const onSortChange = (e) => {
     updateQuery("sortBy", e.target.value);
   };
@@ -173,11 +190,11 @@ const Marketplace = () => {
     if (currentCategory) return currentCategory;
     if (searchParams.get("vendorId")) {
       const vendor = filterData.vendors.find(
-        (v) => v._id === searchParams.get("vendorId")
+        (v) => v.user?._id === searchParams.get("vendorId")
       );
       return vendor?.businessName || "Vendor Products";
     }
-    if (searchParams.get("q")) return "Search Results";
+    if (searchParams.get("q")) return `Search for "${searchParams.get("q")}"`;
     return "Shop Fresh Produce";
   };
 
@@ -201,7 +218,10 @@ const Marketplace = () => {
                       {getPageTitle()}
                     </h2>
                     <button
-                      onClick={() => setSearchParams({}, { replace: true })}
+                      onClick={() => {
+                        setQuery("");
+                        setSearchParams({}, { replace: true });
+                      }}
                       className="text-sm text-emerald-600 hover:underline"
                     >
                       Clear All Filters
@@ -215,7 +235,7 @@ const Marketplace = () => {
                     <div className="flex items-center gap-4">
                       <SearchInput
                         value={query}
-                        onChange={(q) => setQuery(q)}
+                        onChange={onSearchChange}
                         onSearch={onSearch}
                       />
                       <select
@@ -240,7 +260,7 @@ const Marketplace = () => {
                       <div className="text-center py-12 text-red-600">
                         Failed to load products. Please try again.
                       </div>
-                    ) : (
+                    ) : products.length > 0 ? (
                       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
                         {products.map((p) => (
                           <ProductCard
@@ -251,8 +271,7 @@ const Marketplace = () => {
                           />
                         ))}
                       </div>
-                    )}
-                    {!loading && products.length === 0 && (
+                    ) : (
                       <div className="mt-8 text-center text-gray-500">
                         No products match your filters. Try clearing some
                         filters.
@@ -271,7 +290,7 @@ const Marketplace = () => {
                     </h2>
                     <SearchInput
                       value={query}
-                      onChange={(q) => setQuery(q)}
+                      onChange={onSearchChange}
                       onSearch={onSearch}
                     />
                   </div>
@@ -290,16 +309,14 @@ const Marketplace = () => {
                     {filterData.vendors.slice(0, 8).map((v) => (
                       <VendorCard
                         key={v._id}
-                        id={v._id}
+                        id={v.user?._id} // Link to user ID
                         name={v.businessName}
-                        // MODIFIED: Pass the avatar from the populated user
-                        img={v.user?.avatar}
+                        img={v.user?.avatar} // Pass avatar
                       />
                     ))}
                   </div>
                 </div>
 
-                {/* MODIFIED: Added default product grid to main page */}
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                     Shop Fresh Produce

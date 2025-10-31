@@ -7,6 +7,7 @@ const Sidebar = ({
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Helper function to update a single search parameter
   const updateQuery = (key, value) => {
     setSearchParams(
       (prev) => {
@@ -14,14 +15,15 @@ const Sidebar = ({
         if (value) {
           newParams.set(key, value);
         } else {
-          newParams.delete(key);
+          newParams.delete(key); // Remove if value is empty
         }
         return newParams;
       },
-      { replace: true }
+      { replace: true } // Use replace to avoid polluting browser history
     );
   };
 
+  // --- Read values directly from URL ---
   const selectedCategory = searchParams.get("category") || "";
   // MODIFIED: Default to 10000 (max) instead of 0
   const localMaxPrice = searchParams.get("maxPrice") || "10000";
@@ -30,6 +32,7 @@ const Sidebar = ({
   const localMinRating = searchParams.get("minRating") || "0";
   const localAvailability = searchParams.get("status") || "Any";
 
+  // --- Event Handlers ---
   const onRangeChange = (e) => {
     const val = e.target.value;
     // MODIFIED: Send "" (no limit) if slider is at max
@@ -99,7 +102,7 @@ const Sidebar = ({
               type="range"
               value={localMaxPrice}
               min={0}
-              max={10000}
+              max={10000} // Increased max to 10,000
               step={100}
               onChange={onRangeChange}
               className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-400"
@@ -133,7 +136,8 @@ const Sidebar = ({
             >
               <option value="">All Vendors</option>
               {filterData.vendors.map((v) => (
-                <option key={v._id} value={v._id}>
+                // MODIFIED: Value is now v.user._id, which matches the product's vendorId
+                <option key={v._id} value={v.user._id}>
                   {v.businessName}
                 </option>
               ))}
