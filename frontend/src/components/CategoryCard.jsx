@@ -1,12 +1,10 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 
-const CategoryCard = ({ id, name, img, onClick }) => {
+const CategoryCard = ({ id, name, img }) => {
   return (
     <Link
-      to={`/category/${id}`}
-      onClick={() => onClick?.(id)}
+      to={`/marketplace?category=${encodeURIComponent(id)}`}
       className="group text-center"
     >
       <div

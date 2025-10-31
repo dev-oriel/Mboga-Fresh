@@ -38,8 +38,16 @@ const upload = multer({
   },
 });
 
-router.get("/", list);
+// --- ROUTES ---
+
+// MODIFIED: This is now /list to match the frontend API call.
+// This MUST come before the /:id route.
+router.get("/list", list);
+
+// This route is for getting a single product
 router.get("/:id", getOne);
+
+// Your create, update, and delete routes are correct
 router.post("/", upload.single("image"), createOne);
 router.put("/:id", upload.single("image"), updateOne);
 router.delete("/:id", removeOne);

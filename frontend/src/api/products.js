@@ -1,6 +1,3 @@
-// frontend/src/api/products.js
-
-// Dynamic Base URL Resolver (Pasted into each file for independence)
 const BASE = "";
 
 function buildQueryString(params = {}) {
@@ -36,7 +33,8 @@ async function handleResponse(res) {
  */
 export async function fetchProducts(params = {}) {
   const qs = buildQueryString(params);
-  const res = await fetch(`${BASE}/api/products${qs}`, {
+  const res = await fetch(`${BASE}/api/products/list${qs}`, {
+    // MODIFIED: was /api/products
     credentials: "include",
   });
   return handleResponse(res);
@@ -48,6 +46,15 @@ export async function fetchProduct(id) {
   });
   return handleResponse(res);
 }
+
+// --- NEW FUNCTION ---
+export async function fetchVendorFilters() {
+  const res = await fetch(`${BASE}/api/vendors/filter-list`, {
+    credentials: "include",
+  });
+  return handleResponse(res);
+}
+// --- END NEW FUNCTION ---
 
 export async function createProduct(formData) {
   const res = await fetch(`${BASE}/api/products`, {

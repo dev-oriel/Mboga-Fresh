@@ -1,83 +1,56 @@
-// frontend/src/components/Sidebar.jsx
-import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import React from "react";
+import { Link, useSearchParams } from "react-router-dom";
 
 const Sidebar = ({
   categories = [],
-  vendors = [],
-  selectedCategory = null,
-  selectedVendor = null,
-  locationFilter = "All Locations",
-  maxPrice = 0,
-  minRating = 0,
-  availability = "any",
-  onCategoryClick,
-  onFiltersChange,
+  filterData = { vendors: [], locations: [] },
 }) => {
-  const [localMaxPrice, setLocalMaxPrice] = useState(maxPrice || 0);
-  const [localLocation, setLocalLocation] = useState(
-    locationFilter || "All Locations"
-  );
-  const [localMinRating, setLocalMinRating] = useState(minRating || 0);
-  const [localAvailability, setLocalAvailability] = useState(
-    availability || "any"
-  );
-  const [localVendor, setLocalVendor] = useState(selectedVendor || "");
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  useEffect(() => setLocalMaxPrice(maxPrice || 0), [maxPrice]);
-  useEffect(
-    () => setLocalLocation(locationFilter || "All Locations"),
-    [locationFilter]
-  );
-  useEffect(() => setLocalMinRating(minRating || 0), [minRating]);
-  useEffect(() => setLocalAvailability(availability || "any"), [availability]);
-  useEffect(() => setLocalVendor(selectedVendor || ""), [selectedVendor]);
-
-  const emit = (patch) => {
-    if (onFiltersChange) onFiltersChange(patch);
+  const updateQuery = (key, value) => {
+    setSearchParams(
+      (prev) => {
+        const newParams = new URLSearchParams(prev);
+        if (value) {
+          newParams.set(key, value);
+        } else {
+          newParams.delete(key);
+        }
+        return newParams;
+      },
+      { replace: true }
+    );
   };
 
+  const selectedCategory = searchParams.get("category") || "";
+  // MODIFIED: Default to 10000 (max) instead of 0
+  const localMaxPrice = searchParams.get("maxPrice") || "10000";
+  const localVendor = searchParams.get("vendorId") || "";
+  const localLocation = searchParams.get("location") || "All Locations";
+  const localMinRating = searchParams.get("minRating") || "0";
+  const localAvailability = searchParams.get("status") || "Any";
+
   const onRangeChange = (e) => {
-    const val = Number(e.target.value || 0);
-    setLocalMaxPrice(val);
-    emit({ maxPrice: val });
+    const val = e.target.value;
+    // MODIFIED: Send "" (no limit) if slider is at max
+    updateQuery("maxPrice", val === "10000" ? "" : val);
   };
 
   const onLocationChange = (e) => {
     const val = e.target.value;
-    setLocalLocation(val);
-    emit({ location: val });
-  };
-
-  const onVendorRatingChange = (e) => {
-    const v = e.target.value;
-    let numeric = 0;
-    if (v === "4+") numeric = 4;
-    else if (v === "3+") numeric = 3;
-    else if (v === "2+") numeric = 2;
-    else numeric = 0;
-    setLocalMinRating(numeric);
-    emit({ minRating: numeric });
-  };
-
-  const onAvailabilityChange = (e) => {
-    const v = e.target.value;
-    const mapped =
-      v === "In Stock" ? "in" : v === "Out of Stock" ? "out" : "any";
-    setLocalAvailability(mapped);
-    emit({ availability: mapped });
+    updateQuery("location", val === "All Locations" ? "" : val);
   };
 
   const onVendorSelect = (e) => {
-    const v = e.target.value;
-    setLocalVendor(v);
-    emit({ vendor: v || null });
+    updateQuery("vendorId", e.target.value);
   };
 
-  const handleCategoryClick = (catId) => {
-    if (onCategoryClick) onCategoryClick(catId);
-    emit({ category: catId });
+  const onAvailabilityChange = (e) => {
+    const val = e.target.value;
+    updateQuery("status", val === "Any" ? "" : val);
   };
+
+  // Note: Vendor Rating is not implemented in your backend, I've left the handler out for now.
 
   return (
     <div className="sticky top-24 space-y-8">
@@ -91,8 +64,7 @@ const Sidebar = ({
             return (
               <li key={c.id}>
                 <Link
-                  to={`/category/${c.id}`}
-                  onClick={() => handleCategoryClick(c.id)}
+                  to={`/marketplace?category=${encodeURIComponent(c.id)}`}
                   className={`flex justify-between items-center p-2 rounded-lg transition-colors ${
                     isActive
                       ? "bg-emerald-100 dark:bg-emerald-800/30 text-emerald-500 font-semibold"
@@ -127,7 +99,8 @@ const Sidebar = ({
               type="range"
               value={localMaxPrice}
               min={0}
-              max={1000}
+              max={10000}
+              step={100}
               onChange={onRangeChange}
               className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-400"
             />
@@ -136,7 +109,10 @@ const Sidebar = ({
               <div className="text-right">
                 <span className="mr-2">Up to</span>
                 <span className="font-semibold">
-                  {localMaxPrice > 0 ? `KES ${localMaxPrice}` : "No limit"}
+                  {/* MODIFIED: Check against 10000 for "No limit" */}
+                  {localMaxPrice === "10000"
+                    ? "No limit"
+                    : `KES ${localMaxPrice}`}
                 </span>
               </div>
             </div>
@@ -151,14 +127,14 @@ const Sidebar = ({
             </label>
             <select
               id="vendor-select"
-              value={localVendor || ""}
+              value={localVendor}
               onChange={onVendorSelect}
               className="mt-1 block w-full py-2 px-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-black rounded-lg shadow-sm focus:outline-none focus:ring-emerald-400 focus:border-emerald-400 text-sm"
             >
               <option value="">All Vendors</option>
-              {vendors.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name}
+              {filterData.vendors.map((v) => (
+                <option key={v._id} value={v._id}>
+                  {v.businessName}
                 </option>
               ))}
             </select>
@@ -178,37 +154,11 @@ const Sidebar = ({
               className="mt-1 block w-full py-2 px-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-black rounded-lg shadow-sm focus:outline-none focus:ring-emerald-400 focus:border-emerald-400 text-sm"
             >
               <option>All Locations</option>
-              <option>Nairobi</option>
-              <option>Mombasa</option>
-              <option>Kisumu</option>
-            </select>
-          </div>
-
-          <div>
-            <label
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              htmlFor="vendor-rating"
-            >
-              Vendor Rating
-            </label>
-            <select
-              id="vendor-rating"
-              value={
-                localMinRating === 4
-                  ? "4+"
-                  : localMinRating === 3
-                  ? "3+"
-                  : localMinRating === 2
-                  ? "2+"
-                  : "any"
-              }
-              onChange={onVendorRatingChange}
-              className="mt-1 block w-full py-2 px-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-black rounded-lg shadow-sm focus:outline-none focus:ring-emerald-400 focus:border-emerald-400 text-sm"
-            >
-              <option value="any">Any Rating</option>
-              <option value="4+">4 Stars &amp; Up</option>
-              <option value="3+">3 Stars &amp; Up</option>
-              <option value="2+">2 Stars &amp; Up</option>
+              {filterData.locations.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -221,13 +171,7 @@ const Sidebar = ({
             </label>
             <select
               id="availability"
-              value={
-                localAvailability === "in"
-                  ? "In Stock"
-                  : localAvailability === "out"
-                  ? "Out of Stock"
-                  : "Any"
-              }
+              value={localAvailability}
               onChange={onAvailabilityChange}
               className="mt-1 block w-full py-2 px-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-black rounded-lg shadow-sm focus:outline-none focus:ring-emerald-400 focus:border-emerald-400 text-sm"
             >

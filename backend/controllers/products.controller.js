@@ -126,10 +126,31 @@ async function enrichVendorDisplay(products = []) {
   });
 }
 
-function buildFilterSafe({ q, category, vendorId } = {}) {
+async function buildFilterSafe({
+  q,
+  category,
+  vendorId,
+  minPrice,
+  maxPrice,
+  status,
+  location,
+} = {}) {
   const clauses = [];
 
-  if (category) clauses.push({ category });
+  // MODIFIED: Made category filter case-insensitive
+  if (category) {
+    clauses.push({ category: new RegExp(`^${escapeRegex(category)}$`, "i") });
+  }
+  if (status) clauses.push({ status });
+
+  if (minPrice || maxPrice) {
+    const priceClause = {};
+    if (minPrice && Number(minPrice) > 0) priceClause.$gte = Number(minPrice);
+    if (maxPrice && Number(maxPrice) > 0) priceClause.$lte = Number(maxPrice);
+    if (Object.keys(priceClause).length > 0) {
+      clauses.push({ price: priceClause });
+    }
+  }
 
   if (q) {
     const re = new RegExp(String(q), "i");
@@ -138,28 +159,54 @@ function buildFilterSafe({ q, category, vendorId } = {}) {
     });
   }
 
-  if (
-    vendorId !== undefined &&
-    vendorId !== null &&
-    String(vendorId).trim() !== ""
-  ) {
+  let vendorIdsFromLocation = null;
+
+  if (location && location !== "All Locations") {
+    const vendors = await VendorProfile.find({
+      location: new RegExp(`^${escapeRegex(location)}$`, "i"),
+    })
+      .select("_id user")
+      .lean();
+
+    vendorIdsFromLocation = new Set();
+    vendors.forEach((v) => {
+      vendorIdsFromLocation.add(String(v._id));
+      if (v.user) vendorIdsFromLocation.add(String(v.user));
+    });
+
+    if (vendorIdsFromLocation.size === 0) {
+      clauses.push({ _id: new mongoose.Types.ObjectId() });
+    }
+  }
+
+  if (vendorId) {
     const raw = String(vendorId).trim();
+    const vendorOrClause = [];
 
     if (mongoose.Types.ObjectId.isValid(raw)) {
-      clauses.push({
-        $or: [
-          { vendorId: raw },
-          { vendorId: new mongoose.Types.ObjectId(raw) },
-        ],
-      });
+      vendorOrClause.push({ vendorId: raw });
+      vendorOrClause.push({ vendorId: new mongoose.Types.ObjectId(raw) });
     } else {
-      clauses.push({
-        $or: [
-          { vendorId: raw },
-          { vendorId: new RegExp(`^${escapeRegex(raw)}$`, "i") },
-        ],
-      });
+      vendorOrClause.push({ vendorId: raw });
     }
+
+    if (vendorIdsFromLocation) {
+      if (vendorIdsFromLocation.has(raw)) {
+        clauses.push({ $or: vendorOrClause });
+      } else {
+        clauses.push({ _id: new mongoose.Types.ObjectId() });
+      }
+    } else {
+      clauses.push({ $or: vendorOrClause });
+    }
+  } else if (vendorIdsFromLocation) {
+    const vendorIdArray = Array.from(vendorIdsFromLocation).flatMap((id) => {
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        return [id, new mongoose.Types.ObjectId(id)];
+      }
+      return [id];
+    });
+    clauses.push({ vendorId: { $in: vendorIdArray } });
   }
 
   if (clauses.length === 0) return {};
@@ -169,16 +216,42 @@ function buildFilterSafe({ q, category, vendorId } = {}) {
 
 export const list = async (req, res) => {
   try {
-    const { q, limit = 100, skip = 0, category, vendorId } = req.query;
+    const {
+      q,
+      limit = 100,
+      skip = 0,
+      category,
+      vendorId,
+      minPrice,
+      maxPrice,
+      status,
+      location,
+      sortBy,
+    } = req.query;
 
-    const filter = buildFilterSafe({ q, category, vendorId });
+    const filter = await buildFilterSafe({
+      q,
+      category,
+      vendorId,
+      minPrice,
+      maxPrice,
+      status,
+      location,
+    });
 
     console.debug("products.list filter:", JSON.stringify(filter));
+
+    let sort = { createdAt: -1 };
+    if (sortBy === "price-asc") {
+      sort = { price: 1 };
+    } else if (sortBy === "price-desc") {
+      sort = { price: -1 };
+    }
 
     let products;
     try {
       products = await Product.find(filter)
-        .sort({ createdAt: -1 })
+        .sort(sort)
         .skip(Number(skip))
         .limit(Math.min(1000, Number(limit)))
         .lean();
@@ -217,15 +290,8 @@ export const getOne = async (req, res) => {
 
 export const createOne = async (req, res) => {
   try {
-    const {
-      name,
-      category,
-      price,
-      unit, // MODIFIED
-      status,
-      description,
-      vendorId,
-    } = req.body;
+    const { name, category, price, unit, status, description, vendorId } =
+      req.body;
 
     const file = req.file || (Array.isArray(req.files) ? req.files[0] : null);
     const imagePath = file ? `/uploads/${file.filename}` : "";
@@ -234,7 +300,7 @@ export const createOne = async (req, res) => {
       name,
       category,
       price: Number(price) || 0,
-      unit, // MODIFIED
+      unit,
       status,
       description,
       vendorId: vendorId || (req.user ? String(req.user._id) : vendorId),
@@ -287,15 +353,8 @@ export const createOne = async (req, res) => {
 
 export const updateOne = async (req, res) => {
   try {
-    const {
-      name,
-      category,
-      price,
-      unit, // MODIFIED
-      status,
-      description,
-      vendorId,
-    } = req.body;
+    const { name, category, price, unit, status, description, vendorId } =
+      req.body;
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
@@ -308,7 +367,7 @@ export const updateOne = async (req, res) => {
     if (name !== undefined) product.name = name;
     if (category !== undefined) product.category = category;
     if (price !== undefined) product.price = Number(price) || product.price;
-    if (unit !== undefined) product.unit = unit; // MODIFIED
+    if (unit !== undefined) product.unit = unit;
     if (status !== undefined) product.status = status;
     if (description !== undefined) product.description = description;
     if (vendorId !== undefined) product.vendorId = vendorId;
