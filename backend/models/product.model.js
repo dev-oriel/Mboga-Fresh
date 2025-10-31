@@ -5,8 +5,7 @@ const ProductSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     category: { type: String, required: true, trim: true },
     price: { type: Number, default: 0 },
-    priceLabel: { type: String, default: "KSh 0" },
-    stock: { type: String, default: "" },
+    unit: { type: String, trim: true, default: "" }, // ADDED: This will hold "/kg", "per piece", etc.
     status: {
       type: String,
       enum: ["In Stock", "Out of Stock"],

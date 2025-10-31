@@ -1,4 +1,3 @@
-// frontend/src/components/ProductDetails.jsx
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Header from "./Header";
@@ -28,7 +27,6 @@ export default function ProductDetails() {
         if (data && typeof data === "object") {
           setProduct(data);
         } else {
-          // backend returned something unexpected
           console.warn("fetchProduct returned unexpected data:", data);
           setProduct(null);
         }
@@ -38,7 +36,6 @@ export default function ProductDetails() {
           "fetchProduct error - falling back to local sampleProducts:",
           err?.message || err
         );
-        // Fallback: try to find product in local sampleProducts (developer convenience)
         const local = (sampleProducts || []).find(
           (p) => String(p.id) === String(id)
         );
@@ -105,7 +102,6 @@ export default function ProductDetails() {
 
   const vendorName = product.vendor?.name ?? product.vendor ?? "Vendor";
 
-  // normalize image path (attempt to use imagePath or img)
   const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
   const imageSrc =
     product.imagePath && typeof product.imagePath === "string"
@@ -123,7 +119,8 @@ export default function ProductDetails() {
       {
         id: product._id || product.id,
         title: product.title || product.name,
-        priceLabel: product.priceLabel || product.price || "",
+        // MODIFIED: Construct priceLabel from new fields
+        priceLabel: `KES ${product.price || 0} ${product.unit || ""}`.trim(),
         img: imageSrc,
         vendor: product.vendor || vendorName,
       },
@@ -190,8 +187,14 @@ export default function ProductDetails() {
               </p>
             </div>
 
-            <div className="text-3xl font-bold text-emerald-400">
-              {product.priceLabel ?? product.price ?? ""}
+            {/* MODIFIED: Display price and unit correctly */}
+            <div className="text-3xl font-bold text-emerald-400 flex items-baseline gap-2">
+              <span>KES {product.price || 0}</span>
+              {product.unit && (
+                <span className="text-xl font-medium text-gray-500 dark:text-gray-400">
+                  {product.unit}
+                </span>
+              )}
             </div>
 
             <div className="border-t border-b border-gray-200 dark:border-gray-700 py-6">

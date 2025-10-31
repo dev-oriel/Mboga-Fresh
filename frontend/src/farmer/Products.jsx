@@ -2,7 +2,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Edit2, Trash2, Plus, X } from "lucide-react";
 import Header from "../components/FarmerComponents/Header";
-import Footer from "../components/FarmerComponents/Footer";
 import { vendorCategories } from "../constants";
 import {
   fetchBulkProducts,
@@ -592,9 +591,6 @@ export default function Products() {
               >
                 {editingId ? "Save Changes" : "Add Product"}
               </button>
-              <div>
-                <Footer />
-              </div>
             </div>
           </form>
         </div>

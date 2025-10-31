@@ -1,4 +1,3 @@
-// frontend/src/components/ProductCard.jsx
 import React from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
@@ -16,26 +15,9 @@ function resolveImageSrc(img) {
   return `${API_BASE || window.location.origin}/${img}`;
 }
 
-function parsePrice(price) {
-  if (price == null)
-    return { currency: "KES", amount: "", unit: "", display: "" };
-  const raw = String(price).trim();
-  const unitMatch = raw.match(/(\/\S.*)$/);
-  const unit = unitMatch ? unitMatch[0].trim() : "";
-  const numMatch = raw.replace(/,/g, "").match(/(\d+(\.\d+)?)/);
-  const amount = numMatch ? numMatch[0] : "";
-  const currencyMatch = raw.match(/^[^\d\.\s\/]+/);
-  const currency = currencyMatch
-    ? currencyMatch[0].trim().replace(/\.$/, "")
-    : "KES";
-  const display = amount ? `${currency} ${amount}` : raw;
-  return { currency, amount, unit, display };
-}
-
 const ProductCard = (props) => {
   const id = props.id || props._id;
   const title = props.title || props.name || "";
-  // Prefer explicit denormalized vendorName (from backend), then vendorBusiness, then vendor (legacy), then vendorId as last fallback.
   const rawVendor =
     props.vendorName ??
     props.vendorBusiness ??
@@ -45,12 +27,14 @@ const ProductCard = (props) => {
   const vendorDisplay = String(rawVendor || "").trim() || "Unknown vendor";
 
   const img = props.img || props.image || props.imagePath || props.imgPath;
-  const priceRaw = props.priceLabel || props.price || props.priceStr || "";
   const special = !!props.special;
   const onView = props.onView;
   const onAdd = props.onAdd;
 
-  const { currency, amount, unit, display } = parsePrice(priceRaw);
+  // MODIFIED: Simplified price and unit logic
+  const currency = "KES";
+  const amount = props.price || 0;
+  const unit = props.unit || "";
   const resolvedImg = resolveImageSrc(img);
 
   const { addItem } = useCart();
@@ -66,8 +50,9 @@ const ProductCard = (props) => {
       {
         id,
         title,
-        priceLabel: priceRaw || display,
-        price: amount || 0,
+        // MODIFIED: Construct priceLabel from new fields
+        priceLabel: `${currency} ${amount} ${unit}`.trim(),
+        price: amount,
         img: resolvedImg,
         vendor: vendorDisplay,
       },
@@ -139,11 +124,12 @@ const ProductCard = (props) => {
           From {vendorDisplay}
         </p>
 
+        {/* MODIFIED: This JSX now works perfectly with the new variables */}
         <div className="mt-4 flex items-end justify-between">
           <div className="flex items-baseline gap-2">
             <span className="text-sm text-gray-500">{currency}</span>
             <span className="text-xl font-extrabold text-emerald-600">
-              {amount || display || ""}
+              {amount}
             </span>
             {unit && <span className="text-sm text-gray-500 ml-1">{unit}</span>}
           </div>

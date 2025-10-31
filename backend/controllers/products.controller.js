@@ -146,7 +146,6 @@ function buildFilterSafe({ q, category, vendorId } = {}) {
     const raw = String(vendorId).trim();
 
     if (mongoose.Types.ObjectId.isValid(raw)) {
-      // IMPORTANT: use `new mongoose.Types.ObjectId(raw)` (must be called with `new`)
       clauses.push({
         $or: [
           { vendorId: raw },
@@ -221,9 +220,8 @@ export const createOne = async (req, res) => {
     const {
       name,
       category,
-      priceLabel,
       price,
-      stock,
+      unit, // MODIFIED
       status,
       description,
       vendorId,
@@ -236,8 +234,7 @@ export const createOne = async (req, res) => {
       name,
       category,
       price: Number(price) || 0,
-      priceLabel: priceLabel || `KSh ${Number(price) || 0}`,
-      stock,
+      unit, // MODIFIED
       status,
       description,
       vendorId: vendorId || (req.user ? String(req.user._id) : vendorId),
@@ -293,9 +290,8 @@ export const updateOne = async (req, res) => {
     const {
       name,
       category,
-      priceLabel,
       price,
-      stock,
+      unit, // MODIFIED
       status,
       description,
       vendorId,
@@ -312,8 +308,7 @@ export const updateOne = async (req, res) => {
     if (name !== undefined) product.name = name;
     if (category !== undefined) product.category = category;
     if (price !== undefined) product.price = Number(price) || product.price;
-    if (priceLabel !== undefined) product.priceLabel = priceLabel;
-    if (stock !== undefined) product.stock = stock;
+    if (unit !== undefined) product.unit = unit; // MODIFIED
     if (status !== undefined) product.status = status;
     if (description !== undefined) product.description = description;
     if (vendorId !== undefined) product.vendorId = vendorId;

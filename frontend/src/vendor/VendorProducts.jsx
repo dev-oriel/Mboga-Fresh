@@ -9,9 +9,8 @@ import {
   deleteProduct,
 } from "../api/products";
 import { useAuth } from "../context/AuthContext";
-import { useVendorData } from "../context/VendorDataContext"; // <-- 1. IMPORT CONTEXT
+import { useVendorData } from "../context/VendorDataContext";
 
-/* ... (keep constants) ... */
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_PLACEHOLDER =
@@ -19,25 +18,24 @@ const DEFAULT_PLACEHOLDER =
 
 export default function VendorProductManagement() {
   const { user } = useAuth();
-  const { unreadCount } = useVendorData(); // <-- 2. GET THE COUNT
+  const { unreadCount } = useVendorData();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ... (keep all states and functions: open, editingId, formErrors, refs, form, load, resetForm, openAdd, openEdit, handleDelete, fileToPreview, handleFileChange, handleDrop, preventDefault, handlePriceChange, validateForm, handleSubmit, resolveImageUrl) ...
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formErrors, setFormErrors] = useState({});
   const fileInputRef = useRef(null);
   const firstInputRef = useRef(null);
 
+  // MODIFIED: Updated form state
   const [form, setForm] = useState({
     file: null,
     imagePreview: "",
     name: "",
     category: vendorCategories?.[0]?.label ?? "",
-    priceLabel: "",
     price: 0,
-    stock: "",
+    unit: "", // Replaced stock
     status: "In Stock",
     description: "",
   });
@@ -68,15 +66,15 @@ export default function VendorProductManagement() {
     load();
   }, [load]);
 
+  // MODIFIED: Updated reset function
   function resetForm() {
     setForm({
       file: null,
       imagePreview: "",
       name: "",
       category: vendorCategories?.[0]?.label ?? "",
-      priceLabel: "",
       price: 0,
-      stock: "",
+      unit: "",
       status: "In Stock",
       description: "",
     });
@@ -92,16 +90,15 @@ export default function VendorProductManagement() {
     requestAnimationFrame(() => firstInputRef.current?.focus());
   }
 
+  // MODIFIED: Updated to populate new fields
   function openEdit(product) {
     setForm({
       file: null,
       imagePreview: product.imagePath || product.image || "",
       name: product.name || "",
       category: product.category || vendorCategories?.[0]?.label,
-      priceLabel:
-        product.priceLabel || (product.price ? `KSh ${product.price}` : ""),
       price: product.price || 0,
-      stock: product.stock || "",
+      unit: product.unit || "",
       status: product.status || "In Stock",
       description: product.description || "",
     });
@@ -171,10 +168,10 @@ export default function VendorProductManagement() {
     e.stopPropagation();
   }
 
+  // MODIFIED: Simplified price handler
   function handlePriceChange(val) {
-    const digits = String(val).replace(/[^\d.]/g, "");
-    const n = Number(digits) || 0;
-    setForm((s) => ({ ...s, priceLabel: `KES ${n}`, price: n }));
+    const n = Number(val) || 0;
+    setForm((s) => ({ ...s, price: n }));
   }
 
   function validateForm() {
@@ -184,10 +181,13 @@ export default function VendorProductManagement() {
     if (!form.category) errors.category = "Select a category";
     if (!form.price || Number(form.price) <= 0)
       errors.price = "Enter a valid price (> 0)";
+    if (!form.unit || String(form.unit).trim().length === 0)
+      errors.unit = "Unit is required (e.g. /kg, per piece)"; // Added unit validation
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   }
 
+  // MODIFIED: Updated FormData submission
   async function handleSubmit(e) {
     e.preventDefault();
     if (!validateForm()) return;
@@ -195,11 +195,11 @@ export default function VendorProductManagement() {
     const fd = new FormData();
     fd.append("name", form.name.trim());
     fd.append("category", form.category);
-    fd.append("priceLabel", form.priceLabel);
     fd.append("price", String(form.price));
-    fd.append("stock", form.stock);
+    fd.append("unit", form.unit.trim()); // Changed from stock
     fd.append("status", form.status);
     fd.append("description", form.description || "");
+    // Removed priceLabel and stock
 
     if (form.file) fd.append("image", form.file);
 
@@ -240,10 +240,9 @@ export default function VendorProductManagement() {
       <Header
         avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDeL7radWSj-FEteEjqLpufXII3-tc_o7GMvLvB07AaD_bYBkfAcIOnNbOXkTdMOHRgJQwLZE-Z_iw72Bd8bpHzfXP_m0pIvteSw7FKZ1qV9GD1KfgyDVG90bCO7OGe6JyYIkm9DBo2ArC60uEqSfDvnnYWeo6IqVEjWxsVX6dUoxjm9ozyVlriiMdVLc_jU9ZxS01QcxNa8hn-ePNbB6IcXSwExf2U61R-epab8nsOkbq95E7z6b-fH4zOt0j2MPt20nrqtPM1NHI"
         userName={user?.name || "Vendor"}
-        unreadCount={unreadCount} // <-- 3. PASS THE COUNT
+        unreadCount={unreadCount}
       />
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* ... (rest of the file is identical) ... */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-3xl font-bold">My Products</h2>
@@ -262,6 +261,7 @@ export default function VendorProductManagement() {
           </button>
         </div>
 
+        {/* MODIFIED: Table headers adjusted */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <table className="w-full">
             <thead className="bg-emerald-50">
@@ -276,10 +276,7 @@ export default function VendorProductManagement() {
                   Category
                 </th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
-                  Price/Unit
-                </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
-                  Stock
+                  Price
                 </th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
                   Status
@@ -293,7 +290,7 @@ export default function VendorProductManagement() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center">
+                  <td colSpan={6} className="p-8 text-center">
                     Loading...
                   </td>
                 </tr>
@@ -301,7 +298,7 @@ export default function VendorProductManagement() {
 
               {!loading && products.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center">
+                  <td colSpan={6} className="p-8 text-center">
                     No products yet.
                   </td>
                 </tr>
@@ -340,11 +337,9 @@ export default function VendorProductManagement() {
                       <td className="py-4 px-6 text-sm text-gray-600">
                         {product.category}
                       </td>
+                      {/* MODIFIED: Display price and unit correctly */}
                       <td className="py-4 px-6 text-sm text-gray-900">
-                        {product.priceLabel}
-                      </td>
-                      <td className="py-4 px-6 text-sm text-gray-900">
-                        {product.stock}
+                        KES {product.price} {product.unit}
                       </td>
                       <td className="py-4 px-6">
                         <span
@@ -384,6 +379,7 @@ export default function VendorProductManagement() {
         </div>
       </div>
 
+      {/* MODIFIED: Modal Form */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 md:items-center">
           <div
@@ -435,7 +431,11 @@ export default function VendorProductManagement() {
                 >
                   {form.imagePreview ? (
                     <img
-                      src={form.imagePreview}
+                      src={
+                        form.imagePreview.startsWith("data:")
+                          ? form.imagePreview
+                          : resolveImageUrl(form.imagePreview)
+                      }
                       alt="Preview"
                       className="w-full h-full object-cover"
                     />
@@ -523,14 +523,16 @@ export default function VendorProductManagement() {
                   )}
                 </div>
 
+                {/* MODIFIED: Price input */}
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    Price / Unit
+                    Price (KES)
                   </label>
                   <input
-                    value={form.priceLabel}
+                    type="number"
+                    value={form.price}
                     onChange={(e) => handlePriceChange(e.target.value)}
-                    placeholder="KES 120"
+                    placeholder="120"
                     className="w-full rounded-md border px-3 py-2"
                     required
                   />
@@ -541,18 +543,23 @@ export default function VendorProductManagement() {
                   )}
                 </div>
 
+                {/* MODIFIED: Unit input */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Stock / Unit qty
-                  </label>
+                  <label className="block text-sm font-medium mb-1">Unit</label>
                   <input
-                    value={form.stock}
+                    value={form.unit}
                     onChange={(e) =>
-                      setForm((s) => ({ ...s, stock: e.target.value }))
+                      setForm((s) => ({ ...s, unit: e.target.value }))
                     }
-                    placeholder="E.g. 50 kg"
+                    placeholder="E.g. /kg, per piece, 3 pcs"
                     className="w-full rounded-md border px-3 py-2"
+                    required
                   />
+                  {formErrors.unit && (
+                    <div className="text-sm text-red-600 mt-1">
+                      {formErrors.unit}
+                    </div>
+                  )}
                 </div>
 
                 <div>
