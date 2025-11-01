@@ -112,6 +112,18 @@ const Freshpicks = () => {
             );
           })}
         </div>
+
+        {/* --- ADDED THIS BLOCK --- */}
+        <div className="text-center mt-12">
+          <Link
+            to="/marketplace"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow transition-colors"
+          >
+            <span>View All Products</span>
+            <span className="material-symbols-outlined">arrow_forward</span>
+          </Link>
+        </div>
+        {/* --- END OF ADDED BLOCK --- */}
       </div>
     </section>
   );
