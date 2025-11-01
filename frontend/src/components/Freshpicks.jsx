@@ -1,52 +1,51 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { fetchProducts } from "../api/products"; // MODIFIED: Import API
 
-const products = [
-  {
-    name: "Ripe Avocadoes (Hass)",
-    vendor: "Mama Njeri's",
-    price: "KES 40",
-    unit: "/pc",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAPMwWtusjfFFbt3NbyfIkkXFn_YOJpTbBz98KDTFc4jfw3n5jYzFvOssJrHya7sGGO7Z7TyOLmoyhhcl4cu6oQTcZcFlLYlrQFRp_G7-q0sVi9AGMyYu2jeoK2cRmM-ubEiasMgPGrhZxpBgoTQI6MO6IXrowdKjdyqyzFWtoYB8-MJMavtVkCpt79Mg7aXnFZkNrojZ1JOMEQ7Qqq1zMGkfYFU3AyQ1v8Op4Y0RvqK1Aa0O2U90JrzIV1ISEVlAMKpL9jC6SDFeo",
-    special: true,
-  },
-  {
-    name: "Sweet Mangoes (Ngowe)",
-    vendor: "Akinyi's Fruits",
-    price: "KES 150",
-    unit: "/kg",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBV8gBbKDa7cnMo9Dd_h-fyu4f1jiSE04nHoEkLNmImaNTqW_itR65qLuIFDIy4loHjhJGzzmb0dRdiodmUR4SR4tObd-gXkt64n3DsrJoy1DjfS74qMY9Tfg0xfB_d8-9Nq8CQqOVLD7FqjVurOP6UI1rZCj-Qe6GCrmx87UmvQdPA6VXx_Zmhn2zxzE_Nhi0FgYDA-CnO7ZXYrbubdEE72AIpZh9pqmyWoPqkUeFvjSsWV3Sp5NDBK2wLd_VXxHmMemnOdC3EKcU",
-    special: false,
-  },
-  {
-    name: "Red Onions",
-    vendor: "Kimani's",
-    price: "KES 120",
-    unit: "/kg",
-    img: "https://lh3.googleusercontent.com/aida-public/AB6AXuATQit1JrF5Jnyt4wkvgo4gg9AE35WZUHYu4bkP8Ug9C24i6Hq1pNoyB6sLrOU8lTrlw08oS_T1yAyCSoFN6GBDhXyWuTyePSown1zYI1IdMrIa_s7q3R85HYOD-V4TQtSPgpFWQ4LJFw-8rwhCMVpOnTZuUJWySzBEnWCg6X2TJG7zO-c5S8NdyRVip8br5YvWYZb3AkCpH2K7OdAX80AZ36gBsL552hxuZRtmFY-68iwn-ESSyvtSyqLf1RcvFa55S4lzOUzCDRM",
-    special: false,
-  },
-];
+// Helper function to resolve image paths
+const DEFAULT_PLACEHOLDER =
+  "https://images.unsplash.com/photo-1518976024611-0a4e3d1c9f05?auto=format&fit=crop&w=1200&q=60";
+const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
 
-function slugifyName(name = "") {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+function resolveImageSrc(img) {
+  if (!img) return DEFAULT_PLACEHOLDER;
+  if (typeof img !== "string") return DEFAULT_PLACEHOLDER;
+  if (img.startsWith("http://") || img.startsWith("https://")) return img;
+  if (img.startsWith("data:")) return img;
+  if (img.startsWith("/")) return `${API_BASE || window.location.origin}${img}`;
+  return `${API_BASE || window.location.origin}/${img}`;
 }
 
 const Freshpicks = () => {
   const { addItem } = useCart();
+  const [products, setProducts] = useState([]);
 
-  const handleAdd = (product) => {
-    const id = slugifyName(product.name);
+  // MODIFIED: Fetch real products on component mount
+  useEffect(() => {
+    // Fetch 3 newest "In Stock" products
+    fetchProducts({ status: "In Stock", limit: 3, sortBy: "relevance" })
+      .then((data) => {
+        if (data && Array.isArray(data.products)) {
+          setProducts(data.products);
+        }
+      })
+      .catch((err) => console.error("Failed to load fresh picks:", err));
+  }, []);
+
+  const handleAdd = (e, product) => {
+    e.preventDefault(); // Stop the Link navigation
+    e.stopPropagation(); // Stop event bubbling
+
     addItem(
       {
-        id,
+        id: product._id,
         title: product.name,
-        price: `${product.price}${product.unit ? product.unit : ""}`,
-        img: product.img,
-        vendor: product.vendor,
+        price: product.price, // Already a number
+        unit: product.unit,
+        priceLabel: `KES ${product.price} ${product.unit || ""}`.trim(),
+        img: resolveImageSrc(product.imagePath),
+        vendor: product.vendorName,
       },
       1
     );
@@ -60,23 +59,26 @@ const Freshpicks = () => {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {products.map((product) => {
-            const id = slugifyName(product.name);
+            const id = product._id;
+            const resolvedImg = resolveImageSrc(product.imagePath);
+
             return (
-              <div
+              // MODIFIED: Card is now a Link
+              <Link
                 key={id}
+                to={`/product/${id}`}
                 className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden group flex flex-col"
               >
                 <div className="relative">
                   <img
-                    src={product.img}
+                    src={resolvedImg}
                     alt={product.name}
                     className="w-full h-56 object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = DEFAULT_PLACEHOLDER;
+                    }}
                   />
-                  {product.special && (
-                    <div className="absolute top-3 left-3 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                      SPECIAL
-                    </div>
-                  )}
+                  {/* 'special' prop doesn't exist on product, can be re-added if needed */}
                 </div>
 
                 <div className="p-4 flex-grow flex flex-col">
@@ -84,12 +86,12 @@ const Freshpicks = () => {
                     {product.name}
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    From {product.vendor}
+                    From {product.vendorName || "Mboga Fresh"}
                   </p>
 
                   <div className="flex justify-between items-center mt-4">
                     <span className="text-xl font-extrabold text-green-600">
-                      {product.price}{" "}
+                      KES {product.price}{" "}
                       <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
                         {product.unit}
                       </span>
@@ -97,7 +99,7 @@ const Freshpicks = () => {
 
                     <button
                       aria-label={`Add ${product.name} to cart`}
-                      onClick={() => handleAdd(product)}
+                      onClick={(e) => handleAdd(e, product)}
                       className="bg-green-600/10 text-green-600 p-2 rounded-full hover:bg-green-600 hover:text-white transition-colors"
                     >
                       <span className="material-symbols-outlined">
@@ -106,7 +108,7 @@ const Freshpicks = () => {
                     </button>
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

@@ -1,11 +1,9 @@
-// frontend/src/components/CategoriesSection.jsx
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom"; // MODIFIED: Import Link
 import { categories } from "../constants";
 
 const CategoriesSection = () => {
-  const navigate = useNavigate();
-
+  // REMOVED: useNavigate
   return (
     <section className="py-16 bg-white dark:bg-gray-900">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -15,10 +13,11 @@ const CategoriesSection = () => {
 
         <div className="flex overflow-x-auto space-x-6 pb-4 -mx-4 px-4">
           {categories.map((cat) => (
-            <button
-              type="button"
+            // MODIFIED: Changed from <button> to <Link>
+            <Link
               key={cat.id}
-              onClick={() => navigate(`/category/${cat.id}`)}
+              // MODIFIED: This now links to the marketplace with the correct filter
+              to={`/marketplace?category=${encodeURIComponent(cat.id)}`}
               className="flex-shrink-0 w-40 text-center group focus:outline-none"
               aria-label={`Open ${cat.name} category`}
             >
@@ -33,7 +32,7 @@ const CategoriesSection = () => {
               <h3 className="mt-4 font-semibold text-lg text-gray-700 dark:text-gray-200">
                 {cat.name}
               </h3>
-            </button>
+            </Link>
           ))}
         </div>
       </div>
