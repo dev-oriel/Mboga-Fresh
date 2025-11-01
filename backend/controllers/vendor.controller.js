@@ -3,10 +3,10 @@ import VendorProfile from "../models/vendorProfile.model.js";
 // Get a list of vendors and unique locations for filtering
 export const listVendorsForFilter = async (req, res) => {
   try {
-    // MODIFIED: Chained .populate() to get the user's data (including avatar)
     const vendors = await VendorProfile.find({})
-      .select("businessName user") // Added 'user' to select
-      .populate("user", "avatar") // Populate the 'user' field, and select only the 'avatar'
+      // MODIFIED: Added 'location' to the .select()
+      .select("businessName user location")
+      .populate("user", "avatar")
       .lean();
 
     // Get all unique, non-empty locations from the profiles

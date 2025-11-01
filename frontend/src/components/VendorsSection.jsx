@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchVendorFilters } from "../api/products"; // MODIFIED: Import API
+import { fetchVendorFilters } from "../api/products";
 
 // Helper function to resolve image paths
-const DEFAULT_PLACEHOLDER = "https://via.placeholder.com/150";
+const DEFAULT_PLACEHOLDER =
+  "https://images.unsplash.com/photo-1518976024611-0a4e3d1c9f05?auto=format&fit=crop&w=1200&q=60";
 const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
 
 function resolveImageSrc(img) {
@@ -20,7 +21,7 @@ const VendorsSection = () => {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // MODIFIED: Fetch real vendors on component mount
+  // Fetch real vendors on component mount
   useEffect(() => {
     fetchVendorFilters()
       .then((data) => {
@@ -74,7 +75,6 @@ const VendorsSection = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
           {featuredVendors.map((vendor) => {
-            // MODIFIED: Use real data structure
             const vendorId = vendor.user?._id || vendor._id;
             const key = vendor._id;
             const vendorImg = vendor.user?.avatar;
@@ -85,21 +85,25 @@ const VendorsSection = () => {
               <button
                 type="button"
                 key={key}
-                // MODIFIED: Navigate to the correct marketplace filter URL
                 onClick={() => navigate(`/marketplace?vendorId=${vendorId}`)}
                 className="text-left bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow transform hover:-translate-y-1 hover:scale-105 focus:outline-none"
                 aria-label={`Open ${vendorName} profile`}
               >
-                <img
-                  src={resolveImageSrc(vendorImg)}
-                  alt={vendorName}
-                  className="w-full h-56 object-cover transition-transform duration-500 hover:scale-110"
-                  loading="lazy"
-                  onError={(e) => {
-                    e.currentTarget.src = DEFAULT_PLACEHOLDER;
-                  }}
-                />
-                <div className="p-6 flex flex-col justify-between h-40">
+                {/* MODIFIED: Wrapped image in an aspect-ratio container */}
+                <div className="aspect-video overflow-hidden">
+                  <img
+                    src={resolveImageSrc(vendorImg)}
+                    alt={vendorName}
+                    // MODIFIED: 'h-56' removed, 'h-full' added
+                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.src = DEFAULT_PLACEHOLDER;
+                    }}
+                  />
+                </div>
+                {/* MODIFIED: Removed fixed height 'h-40' */}
+                <div className="p-6">
                   <div>
                     <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
                       {vendorName}
@@ -108,7 +112,6 @@ const VendorsSection = () => {
                       {vendorLocation}
                     </p>
                   </div>
-                  {/* We don't have rating data from this API, so it's removed */}
                 </div>
               </button>
             );
