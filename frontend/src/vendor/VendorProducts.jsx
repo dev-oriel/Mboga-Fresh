@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Edit2, Trash2, Plus, X } from "lucide-react";
 import Header from "../components/vendorComponents/Header";
-import { vendorCategories } from "../constants"; // This now imports the version with IDs
+// MODIFIED: Import the same 'categories' list as your marketplace
+import { categories as hardCodedCategories } from "../constants";
 import {
   fetchProducts,
   createProduct,
@@ -32,7 +33,8 @@ export default function VendorProductManagement() {
     file: null,
     imagePreview: "",
     name: "",
-    category: vendorCategories?.[0]?.id ?? "", // FIX: Uses ID
+    // MODIFIED: Use the 'id' from the correct category list
+    category: hardCodedCategories?.[0]?.id ?? "",
     price: 0,
     unit: "",
     status: "In Stock",
@@ -74,13 +76,13 @@ export default function VendorProductManagement() {
     load();
   }, [load]);
 
-  // FIX: Uses ID
   function resetForm() {
     setForm({
       file: null,
       imagePreview: "",
       name: "",
-      category: vendorCategories?.[0]?.id ?? "",
+      // MODIFIED: Reset to the 'id'
+      category: hardCodedCategories?.[0]?.id ?? "",
       price: 0,
       unit: "",
       status: "In Stock",
@@ -98,19 +100,13 @@ export default function VendorProductManagement() {
     requestAnimationFrame(() => firstInputRef.current?.focus());
   }
 
-  // FIX: Handles finding category by ID or old Label
   function openEdit(product) {
-    const currentCategory = vendorCategories.find(
-      (c) => c.label === product.category || c.id === product.category
-    );
-
     setForm({
       file: null,
       imagePreview: product.imagePath || product.image || "",
       name: product.name || "",
-      category: currentCategory
-        ? currentCategory.id
-        : vendorCategories?.[0]?.id,
+      // MODIFIED: Default to the 'id' from the correct list
+      category: product.category || hardCodedCategories?.[0]?.id,
       price: product.price || 0,
       unit: product.unit || "",
       status: product.status || "In Stock",
@@ -206,7 +202,7 @@ export default function VendorProductManagement() {
 
     const fd = new FormData();
     fd.append("name", form.name.trim());
-    fd.append("category", form.category); // This is now an ID (e.g., "herbs")
+    fd.append("category", form.category);
     fd.append("price", String(form.price));
     fd.append("unit", form.unit.trim());
     fd.append("status", form.status);
@@ -317,13 +313,10 @@ export default function VendorProductManagement() {
               {!loading &&
                 products.map((product, idx) => {
                   const id = product._id || product.id;
-                  // FIX: Find the category label to display, even if ID is stored
-                  const categoryLabel =
-                    vendorCategories.find(
-                      (c) =>
-                        c.id === product.category ||
-                        c.label === product.category
-                    )?.label || product.category;
+                  // MODIFIED: Find the display name from the correct list
+                  const categoryDisplay =
+                    hardCodedCategories.find((c) => c.id === product.category)
+                      ?.name || product.category;
 
                   return (
                     <tr
@@ -353,7 +346,7 @@ export default function VendorProductManagement() {
                         {product.name}
                       </td>
                       <td className="py-4 px-6 text-sm text-gray-600">
-                        {categoryLabel}
+                        {categoryDisplay}
                       </td>
                       <td className="py-4 px-6 text-sm text-gray-900">
                         KES {product.price} {product.unit}
@@ -526,10 +519,10 @@ export default function VendorProductManagement() {
                     className="w-full rounded-md border px-3 py-2"
                     required
                   >
-                    {/* FIX: Value is c.id, label is c.label */}
-                    {vendorCategories?.map((c) => (
+                    {/* MODIFIED: Use the correct list, value, and key */}
+                    {hardCodedCategories?.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.label}
+                        {c.name}
                       </option>
                     ))}
                   </select>
